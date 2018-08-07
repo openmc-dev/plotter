@@ -81,14 +81,6 @@ class MainWidget(QWidget):
         self.mainLayout.addLayout(self.controlLayout, 0)
         self.setLayout(self.mainLayout)
 
-    """
-    def mousePressEvent(self, event):
-        mousePos = self.plot.mapFromParent(event.pos())
-        xPos = mousePos.x() - 14 - (self.pixelWidth.value() / 2)
-        yPos = mousePos.y() - 14 - (self.pixelHeight.value() / 2)
-        print (xPos, yPos)
-        #print (event.pos().x())
-    """
 
     def onSubmit(self):
 
@@ -117,11 +109,14 @@ class MainWidget(QWidget):
         self.plot.setPixmap(QtGui.QPixmap('plot.ppm'))
         self.plot.adjustSize()
 
-        # Adjust main window size (?)
-        # Adjust scroll area to fit plot if window will not exeed screen size
-        # TODO figure out how to clean this up / do this correctly
+
+        # Get screen dimensions
         self.screen = app.desktop().screenGeometry()
 
+
+        # Adjust main window size:
+        # Adjust scroll area to fit plot if window will not exeed screen size
+        # TODO figure out how to clean this up / do this correctly?
         if self.pixelWidth.value() < .8 * self.screen.width():
             self.frame.setMinimumWidth(self.plot.width() + 20)
         else:
