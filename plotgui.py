@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 import sys, openmc
-from PyQt5.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
+from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QApplication, QGroupBox, QFormLayout, QLabel, QLineEdit, QComboBox,
     QSpinBox, QDoubleSpinBox, QSizePolicy, QSpacerItem, QMainWindow,
     QCheckBox, QScrollArea, QStyleFactory, QLayout)
-from PyQt5 import QtCore, QtGui
+from PySide2 import QtCore, QtGui
 
 
 class MainWindow(QMainWindow):
