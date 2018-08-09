@@ -76,9 +76,6 @@ class MainWidget(QWidget):
 
     def updatePlot(self):
 
-        # Hide rubber band rectangle
-        self.plotIm.rubberBand.hide()
-
         self.saveCurrentPlot()
         self.generatePlot()
 
@@ -294,16 +291,6 @@ class PlotImage(QLabel):
 
         cp = self.currentPlot
 
-        # Restore fields to current values
-        if self.rubberBand.isVisible():
-            self.xOrigin.setText(str(cp['xOr']))
-            self.yOrigin.setText(str(cp['yOr']))
-            self.zOrigin.setText(str(cp['zOr']))
-            mainWindow.mainWidget.width.setValue(cp['width'])
-            mainWindow.mainWidget.height.setValue(cp['height'])
-
-            self.rubberBand.hide()
-
         # Cursor position in pixels relative to center of image
         xPos = event.pos().x() - (cp['pixwidth'] / 2)
         yPos = -event.pos().y() + (cp['pixheight'] / 2)
@@ -385,6 +372,10 @@ class PlotImage(QLabel):
 
     def enterEvent(self, event):
         self.setCursor(QtCore.Qt.CrossCursor)
+
+    def mouseReleaseEvent(self, event):
+        self.rubberBand.hide()
+        mainWindow.mainWidget.updatePlot()
 
     def leaveEvent(self, event):
         mainWindow.updateStatus()
