@@ -7,42 +7,133 @@ from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QApplication, QGroupBox, QFormLayout, QLabel, QLineEdit, QComboBox,
     QSpinBox, QDoubleSpinBox, QSizePolicy, QSpacerItem, QMainWindow,
-    QCheckBox, QScrollArea, QLayout, QRubberBand)
+    QCheckBox, QScrollArea, QLayout, QRubberBand, QMenu)
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
 
-        # Set max window size to fit screen
-        self.screen = app.desktop().screenGeometry()
-        self.setMaximumSize(self.screen.width(), self.screen.height())
-
-        # Create, set main widget
-        self.mainWidget = MainWidget()
-        self.setCentralWidget(self.mainWidget)
-
         # Set Window Title
         self.setWindowTitle('OpenMC Plot Explorer')
 
+        # Create Layout:
+        self.createLayout()
+
+        # Create, set main widget
+        self.mainWidget = QWidget()
+        self.mainWidget.setLayout(self.mainLayout)
+        self.setCentralWidget(self.mainWidget)
+
+        self.previousPlots = []
+        self.currentPlot = {}
+
         # Load Plot
-        self.mainWidget.updatePlot()
+        self.updatePlot()
 
-
-    def updateStatus(self):
-        cp = self.mainWidget.plotIm.currentPlot
+    def showCurrentPlot(self):
+        cp = self.currentPlot
         self.statusBar().showMessage(f"Origin: ({cp['xOr']}, {cp['yOr']}, "
-            f"{cp['zOr']})  |  Width: {cp['width']} Height: {cp['height']}  |  "
-            f"Color By: {cp['cb']}  |  Basis: {cp['basis']}")
+            f"{cp['zOr']})  |  Width: {cp['width']} Height: {cp['height']}  |"
+            f"  Color By: {cp['colorby']}  |  Basis: {cp['basis']}")
+
+    def updatePlot(self):
+
+        self.saveCurrentPlot()
+        self.generatePlot()
+
+        # Update plot image
+        self.plotIm.setPixmap(QtGui.QPixmap('plot.ppm'))
+        self.plotIm.adjustSize()
+
+        # Get screen dimensions
+        self.screen = app.desktop().screenGeometry()
+        self.setMaximumSize(self.screen.width(), self.screen.height())
 
 
-class MainWidget(QWidget):
-    def __init__(self):
-        super(MainWidget, self).__init__()
+        # Adjust scroll area to fit plot if window will not exeed screen size
+        if self.hRes.value() < .8 * self.screen.width():
+            self.frame.setMinimumWidth(self.plotIm.width() + 20)
+        else:
+            self.frame.setMinimumWidth(20)
+        if self.vRes.value() < .85 * self.screen.height():
+            self.frame.setMinimumHeight(self.plotIm.height() + 20)
+        else:
+            self.frame.setMinimumHeight(20)
+
+        # Update status bar
+        self.showCurrentPlot()
+
+        # Determine Scale of image / plot
+        self.plotIm.scale = (self.hRes.value() / self.width.value(),
+                           self.vRes.value() / self.height.value())
+
+        # Determine image axis relative to plot
+        if self.basis.currentText()[0] == 'x':
+            self.plotIm.imageX = ('xOr', self.xOr)
+        else:
+            self.plotIm.imageX = ('yOr', self.yOr)
+        if self.basis.currentText()[1] == 'y':
+            self.plotIm.imageY = ('yOr', self.yOr)
+        else:
+            self.plotIm.imageY = ('zOr', self.zOr)
+
+    def saveCurrentPlot(self):
+
+        # Convert origin values to float
+        for value in [self.xOr, self.yOr, self.zOr]:
+            try:
+                value.setText(str(float(value.text().replace(",", ""))))
+            except ValueError:
+                value.setText('0.0')
+
+        # Create dict of current plot values
+        self.currentPlot['xOr'] = float(self.xOr.text())
+        self.currentPlot['yOr'] = float(self.yOr.text())
+        self.currentPlot['zOr'] = float(self.zOr.text())
+        self.currentPlot['colorby'] = self.colorby.currentText()
+        self.currentPlot['basis'] = self.basis.currentText()
+        self.currentPlot['width'] = self.width.value()
+        self.currentPlot['height'] = self.height.value()
+        self.currentPlot['hRes'] = self.hRes.value()
+        self.currentPlot['vRes'] = self.vRes.value()
+
+    def generatePlot(self):
+
+        cp = self.currentPlot
+
+        # Generate plot.xml
+        plot = openmc.Plot()
+        plot.filename = 'plot'
+        plot.color_by = cp['colorby']
+        plot.basis = cp['basis']
+        plot.origin = (cp['xOr'], cp['yOr'], cp['zOr'])
+        plot.width = (cp['width'], cp['height'])
+        plot.pixels = (cp['hRes'], cp['vRes'])
+        plot.background = 'black'
+
+        plots = openmc.Plots([plot])
+        plots.export_to_xml()
+        openmc.plot_geometry()
+
+    def onAspectLockChange(self,state):
+        if state == QtCore.Qt.Checked:
+            self.onRatioChange()
+            self.vRes.setDisabled(True)
+            self.vResLabel.setDisabled(True)
+        else:
+            self.vRes.setDisabled(False)
+            self.vResLabel.setDisabled(False)
+
+    def onRatioChange(self):
+        if self.ratioCheck.isChecked():
+            ratio = self.width.value() / self.height.value()
+            self.vRes.setValue(int(self.hRes.value() / ratio))
+
+    def createLayout(self):
 
         # Plot
         self.plotIm = PlotImage()
-        self.plotIm.setAlignment(QtCore.Qt.AlignCenter)
 
         # Scroll Area
         self.frame = QScrollArea(self)
@@ -63,7 +154,7 @@ class MainWidget(QWidget):
         self.controlLayout = QVBoxLayout()
         self.controlLayout.addWidget(self.originGroupBox)
         self.controlLayout.addWidget(self.optionsGroupBox)
-        self.controlLayout.addWidget(self.pixelGroupBox)
+        self.controlLayout.addWidget(self.resGroupBox)
         self.controlLayout.addWidget(self.submitButton)
         self.controlLayout.addStretch()
 
@@ -73,135 +164,36 @@ class MainWidget(QWidget):
         self.mainLayout.addLayout(self.controlLayout, 0)
         self.setLayout(self.mainLayout)
 
-
-    def updatePlot(self):
-
-        self.saveCurrentPlot()
-        self.generatePlot()
-
-        # Update Pixmap
-        self.plotIm.setPixmap(QtGui.QPixmap('plot.ppm'))
-        self.plotIm.adjustSize()
-
-        # Get screen dimensions
-        self.screen = app.desktop().screenGeometry()
-
-        # Adjust scroll area to fit plot if window will not exeed screen size
-        if self.pixelWidth.value() < .8 * self.screen.width():
-            self.frame.setMinimumWidth(self.plotIm.width() + 20)
-        else:
-            self.frame.setMinimumWidth(20)
-        if self.pixelHeight.value() < .85 * self.screen.height():
-            self.frame.setMinimumHeight(self.plotIm.height() + 20)
-        else:
-            self.frame.setMinimumHeight(20)
-
-        # Update status bar
-        self.parentWidget().updateStatus()
-
-        # Determine Scale of image / plot
-        self.plotIm.scale = (self.pixelWidth.value() / self.width.value(),
-                           self.pixelHeight.value() / self.height.value())
-
-        # Determine image axis relative to plot
-        if self.basis.currentText()[0] == 'x':
-            self.plotIm.imageX = ('xOr', self.plotIm.xOrigin)
-        else:
-            self.plotIm.imageX = ('yOr', self.plotIm.yOrigin)
-
-        if self.basis.currentText()[1] == 'y':
-            self.plotIm.imageY = ('yOr', self.plotIm.yOrigin)
-        else:
-            self.plotIm.imageY = ('zOr', self.plotIm.zOrigin)
-
-
-    def generatePlot(self):
-
-        cp = self.plotIm.currentPlot
-
-        # Generate plot.xml
-        plot = openmc.Plot()
-        plot.filename = 'plot'
-        plot.color_by = cp['cb']
-        plot.basis = cp['basis']
-        plot.origin = (cp['xOr'], cp['yOr'], cp['zOr'])
-        plot.width = (cp['width'], cp['height'])
-        plot.background = 'black'
-        plot.pixels = (cp['pixwidth'], cp['pixheight'])
-
-        plots = openmc.Plots([plot])
-        plots.export_to_xml()
-        openmc.plot_geometry()
-
-
-    def saveCurrentPlot(self):
-
-        # Convert origin values to float
-        for value in [self.plotIm.xOrigin, self.plotIm.yOrigin, self.plotIm.zOrigin]:
-            try:
-                value.setText(str(float(value.text().replace(",", ""))))
-            except:
-                value.setText('0.0')
-
-        # Create dict of current plot values
-        self.plotIm.currentPlot['xOr'] = float(self.plotIm.xOrigin.text())
-        self.plotIm.currentPlot['yOr'] = float(self.plotIm.yOrigin.text())
-        self.plotIm.currentPlot['zOr'] = float(self.plotIm.zOrigin.text())
-        self.plotIm.currentPlot['cb'] = self.colorby.currentText()
-        self.plotIm.currentPlot['basis'] = self.basis.currentText()
-        self.plotIm.currentPlot['width'] = self.width.value()
-        self.plotIm.currentPlot['height'] = self.height.value()
-        self.plotIm.currentPlot['pixwidth'] = self.pixelWidth.value()
-        self.plotIm.currentPlot['pixheight'] = self.pixelHeight.value()
-
-    def onAspectLockChange(self,state):
-        if state == QtCore.Qt.Checked:
-            ratio = self.width.value() / self.height.value()
-            self.pixelHeight.setValue(int(self.pixelWidth.value() / ratio))
-            self.pixelHeight.setDisabled(True)
-            self.pixelHeightLabel.setDisabled(True)
-        else:
-            self.pixelHeight.setDisabled(False)
-            self.pixelHeightLabel.setDisabled(False)
-
-
-    def onRatioChange(self, value):
-        if self.ratioCheck.isChecked():
-            ratio = self.width.value() / self.height.value()
-            self.pixelHeight.setValue(int(self.pixelWidth.value() / ratio))
-
-
     def createOriginBox(self):
 
         # X Origin
-        self.plotIm.xOrigin = QLineEdit()
-        self.plotIm.xOrigin.setValidator(QtGui.QDoubleValidator())
-        self.plotIm.xOrigin.setText('0.00')
-        self.plotIm.xOrigin.setPlaceholderText('0.00')
+        self.xOr = QLineEdit()
+        self.xOr.setValidator(QtGui.QDoubleValidator())
+        self.xOr.setText('0.00')
+        self.xOr.setPlaceholderText('0.00')
 
         # Y Origin
-        self.plotIm.yOrigin = QLineEdit()
-        self.plotIm.yOrigin.setValidator(QtGui.QDoubleValidator())
-        self.plotIm.yOrigin.setText('0.00')
-        self.plotIm.yOrigin.setPlaceholderText('0.00')
+        self.yOr = QLineEdit()
+        self.yOr.setValidator(QtGui.QDoubleValidator())
+        self.yOr.setText('0.00')
+        self.yOr.setPlaceholderText('0.00')
 
         # Z Origin
-        self.plotIm.zOrigin = QLineEdit()
-        self.plotIm.zOrigin.setValidator(QtGui.QDoubleValidator())
-        self.plotIm.zOrigin.setText('0.00')
-        self.plotIm.zOrigin.setPlaceholderText('0.00')
+        self.zOr = QLineEdit()
+        self.zOr.setValidator(QtGui.QDoubleValidator())
+        self.zOr.setText('0.00')
+        self.zOr.setPlaceholderText('0.00')
 
         # Origin Form Layout
-        self.originLayout = QFormLayout()
-        self.originLayout.addRow('X:', self.plotIm.xOrigin)
-        self.originLayout.addRow('Y:', self.plotIm.yOrigin)
-        self.originLayout.addRow('Z:', self.plotIm.zOrigin)
-        self.originLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        self.orLayout = QFormLayout()
+        self.orLayout.addRow('X:', self.xOr)
+        self.orLayout.addRow('Y:', self.yOr)
+        self.orLayout.addRow('Z:', self.zOr)
+        self.orLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         # Origin Group Box
         self.originGroupBox = QGroupBox('ORIGIN')
-        self.originGroupBox.setLayout(self.originLayout)
-
+        self.originGroupBox.setLayout(self.orLayout)
 
     def createOptionsBox(self):
 
@@ -229,156 +221,152 @@ class MainWidget(QWidget):
         self.basis.addItem("yz")
 
         # Options Form Layout
-        self.optionsLayout = QFormLayout()
-        self.optionsLayout.addRow('Width:', self.width)
-        self.optionsLayout.addRow('Height', self.height)
-        self.optionsLayout.addRow('Color By:', self.colorby)
-        self.optionsLayout.addRow('Basis', self.basis)
-        self.optionsLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        self.opLayout = QFormLayout()
+        self.opLayout.addRow('Width:', self.width)
+        self.opLayout.addRow('Height', self.height)
+        self.opLayout.addRow('Color By:', self.colorby)
+        self.opLayout.addRow('Basis', self.basis)
+        self.opLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         # Options Group Box
         self.optionsGroupBox = QGroupBox('OPTIONS')
-        self.optionsGroupBox.setLayout(self.optionsLayout)
-
+        self.optionsGroupBox.setLayout(self.opLayout)
 
     def createResolutionBox(self):
 
         # Horizontal Resolution
-        self.pixelWidth = QSpinBox(self)
-        self.pixelWidth.setRange(1, 10000000)
-        self.pixelWidth.setValue(500)
-        self.pixelWidth.valueChanged.connect(self.onRatioChange)
-        self.pixelWidth.setSingleStep(5)
+        self.hRes = QSpinBox(self)
+        self.hRes.setRange(1, 10000000)
+        self.hRes.setValue(500)
+        self.hRes.setSingleStep(25)
+        self.hRes.valueChanged.connect(self.onRatioChange)
 
         # Vertical Resolution
-        self.pixelHeightLabel = QLabel('Pixel Height')
-        self.pixelHeightLabel.setDisabled(True)
-        self.pixelHeight = QSpinBox(self)
-        self.pixelHeight.setRange(1, 10000000)
-        self.pixelHeight.setValue(500)
-        self.pixelHeight.setSingleStep(5)
-        self.pixelHeight.setDisabled(True)
+        self.vResLabel = QLabel('Pixel Height')
+        self.vResLabel.setDisabled(True)
+        self.vRes = QSpinBox(self)
+        self.vRes.setRange(1, 10000000)
+        self.vRes.setValue(500)
+        self.vRes.setSingleStep(25)
+        self.vRes.setDisabled(True)
 
         # Ratio checkbox
         self.ratioCheck = QCheckBox("Fixed Aspect Ratio", self)
         self.ratioCheck.toggle()
         self.ratioCheck.stateChanged.connect(self.onAspectLockChange)
 
-        # Pixel Form Layout
-        self.pixelLayout = QFormLayout()
-        self.pixelLayout.addRow(self.ratioCheck)
-        self.pixelLayout.addRow('Pixel Width:', self.pixelWidth)
-        self.pixelLayout.addRow(self.pixelHeightLabel, self.pixelHeight)
-        self.pixelLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        # Resolution Form Layout
+        self.resLayout = QFormLayout()
+        self.resLayout.addRow(self.ratioCheck)
+        self.resLayout.addRow('Pixel Width:', self.hRes)
+        self.resLayout.addRow(self.vResLabel, self.vRes)
+        self.resLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
-        # Pixel Group Box
-        self.pixelGroupBox = QGroupBox("PIXELS")
-        self.pixelGroupBox.setLayout(self.pixelLayout)
+        # Resolution Group Box
+        self.resGroupBox = QGroupBox("RESOLUTION")
+        self.resGroupBox.setLayout(self.resLayout)
 
 
 class PlotImage(QLabel):
     def __init__(self):
         super(PlotImage, self).__init__()
 
+        self.setAlignment(QtCore.Qt.AlignCenter)
         self.setMouseTracking(True)
+
         self.rubberBand = QRubberBand(QRubberBand.Rectangle, self)
-        self.previousPlots = []
-        self.currentPlot = {}
         self.origin = QtCore.QPoint()
-        self.scale = 1
+        self.scale = (1, 1)
+
+    def enterEvent(self, event):
+        self.setCursor(QtCore.Qt.CrossCursor)
+
+    def leaveEvent(self, event):
+        mainWindow.showCurrentPlot()
 
     def mousePressEvent(self, event):
 
-        cp = self.currentPlot
+        cp = mainWindow.currentPlot
 
-        # Cursor position in pixels relative to center of image
-        xPos = event.pos().x() - (cp['pixwidth'] / 2)
-        yPos = -event.pos().y() + (cp['pixheight'] / 2)
+        # Cursor position in pixels relative to center of plot image
+        xPos = event.pos().x() - (cp['hRes'] / 2)
+        yPos = -event.pos().y() + (cp['vRes'] / 2)
 
-        # Curson position relative to plot
+        # Curson position in plot units relative to model
         self.xBandOrigin = (xPos / self.scale[0]) + cp[self.imageX[0]]
         self.yBandOrigin = (yPos / self.scale[1]) + cp[self.imageY[0]]
 
-        # Rubber band start position
-        self.origin = event.pos()
-
         # Create rubber band
         self.rubberBand.setGeometry(QtCore.QRect(self.origin, QtCore.QSize()))
+
+        # Rubber band start position
+        self.origin = event.pos()
 
         QLabel.mousePressEvent(self, event)
 
     def mouseMoveEvent(self, event):
 
-        cp = self.currentPlot
+        cp = mainWindow.currentPlot
 
         # Cursor position in pixels relative to center of image
-        xPos = event.pos().x() - (cp['pixwidth'] / 2) #+ 1
-        yPos = (-event.pos().y() + (cp['pixheight'] / 2)) #+ 1
+        xPos = event.pos().x() - (cp['hRes'] / 2) #+ 1
+        yPos = (-event.pos().y() + (cp['vRes'] / 2)) #+ 1
 
-        # Cursor position relative to plot
+        # Cursor position in plot units relative to model
         xPlotPos = (xPos / self.scale[0]) + cp[self.imageX[0]]
         yPlotPos = (yPos / self.scale[1]) + cp[self.imageY[0]]
 
         # Show Cursor position relative to plot in status bar
-        if mainWindow.mainWidget.basis.currentText() == 'xy':
-            mainWindow.statusBar().showMessage(f"Plot Position: ({round(xPlotPos, 2)}, "
-                                        f"{round(yPlotPos, 2)}, {cp['zOr']})")
-        elif mainWindow.mainWidget.basis.currentText() == 'xz':
-            mainWindow.statusBar().showMessage(f"Plot Position: ({round(xPlotPos, 2)}, "
-                                        f"{cp['yOr']}, {round(yPlotPos, 2)})")
+        if mainWindow.basis.currentText() == 'xy':
+            mainWindow.statusBar().showMessage(f"Plot Position: "
+                f"({round(xPlotPos, 2)}, {round(yPlotPos, 2)}, {cp['zOr']})")
+        elif mainWindow.basis.currentText() == 'xz':
+            mainWindow.statusBar().showMessage(f"Plot Position: "
+                f"({round(xPlotPos, 2)}, {cp['yOr']}, {round(yPlotPos, 2)})")
         else:
-            mainWindow.statusBar().showMessage(f"Plot Position: ({cp['xOr']}, "
-                                        f"{round(xPlotPos, 2)}, {round(yPlotPos, 2)})")
+            mainWindow.statusBar().showMessage(f"Plot Position: "
+                f"({cp['xOr']}, {round(xPlotPos, 2)}, {round(yPlotPos, 2)})")
 
         # Update rubber band and values if mouse button held down
         if app.mouseButtons() in [QtCore.Qt.LeftButton, QtCore.Qt.RightButton]:
             self.rubberBand.setGeometry(
                 QtCore.QRect(self.origin, event.pos()).normalized())
 
+            # Show rubber band if at least one dimension > 5 pixels
             if self.rubberBand.width() > 5 or self.rubberBand.height() > 5:
                 self.rubberBand.show()
 
-            # Update x Origin
+            # Update plot X Origin
             xcenter = self.xBandOrigin + ((xPlotPos - self.xBandOrigin) / 2)
             self.imageX[1].setText(str(round(xcenter, 9)))
 
-            # Update y Origin
+            # Update plot Y Origin
             ycenter = self.yBandOrigin + ((yPlotPos - self.yBandOrigin) / 2)
             self.imageY[1].setText(str(round(ycenter, 9)))
 
-            # Zoom in to rubber band rectangle if left button held
-            if app.mouseButtons() == QtCore.Qt.LeftButton:
+        # Zoom in to rubber band rectangle if left button held
+        if app.mouseButtons() == QtCore.Qt.LeftButton:
 
-                # Update width
-                width = abs(self.xBandOrigin - xPlotPos)
-                mainWindow.mainWidget.width.setValue(width)
+            # Update width and height
+            mainWindow.width.setValue(abs(self.xBandOrigin - xPlotPos))
+            mainWindow.height.setValue(abs(self.yBandOrigin - yPlotPos))
 
-                # Update height
-                height = abs(self.yBandOrigin - yPlotPos)
-                mainWindow.mainWidget.height.setValue(height)
+        # Zoom out if right button held. Larger rectangle = more zoomed out
+        elif app.mouseButtons() == QtCore.Qt.RightButton:
 
-            # Zoom out if right button held. Larger rectangle = more zoomed out
-            elif app.mouseButtons() == QtCore.Qt.RightButton:
+            # Update width
+            width = cp['width'] * (1 + (abs(self.origin.x()
+                                - event.pos().x()) / cp['hRes']) * 4)
+            mainWindow.width.setValue(width)
 
-                # Update width
-                width = cp['width'] * (1 + (abs(self.origin.x()
-                                    - event.pos().x()) / cp['pixwidth']) * 4)
-                mainWindow.mainWidget.width.setValue(width)
-
-                # Update height
-                height = cp['height'] * (1 + (abs(self.origin.y()
-                                    - event.pos().y()) / cp['pixheight']) * 4)
-                mainWindow.mainWidget.height.setValue(height)
-
-    def enterEvent(self, event):
-        self.setCursor(QtCore.Qt.CrossCursor)
+            # Update height
+            height = cp['height'] * (1 + (abs(self.origin.y()
+                                - event.pos().y()) / cp['vRes']) * 4)
+            mainWindow.height.setValue(height)
 
     def mouseReleaseEvent(self, event):
         self.rubberBand.hide()
-        mainWindow.mainWidget.updatePlot()
-
-    def leaveEvent(self, event):
-        mainWindow.updateStatus()
+        mainWindow.updatePlot()
 
 
 if __name__ == '__main__':
