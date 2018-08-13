@@ -1,13 +1,14 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import sys, openmc
+import sys, openmc, copy
 from collections import defaultdict
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QApplication, QGroupBox, QFormLayout, QLabel, QLineEdit, QComboBox,
     QSpinBox, QDoubleSpinBox, QSizePolicy, QSpacerItem, QMainWindow,
-    QCheckBox, QScrollArea, QLayout, QRubberBand, QMenu)
+    QCheckBox, QScrollArea, QLayout, QRubberBand, QMenu, QAction, QMenuBar,
+    QFileDialog)
 
 
 class MainWindow(QMainWindow):
@@ -17,6 +18,9 @@ class MainWindow(QMainWindow):
         # Set Window Title
         self.setWindowTitle('OpenMC Plot Explorer')
 
+        # Create Menubar
+        self.createMenuBar()
+
         # Create Layout:
         self.createLayout()
 
@@ -25,11 +29,91 @@ class MainWindow(QMainWindow):
         self.mainWidget.setLayout(self.mainLayout)
         self.setCentralWidget(self.mainWidget)
 
+        self.currentPlot = {'xOr': 0.0, 'yOr': 0.0, 'zOr': 0.0,
+                            'colorby': 'material', 'basis': 'xy',
+                            'width': 25.0, 'height': 25.0, 'hRes': 500,
+                            'vRes': 500}
         self.previousPlots = []
-        self.currentPlot = {}
+        self.subsequentPlots = []
 
         # Load Plot
         self.updatePlot()
+
+    def createMenuBar(self):
+
+        # Actions
+        self.saveAction = QAction("&Save Image As...", self)
+        self.saveAction.setShortcut("Ctrl+S")
+        self.saveAction.triggered.connect(self.saveImage)
+
+        self.applyAction = QAction("&Apply Changes", self)
+        self.applyAction.setShortcut("Shift+Return")
+        self.applyAction.triggered.connect(self.applyChanges)
+
+        self.undoAction = QAction('&Undo', self)
+        self.undoAction.setShortcut("Ctrl+Z")
+        self.undoAction.setDisabled(True)
+        self.undoAction.triggered.connect(self.undo)
+
+        self.redoAction = QAction('&Redo', self)
+        self.redoAction.setDisabled(True)
+        self.redoAction.setShortcut("Ctrl+Shift+Z")
+        self.redoAction.triggered.connect(self.redo)
+
+        # Menus
+        self.mainMenu = self.menuBar()
+        #self.mainMenu.setNativeMenuBar(False)
+        self.fileMenu = self.mainMenu.addMenu('&File')
+        self.editMenu = self.mainMenu.addMenu('&Edit')
+        self.fileMenu.addAction(self.saveAction)
+        self.editMenu.addAction(self.applyAction)
+        self.editMenu.addAction(self.undoAction)
+        self.editMenu.addAction(self.redoAction)
+
+    def saveImage(self):
+        filename, ext = QFileDialog.getSaveFileName(self, "Save Plot Image",
+                                                    "", "Images (*.png *.ppm)")
+        if filename:
+            if "." not in filename:
+                self.pixmap.save(filename + ".ppm")
+            else:
+                self.pixmap.save(filename)
+        else: pass
+
+    def undo(self):
+        self.subsequentPlots.append(copy.deepcopy(self.currentPlot))
+        self.currentPlot = self.previousPlots.pop()
+
+        self.revertControls()
+        self.updatePlot()
+
+        if not self.previousPlots:
+            self.undoAction.setDisabled(True)
+
+        self.redoAction.setDisabled(False)
+
+    def redo(self):
+        self.previousPlots.append(copy.deepcopy(self.currentPlot))
+        self.currentPlot = self.subsequentPlots.pop()
+        self.revertControls()
+        self.updatePlot()
+
+        if not self.subsequentPlots:
+            self.redoAction.setDisabled(True)
+
+        self.undoAction.setDisabled(False)
+
+    def revertControls(self):
+
+        self.xOr.setText(str(self.currentPlot['xOr']))
+        self.yOr.setText(str(self.currentPlot['yOr']))
+        self.zOr.setText(str(self.currentPlot['zOr']))
+        self.colorby.setCurrentText(self.currentPlot['colorby'])
+        self.basis.setCurrentText(self.currentPlot['basis'])
+        self.width.setValue(self.currentPlot['width'])
+        self.height.setValue(self.currentPlot['height'])
+        self.hRes.setValue(self.currentPlot['hRes'])
+        self.vRes.setValue(self.currentPlot['vRes'])
 
     def showCurrentPlot(self):
         cp = self.currentPlot
@@ -37,19 +121,65 @@ class MainWindow(QMainWindow):
             f"{cp['zOr']})  |  Width: {cp['width']} Height: {cp['height']}  |"
             f"  Color By: {cp['colorby']}  |  Basis: {cp['basis']}")
 
+    def applyChanges(self):
+
+        previous = copy.deepcopy(self.currentPlot)
+
+        # Convert origin values to float
+        for value in [self.xOr, self.yOr, self.zOr]:
+            try:
+                value.setText(str(float(value.text().replace(",", ""))))
+            except ValueError:
+                value.setText('0.0')
+
+        # Create dict of current plot values
+        self.currentPlot['xOr'] = float(self.xOr.text())
+        self.currentPlot['yOr'] = float(self.yOr.text())
+        self.currentPlot['zOr'] = float(self.zOr.text())
+        self.currentPlot['colorby'] = self.colorby.currentText()
+        self.currentPlot['basis'] = self.basis.currentText()
+        self.currentPlot['width'] = self.width.value()
+        self.currentPlot['height'] = self.height.value()
+        self.currentPlot['hRes'] = self.hRes.value()
+        self.currentPlot['vRes'] = self.vRes.value()
+
+        if self.currentPlot != previous:
+            self.previousPlots.append(previous)
+            self.updatePlot()
+            self.subsequentPlots = []
+
     def updatePlot(self):
 
-        self.saveCurrentPlot()
-        self.generatePlot()
+        cp = self.currentPlot
+
+        # Generate plot.xml
+        plot = openmc.Plot()
+        plot.filename = 'plot'
+        plot.color_by = cp['colorby']
+        plot.basis = cp['basis']
+        plot.origin = (cp['xOr'], cp['yOr'], cp['zOr'])
+        plot.width = (cp['width'], cp['height'])
+        plot.pixels = (cp['hRes'], cp['vRes'])
+        plot.background = 'black'
+
+        plots = openmc.Plots([plot])
+        plots.export_to_xml()
+        openmc.plot_geometry()
 
         # Update plot image
-        self.plotIm.setPixmap(QtGui.QPixmap('plot.ppm'))
+        self.pixmap = QtGui.QPixmap('plot.ppm')
+        self.plotIm.setPixmap(self.pixmap)
         self.plotIm.adjustSize()
+
+        if self.previousPlots:
+            self.undoAction.setDisabled(False)
+
+        if self.subsequentPlots:
+            self.redoAction.setDisabled(False)
 
         # Get screen dimensions
         self.screen = app.desktop().screenGeometry()
         self.setMaximumSize(self.screen.width(), self.screen.height())
-
 
         # Adjust scroll area to fit plot if window will not exeed screen size
         if self.hRes.value() < .8 * self.screen.width():
@@ -78,45 +208,7 @@ class MainWindow(QMainWindow):
         else:
             self.plotIm.imageY = ('zOr', self.zOr)
 
-    def saveCurrentPlot(self):
-
-        # Convert origin values to float
-        for value in [self.xOr, self.yOr, self.zOr]:
-            try:
-                value.setText(str(float(value.text().replace(",", ""))))
-            except ValueError:
-                value.setText('0.0')
-
-        # Create dict of current plot values
-        self.currentPlot['xOr'] = float(self.xOr.text())
-        self.currentPlot['yOr'] = float(self.yOr.text())
-        self.currentPlot['zOr'] = float(self.zOr.text())
-        self.currentPlot['colorby'] = self.colorby.currentText()
-        self.currentPlot['basis'] = self.basis.currentText()
-        self.currentPlot['width'] = self.width.value()
-        self.currentPlot['height'] = self.height.value()
-        self.currentPlot['hRes'] = self.hRes.value()
-        self.currentPlot['vRes'] = self.vRes.value()
-
-    def generatePlot(self):
-
-        cp = self.currentPlot
-
-        # Generate plot.xml
-        plot = openmc.Plot()
-        plot.filename = 'plot'
-        plot.color_by = cp['colorby']
-        plot.basis = cp['basis']
-        plot.origin = (cp['xOr'], cp['yOr'], cp['zOr'])
-        plot.width = (cp['width'], cp['height'])
-        plot.pixels = (cp['hRes'], cp['vRes'])
-        plot.background = 'black'
-
-        plots = openmc.Plots([plot])
-        plots.export_to_xml()
-        openmc.plot_geometry()
-
-    def onAspectLockChange(self,state):
+    def onAspectLockChange(self, state):
         if state == QtCore.Qt.Checked:
             self.onRatioChange()
             self.vRes.setDisabled(True)
@@ -148,7 +240,7 @@ class MainWindow(QMainWindow):
 
         # Create submit button
         self.submitButton = QPushButton("Apply Changes", self)
-        self.submitButton.clicked.connect(self.updatePlot)
+        self.submitButton.clicked.connect(self.applyChanges)
 
         # Create control Layout
         self.controlLayout = QVBoxLayout()
@@ -344,29 +436,30 @@ class PlotImage(QLabel):
             ycenter = self.yBandOrigin + ((yPlotPos - self.yBandOrigin) / 2)
             self.imageY[1].setText(str(round(ycenter, 9)))
 
-        # Zoom in to rubber band rectangle if left button held
-        if app.mouseButtons() == QtCore.Qt.LeftButton:
+            # Zoom in to rubber band rectangle if left button held
+            if app.mouseButtons() == QtCore.Qt.LeftButton:
 
-            # Update width and height
-            mainWindow.width.setValue(abs(self.xBandOrigin - xPlotPos))
-            mainWindow.height.setValue(abs(self.yBandOrigin - yPlotPos))
+                # Update width and height
+                mainWindow.width.setValue(abs(self.xBandOrigin - xPlotPos))
+                mainWindow.height.setValue(abs(self.yBandOrigin - yPlotPos))
 
-        # Zoom out if right button held. Larger rectangle = more zoomed out
-        elif app.mouseButtons() == QtCore.Qt.RightButton:
+            # Zoom out if right button held. Larger rectangle = more zoomed out
+            elif app.mouseButtons() == QtCore.Qt.RightButton:
 
-            # Update width
-            width = cp['width'] * (1 + (abs(self.origin.x()
-                                - event.pos().x()) / cp['hRes']) * 4)
-            mainWindow.width.setValue(width)
+                # Update width
+                width = cp['width'] * (1 + (abs(self.origin.x()
+                                    - event.pos().x()) / cp['hRes']) * 4)
+                mainWindow.width.setValue(width)
 
-            # Update height
-            height = cp['height'] * (1 + (abs(self.origin.y()
-                                - event.pos().y()) / cp['vRes']) * 4)
-            mainWindow.height.setValue(height)
+                # Update height
+                height = cp['height'] * (1 + (abs(self.origin.y()
+                                    - event.pos().y()) / cp['vRes']) * 4)
+                mainWindow.height.setValue(height)
 
     def mouseReleaseEvent(self, event):
-        self.rubberBand.hide()
-        mainWindow.updatePlot()
+        if self.rubberBand.isVisible():
+            self.rubberBand.hide()
+            mainWindow.applyChanges()
 
 
 if __name__ == '__main__':
