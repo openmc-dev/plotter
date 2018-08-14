@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys, openmc, copy
+import numpy as np
 from collections import defaultdict
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
@@ -21,6 +22,10 @@ class MainWindow(QMainWindow):
         # Create Menubar
         self.createMenuBar()
 
+        self.currentPlot = self.defaultPlot()
+        self.previousPlots = []
+        self.subsequentPlots = []
+
         # Create Layout:
         self.createLayout()
 
@@ -28,13 +33,6 @@ class MainWindow(QMainWindow):
         self.mainWidget = QWidget()
         self.mainWidget.setLayout(self.mainLayout)
         self.setCentralWidget(self.mainWidget)
-
-        self.currentPlot = {'xOr': 0.0, 'yOr': 0.0, 'zOr': 0.0,
-                            'colorby': 'material', 'basis': 'xy',
-                            'width': 25.0, 'height': 25.0, 'hRes': 500,
-                            'vRes': 500}
-        self.previousPlots = []
-        self.subsequentPlots = []
 
         # Load Plot
         self.updatePlot()
@@ -45,6 +43,10 @@ class MainWindow(QMainWindow):
         self.saveAction = QAction("&Save Image As...", self)
         self.saveAction.setShortcut("Ctrl+S")
         self.saveAction.triggered.connect(self.saveImage)
+
+        self.quitAction = QAction("&Quit", self)
+        self.quitAction.setShortcut("Ctrl+Q")
+        self.saveAction.triggered.connect(lambda: app.quit())
 
         self.applyAction = QAction("&Apply Changes", self)
         self.applyAction.setShortcut("Shift+Return")
@@ -64,11 +66,38 @@ class MainWindow(QMainWindow):
         self.mainMenu = self.menuBar()
         #self.mainMenu.setNativeMenuBar(False)
         self.fileMenu = self.mainMenu.addMenu('&File')
-        self.editMenu = self.mainMenu.addMenu('&Edit')
         self.fileMenu.addAction(self.saveAction)
+        self.fileMenu.addSeparator()
+        self.fileMenu.addAction(self.quitAction)
+
+        self.editMenu = self.mainMenu.addMenu('&Edit')
         self.editMenu.addAction(self.applyAction)
+        self.editMenu.addSeparator()
         self.editMenu.addAction(self.undoAction)
         self.editMenu.addAction(self.redoAction)
+
+    def defaultPlot(self):
+
+        geom = openmc.Geometry.from_xml('geometry.xml')
+        lower_left, upper_right = geom.bounding_box
+
+        if -np.inf not in lower_left and np.inf not in upper_right:
+            xcenter = (upper_right[0] + lower_left[0])/2
+            width = abs(upper_right[0] - lower_left[0])
+            ycenter = (upper_right[1] + lower_left[1])/2
+            height = abs(upper_right[1] - lower_left[1])
+            zcenter = (upper_right[2] + lower_left[2])/2
+
+            default = {'xOr': xcenter, 'yOr': ycenter, 'zOr': zcenter,
+                       'colorby': 'material', 'basis': 'xy',
+                       'width': width + 2, 'height': height + 2,
+                       'hRes': 500, 'vRes': 500}
+        else:
+            default = {'xOr': 0.00, 'yOr': 0.00, 'zOr': 0.00,
+                       'colorby': 'material', 'basis': 'xy',
+                       'width': 25, 'height': 25,
+                       'hRes': 500, 'vRes': 500}
+        return default
 
     def saveImage(self):
         filename, ext = QFileDialog.getSaveFileName(self, "Save Plot Image",
@@ -258,22 +287,24 @@ class MainWindow(QMainWindow):
 
     def createOriginBox(self):
 
+        cp = self.currentPlot
+
         # X Origin
         self.xOr = QLineEdit()
         self.xOr.setValidator(QtGui.QDoubleValidator())
-        self.xOr.setText('0.00')
+        self.xOr.setText(str(cp['xOr']))
         self.xOr.setPlaceholderText('0.00')
 
         # Y Origin
         self.yOr = QLineEdit()
         self.yOr.setValidator(QtGui.QDoubleValidator())
-        self.yOr.setText('0.00')
+        self.yOr.setText(str(cp['yOr']))
         self.yOr.setPlaceholderText('0.00')
 
         # Z Origin
         self.zOr = QLineEdit()
         self.zOr.setValidator(QtGui.QDoubleValidator())
-        self.zOr.setText('0.00')
+        self.zOr.setText(str(cp['zOr']))
         self.zOr.setPlaceholderText('0.00')
 
         # Origin Form Layout
@@ -289,16 +320,18 @@ class MainWindow(QMainWindow):
 
     def createOptionsBox(self):
 
+        cp = self.currentPlot
+
         # Width
         self.width = QDoubleSpinBox(self)
-        self.width.setValue(25)
         self.width.setRange(.1, 10000000)
+        self.width.setValue(cp['width'])
         self.width.valueChanged.connect(self.onRatioChange)
 
         # Height
         self.height = QDoubleSpinBox(self)
-        self.height.setValue(25)
         self.height.setRange(.1, 10000000)
+        self.height.setValue(cp['height'])
         self.height.valueChanged.connect(self.onRatioChange)
 
         # ColorBy
@@ -429,32 +462,32 @@ class PlotImage(QLabel):
                 self.rubberBand.show()
 
             # Update plot X Origin
-            xcenter = self.xBandOrigin + ((xPlotPos - self.xBandOrigin) / 2)
+            xcenter = (self.xBandOrigin + xPlotPos) / 2
             self.imageX[1].setText(str(round(xcenter, 9)))
 
             # Update plot Y Origin
-            ycenter = self.yBandOrigin + ((yPlotPos - self.yBandOrigin) / 2)
+            ycenter = (self.yBandOrigin + yPlotPos) / 2
             self.imageY[1].setText(str(round(ycenter, 9)))
 
-            # Zoom in to rubber band rectangle if left button held
-            if app.mouseButtons() == QtCore.Qt.LeftButton:
+        # Zoom in to rubber band rectangle if left button held
+        if app.mouseButtons() == QtCore.Qt.LeftButton:
 
-                # Update width and height
-                mainWindow.width.setValue(abs(self.xBandOrigin - xPlotPos))
-                mainWindow.height.setValue(abs(self.yBandOrigin - yPlotPos))
+            # Update width and height
+            mainWindow.width.setValue(abs(self.xBandOrigin - xPlotPos))
+            mainWindow.height.setValue(abs(self.yBandOrigin - yPlotPos))
 
-            # Zoom out if right button held. Larger rectangle = more zoomed out
-            elif app.mouseButtons() == QtCore.Qt.RightButton:
+        # Zoom out if right button held. Larger rectangle = more zoomed out
+        elif app.mouseButtons() == QtCore.Qt.RightButton:
 
-                # Update width
-                width = cp['width'] * (1 + (abs(self.origin.x()
-                                    - event.pos().x()) / cp['hRes']) * 4)
-                mainWindow.width.setValue(width)
+            # Update width
+            bandwidth = abs(self.origin.x() - event.pos().x())
+            width = cp['width'] * (cp['hRes'] / max(bandwidth, .001))
+            mainWindow.width.setValue(width)
 
-                # Update height
-                height = cp['height'] * (1 + (abs(self.origin.y()
-                                    - event.pos().y()) / cp['vRes']) * 4)
-                mainWindow.height.setValue(height)
+            # Update height
+            bandheight = abs(self.origin.y() - event.pos().y())
+            height = cp['height'] * (cp['vRes'] / max(bandheight, .001))
+            mainWindow.height.setValue(height)
 
     def mouseReleaseEvent(self, event):
         if self.rubberBand.isVisible():
