@@ -3,7 +3,6 @@
 
 import sys, openmc, copy
 import numpy as np
-from collections import defaultdict
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QApplication, QGroupBox, QFormLayout, QLabel, QLineEdit, QComboBox,
@@ -53,13 +52,13 @@ class MainWindow(QMainWindow):
         self.applyAction.triggered.connect(self.applyChanges)
 
         self.undoAction = QAction('&Undo', self)
-        self.undoAction.setShortcut("Ctrl+Z")
+        self.undoAction.setShortcut(QtGui.QKeySequence.Undo)
         self.undoAction.setDisabled(True)
         self.undoAction.triggered.connect(self.undo)
 
         self.redoAction = QAction('&Redo', self)
         self.redoAction.setDisabled(True)
-        self.redoAction.setShortcut("Ctrl+Shift+Z")
+        self.redoAction.setShortcut(QtGui.QKeySequence.Redo)
         self.redoAction.triggered.connect(self.redo)
 
         # Menus
@@ -77,6 +76,29 @@ class MainWindow(QMainWindow):
         self.editMenu.addAction(self.redoAction)
 
     def defaultPlot(self):
+
+        geom = openmc.Geometry.from_xml('geometry.xml')
+        lower_left, upper_right = geom.bounding_box
+
+        if -np.inf not in lower_left[:2] and np.inf not in upper_right[:2]:
+            xcenter = (upper_right[0] + lower_left[0])/2
+            width = abs(upper_right[0] - lower_left[0])
+            ycenter = (upper_right[1] + lower_left[1])/2
+            height = abs(upper_right[1] - lower_left[1])
+        else:
+            xcenter, ycenter, width, height = (0.00, 0.00, 25, 25)
+
+        if  lower_left[2] != -np.inf and upper_right[2] != np.inf:
+            zcenter = (upper_right[2] + lower_left[2])/2
+        else:
+            zcenter = 0.00
+
+        default = {'xOr': xcenter, 'yOr': ycenter, 'zOr': zcenter,
+                   'colorby': 'material', 'basis': 'xy',
+                   'width': width + 2, 'height': height + 2,
+                   'hRes': 500, 'vRes': 500}
+
+        return default
 
         geom = openmc.Geometry.from_xml('geometry.xml')
         lower_left, upper_right = geom.bounding_box
@@ -146,9 +168,10 @@ class MainWindow(QMainWindow):
 
     def showCurrentPlot(self):
         cp = self.currentPlot
-        self.statusBar().showMessage(f"Origin: ({cp['xOr']}, {cp['yOr']}, "
-            f"{cp['zOr']})  |  Width: {cp['width']} Height: {cp['height']}  |"
-            f"  Color By: {cp['colorby']}  |  Basis: {cp['basis']}")
+        message = (f"Origin: ({cp['xOr']}, {cp['yOr']}, {cp['zOr']})  |  "
+            f"Width: {cp['width']} Height: {cp['height']}  |  "
+            f"Color By: {cp['colorby']}  |  Basis: {cp['basis']}")
+        self.statusBar().showMessage(message)
 
     def applyChanges(self):
 
@@ -501,3 +524,4 @@ if __name__ == '__main__':
     mainWindow = MainWindow()
     mainWindow.show()
     sys.exit(app.exec_())
+    
