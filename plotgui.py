@@ -44,8 +44,8 @@ class MainWindow(QMainWindow):
         self.saveAction.triggered.connect(self.saveImage)
 
         self.quitAction = QAction("&Quit", self)
-        self.quitAction.setShortcut("Ctrl+Q")
-        self.saveAction.triggered.connect(lambda: app.quit())
+        self.quitAction.setShortcut(QtGui.QKeySequence.Quit)
+        self.quitAction.triggered.connect(self.close)
 
         self.applyAction = QAction("&Apply Changes", self)
         self.applyAction.setShortcut("Shift+Return")
@@ -129,7 +129,6 @@ class MainWindow(QMainWindow):
                 self.pixmap.save(filename + ".ppm")
             else:
                 self.pixmap.save(filename)
-        else: pass
 
     def undo(self):
         self.subsequentPlots.append(copy.deepcopy(self.currentPlot))
@@ -250,15 +249,15 @@ class MainWindow(QMainWindow):
         self.plotIm.scale = (self.hRes.value() / self.width.value(),
                            self.vRes.value() / self.height.value())
 
-        # Determine image axis relative to plot
+        # Determine image axes relative to plot
         if self.basis.currentText()[0] == 'x':
-            self.plotIm.imageX = ('xOr', self.xOr)
+            self.plotIm.basisX = ('xOr', self.xOr)
         else:
-            self.plotIm.imageX = ('yOr', self.yOr)
+            self.plotIm.basisX = ('yOr', self.yOr)
         if self.basis.currentText()[1] == 'y':
-            self.plotIm.imageY = ('yOr', self.yOr)
+            self.plotIm.basisY = ('yOr', self.yOr)
         else:
-            self.plotIm.imageY = ('zOr', self.zOr)
+            self.plotIm.basisY = ('zOr', self.zOr)
 
     def onAspectLockChange(self, state):
         if state == QtCore.Qt.Checked:
@@ -368,12 +367,19 @@ class MainWindow(QMainWindow):
         self.basis.addItem("xz")
         self.basis.addItem("yz")
 
+        # Advanced Color Options
+        self.colorOptionsButton = QPushButton('Color Options...')
+        #self.colorOptionsButton.clicked.connect(self.loadColorOptions)
+
+
+
         # Options Form Layout
         self.opLayout = QFormLayout()
         self.opLayout.addRow('Width:', self.width)
         self.opLayout.addRow('Height', self.height)
-        self.opLayout.addRow('Color By:', self.colorby)
         self.opLayout.addRow('Basis', self.basis)
+        self.opLayout.addRow('Color By:', self.colorby)
+        self.opLayout.addRow(self.colorOptionsButton)
         self.opLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         # Options Group Box
@@ -441,8 +447,8 @@ class PlotImage(QLabel):
         yPos = -event.pos().y() + (cp['vRes'] / 2)
 
         # Curson position in plot units relative to model
-        self.xBandOrigin = (xPos / self.scale[0]) + cp[self.imageX[0]]
-        self.yBandOrigin = (yPos / self.scale[1]) + cp[self.imageY[0]]
+        self.xBandOrigin = (xPos / self.scale[0]) + cp[self.basisX[0]]
+        self.yBandOrigin = (yPos / self.scale[1]) + cp[self.basisY[0]]
 
         # Create rubber band
         self.rubberBand.setGeometry(QtCore.QRect(self.origin, QtCore.QSize()))
@@ -461,8 +467,8 @@ class PlotImage(QLabel):
         yPos = (-event.pos().y() + (cp['vRes'] / 2)) #+ 1
 
         # Cursor position in plot units relative to model
-        xPlotPos = (xPos / self.scale[0]) + cp[self.imageX[0]]
-        yPlotPos = (yPos / self.scale[1]) + cp[self.imageY[0]]
+        xPlotPos = (xPos / self.scale[0]) + cp[self.basisX[0]]
+        yPlotPos = (yPos / self.scale[1]) + cp[self.basisY[0]]
 
         # Show Cursor position relative to plot in status bar
         if mainWindow.basis.currentText() == 'xy':
@@ -486,11 +492,11 @@ class PlotImage(QLabel):
 
             # Update plot X Origin
             xcenter = (self.xBandOrigin + xPlotPos) / 2
-            self.imageX[1].setText(str(round(xcenter, 9)))
+            self.basisX[1].setText(str(round(xcenter, 9)))
 
             # Update plot Y Origin
             ycenter = (self.yBandOrigin + yPlotPos) / 2
-            self.imageY[1].setText(str(round(ycenter, 9)))
+            self.basisY[1].setText(str(round(ycenter, 9)))
 
         # Zoom in to rubber band rectangle if left button held
         if app.mouseButtons() == QtCore.Qt.LeftButton:
