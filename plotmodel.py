@@ -1,0 +1,193 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+import sys, openmc, copy
+import numpy as np
+import xml.etree.ElementTree as ET
+
+
+class PlotModel():
+    def __init__(self):
+
+        self.cells = self.getCells()
+        self.materials = self.getMaterials()
+
+        self.maskingActive = False
+        self.maskBackground = 'black'
+
+        self.highlightsActive = False
+        self.highlightBackground = 'grey'
+        self.highlightAlpha = 0.5
+        self.highlightSeed = 1
+
+        self.plotBackground = 'black'
+
+        self.previousPlots = []
+        self.subsequentPlots = []
+        self.currentPlot = self.getDefaultPlot()
+        self.activePlot = copy.deepcopy(self.currentPlot)
+
+    def getCells(self):
+
+        # Read geometry.xml
+        celldoc = ET.parse('geometry.xml')
+        cellroot = celldoc.getroot()
+
+        # Create dictionary of cells
+        cells = {}
+        for cell in cellroot.findall('cell'):
+            attr = {}
+            id = cell.attrib['id']
+            if 'name' in cell.attrib:
+                attr['name'] = cell.attrib['name']
+            else:
+                attr['name'] = f"Cell {id}"
+            attr['color'] = None
+            attr['masked'] = False
+            attr['highlighted'] = False
+            cells[id] = attr
+
+        return cells
+
+    def getMaterials(self):
+
+        # Read materials.xml
+        matdoc = ET.parse('materials.xml')
+        matroot = matdoc.getroot()
+
+        # Create dictionary of materials
+        materials = {}
+        for mat in matroot.findall('material'):
+            attr = {}
+            id = mat.attrib['id']
+            if 'name' in mat.attrib:
+                attr['name'] = mat.attrib['name']
+            else:
+                attr['name'] = f"Material {id}"
+            attr['color'] = None
+            attr['masked'] = False
+            attr['highlighted'] = False
+            materials[id] = attr
+
+        return materials
+
+    def getDefaultPlot(self):
+
+        # Read geometry.xml
+        geom = openmc.Geometry.from_xml('geometry.xml')
+        lower_left, upper_right = geom.bounding_box
+
+        # Check for valid dimension
+        if -np.inf not in lower_left[:2] and np.inf not in upper_right[:2]:
+            xcenter = (upper_right[0] + lower_left[0])/2
+            width = abs(upper_right[0] - lower_left[0])
+            ycenter = (upper_right[1] + lower_left[1])/2
+            height = abs(upper_right[1] - lower_left[1])
+        else:
+            xcenter, ycenter, width, height = (0.00, 0.00, 25, 25)
+
+        if  lower_left[2] != -np.inf and upper_right[2] != np.inf:
+            zcenter = (upper_right[2] + lower_left[2])/2
+        else:
+            zcenter = 0.00
+
+        # Generate default plot values
+        default = {'xOr': xcenter, 'yOr': ycenter, 'zOr': zcenter,
+                   'colorby': 'material', 'basis': 'xy',
+                   'width': width + 2, 'height': height + 2,
+                   'hRes': 500, 'vRes': 500,
+                   'cells': copy.deepcopy(self.cells),
+                   'materials': copy.deepcopy(self.materials),
+                   'mask': False, 'maskbg': 'black',
+                   'highlight': False, 'highlightbg': 'grey',
+                   'highlightalpha': 0.5, 'highlightseed': 1,
+                   'plotbackground': 'black'}
+
+        return default
+
+    def generatePlot(self):
+
+        self.currentPlot = copy.deepcopy(self.activePlot)
+
+        ap = self.activePlot
+
+        # Generate plot.xml
+        plot = openmc.Plot()
+        plot.filename = 'plot'
+        plot.color_by = ap['colorby']
+        plot.basis = ap['basis']
+        plot.origin = (ap['xOr'], ap['yOr'], ap['zOr'])
+        plot.width = (ap['width'], ap['height'])
+        plot.pixels = (ap['hRes'], ap['vRes'])
+
+        # Cell Colors
+        cell_colors = {}
+        for id, attr in ap['cells'].items():
+            if attr['color']:
+                cell_colors[openmc.Cell(int(id))] = attr['color']
+
+        # Material Colors
+        mat_colors = {}
+        for id, attr in ap['materials'].items():
+            if attr['color']:
+                mat_colors[openmc.Material(int(id))] = attr['color']
+
+        if ap['colorby'] == 'cell':
+            plot.colors = cell_colors
+        else:
+            plot.colors = mat_colors
+
+        # Masking options
+        if ap['mask']:
+            cell_mask_components = []
+            for cell in ap['cells']:
+                if not cell['masked']:
+                    cell_mask_components.append(openmc.Cell(int(cell)))
+            material_mask_compenents = []
+            for mat in ap['cells']:
+                if not mat['masked']:
+                    material_mask_compenents.append(openmc.Material(int(mat)))
+            if ap['colorby'] == 'cell':
+                plot.mask_components = cell_mask_components
+            else:
+                plot.mask_components = material_mask_compenents
+            plot.mask_background = ap['maskbg']
+
+        # Highlight options
+        if ap['highlight']:
+            highlighted_cells = []
+            for cell in ap['cells']:
+                if cell['highlighted']:
+                    highlighted_cells.append(openmc.Cell(int(cell)))
+            highlighted_materials = []
+            for mat in ap['materials']:
+                if material['highlighted']:
+                    highlighted_materials.append(openmc.Material(int(mat)))
+            if ap['colorby'] == 'cell':
+                domains = highlighted_cells
+            else:
+                domains = highlighted_materials
+            background = ap['highlightbg']
+            alpha = ap['highlightalpha']
+            seed = ap['highlightseed']
+            plot.highlight_domains(1, domains, seed, alpha, background)
+
+        plot.background = ap['plotbackground']
+
+        # Generate plot.xml
+        plots = openmc.Plots([plot])
+        plots.export_to_xml()
+        openmc.plot_geometry()
+
+    def undo(self):
+        self.subsequentPlots.append(copy.deepcopy(self.currentPlot))
+        self.activePlot = self.previousPlots.pop()
+        self.generatePlot()
+
+    def redo(self):
+        self.storeCurrent()
+        self.activePlot = self.subsequentPlots.pop()
+        self.generatePlot()
+
+    def storeCurrent(self):
+        self.previousPlots.append(copy.deepcopy(self.currentPlot))
