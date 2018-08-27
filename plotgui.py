@@ -388,7 +388,7 @@ class PlotImage(QLabel):
 
         self.scale = self.updateScale()
         self.basisX, self.basisY = (None, None)
-
+ 
     def updateScale(self):
         # Determine Scale of image / plot
         scale = (self.model.currentPlot['hRes'] /
