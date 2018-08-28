@@ -1,26 +1,15 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import sys, openmc, copy
+import sys, openmc, copy, struct
 import numpy as np
 import xml.etree.ElementTree as ET
-
  
 class PlotModel():
     def __init__(self):
 
         self.cells = self.getCells()
         self.materials = self.getMaterials()
-
-        self.maskingActive = False
-        self.maskBackground = 'black'
-
-        self.highlightsActive = False
-        self.highlightBackground = 'grey'
-        self.highlightAlpha = 0.5
-        self.highlightSeed = 1
-
-        self.plotBackground = 'black'
 
         self.previousPlots = []
         self.subsequentPlots = []
@@ -74,8 +63,8 @@ class PlotModel():
     def getDefaultPlot(self):
 
         # Read geometry.xml
-        geom = openmc.Geometry.from_xml('geometry.xml')
-        lower_left, upper_right = geom.bounding_box
+        self.geom = openmc.Geometry.from_xml('geometry.xml')
+        lower_left, upper_right = self.geom.bounding_box
 
         # Check for valid dimension
         if -np.inf not in lower_left[:2] and np.inf not in upper_right[:2]:
@@ -98,10 +87,10 @@ class PlotModel():
                    'hRes': 500, 'vRes': 500,
                    'cells': copy.deepcopy(self.cells),
                    'materials': copy.deepcopy(self.materials),
-                   'mask': False, 'maskbg': 'black',
-                   'highlight': False, 'highlightbg': 'grey',
+                   'mask': True, 'maskbg': (0, 0, 0),
+                   'highlight': True, 'highlightbg': (125, 125, 125),
                    'highlightalpha': 0.5, 'highlightseed': 1,
-                   'plotbackground': 'black'}
+                   'plotbackground': (0, 0, 0)}
 
         return default
 
@@ -140,12 +129,12 @@ class PlotModel():
         # Masking options
         if ap['mask']:
             cell_mask_components = []
-            for cell in ap['cells']:
-                if not cell['masked']:
+            for cell, attr in ap['cells'].items():
+                if not attr['masked']:
                     cell_mask_components.append(openmc.Cell(int(cell)))
             material_mask_compenents = []
-            for mat in ap['cells']:
-                if not mat['masked']:
+            for mat, attr in ap['materials'].items():
+                if not attr['masked']:
                     material_mask_compenents.append(openmc.Material(int(mat)))
             if ap['colorby'] == 'cell':
                 plot.mask_components = cell_mask_components
@@ -156,12 +145,12 @@ class PlotModel():
         # Highlight options
         if ap['highlight']:
             highlighted_cells = []
-            for cell in ap['cells']:
-                if cell['highlighted']:
+            for cell, attr in ap['cells'].items():
+                if attr['highlighted']:
                     highlighted_cells.append(openmc.Cell(int(cell)))
             highlighted_materials = []
-            for mat in ap['materials']:
-                if material['highlighted']:
+            for mat, attr in ap['materials'].items():
+                if attr['highlighted']:
                     highlighted_materials.append(openmc.Material(int(mat)))
             if ap['colorby'] == 'cell':
                 domains = highlighted_cells
@@ -170,7 +159,8 @@ class PlotModel():
             background = ap['highlightbg']
             alpha = ap['highlightalpha']
             seed = ap['highlightseed']
-            plot.highlight_domains(1, domains, seed, alpha, background)
+
+            plot.highlight_domains(self.geom, domains, seed, alpha, background)
 
         plot.background = ap['plotbackground']
 

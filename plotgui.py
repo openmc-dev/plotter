@@ -8,15 +8,16 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QSpinBox, QDoubleSpinBox, QSizePolicy, QSpacerItem, QMainWindow,
     QCheckBox, QScrollArea, QLayout, QRubberBand, QMenu, QAction, QMenuBar,
     QFileDialog, QDialog, QTabWidget, QGridLayout, QToolButton, QColorDialog,
-    QDialogButtonBox)
+    QDialogButtonBox, QFrame)
 from plotmodel import PlotModel
-
+ 
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
 
         # Set Window Title
         self.setWindowTitle('OpenMC Plot Explorer')
+        self.move(100,100)
 
         # Create model
         self.model = PlotModel()
@@ -30,8 +31,10 @@ class MainWindow(QMainWindow):
         # Create layout:
         self.createLayout()
 
-        # Initiate color dialog object name
-        self.colorDialog = None
+        # Initiate color dialog
+        self.colorDialog = ColorDialog(self.model, self.applyChanges, self)
+        self.colorDialog.move(600, 200)
+        self.colorDialog.hide()
 
         # Create, set main widget
         mainWidget = QWidget()
@@ -44,75 +47,6 @@ class MainWindow(QMainWindow):
         self.updateControls(self.model.currentPlot)
 
         self.showStatusPlot()
-
-    def undo(self):
-
-        self.model.undo()
-        self.showCurrentPlot()
-        self.updateControls(self.model.activePlot)
-
-        if not self.model.previousPlots:
-            self.undoAction.setDisabled(True)
-
-        self.redoAction.setDisabled(False)
-
-    def redo(self):
-
-        self.model.redo()
-        self.showCurrentPlot()
-        self.updateControls(self.model.activePlot)
-
-        if not self.model.subsequentPlots:
-            self.redoAction.setDisabled(True)
-
-        self.undoAction.setDisabled(False)
-
-    def showCurrentPlot(self):
-
-        self.plotIm.scale = self.plotIm.updateScale()
-        self.updateRelativeBases()
-
-        # Update plot image
-        self.pixmap = QtGui.QPixmap('plot.ppm')
-        self.plotIm.setPixmap(self.pixmap)
-        self.plotIm.adjustSize()
-
-        self.adjustWindow()
-
-        if self.model.previousPlots:
-            self.undoAction.setDisabled(False)
-
-        if self.model.subsequentPlots:
-            self.redoAction.setDisabled(False)
-        else:
-            self.redoAction.setDisabled(True)
-
-    def updateRelativeBases(self):
-        # Determine image axes relative to plot
-        if self.model.currentPlot['basis'][0] == 'x':
-            basisX = ('xOr', self.xOr)
-        else:
-            basisX = ('yOr', self.yOr)
-        if self.model.currentPlot['basis'][1] == 'y':
-            basisY = ('yOr', self.yOr)
-        else:
-            basisY = ('zOr', self.zOr)
-        self.plotIm.basisX = basisX
-        self.plotIm.basisY = basisY
-
-    def updateControls(self, plot, include_options=True):
-
-        # Show plot values in GUI controls
-        self.xOr.setText(str(plot['xOr']))
-        self.yOr.setText(str(plot['yOr']))
-        self.zOr.setText(str(plot['zOr']))
-        self.width.setValue(plot['width'])
-        self.height.setValue(plot['height'])
-        if include_options:
-            self.colorby.setCurrentText(plot['colorby'])
-            self.basis.setCurrentText(plot['basis'])
-            self.hRes.setValue(plot['hRes'])
-            self.vRes.setValue(plot['vRes'])
 
     def createMenuBar(self):
 
@@ -200,13 +134,11 @@ class MainWindow(QMainWindow):
         self.yOr.setText(str(cp['yOr']))
         self.yOr.setPlaceholderText('0.00')
 
-
         # Z Origin
         self.zOr = QLineEdit()
         self.zOr.setValidator(QtGui.QDoubleValidator())
         self.zOr.setText(str(cp['zOr']))
         self.zOr.setPlaceholderText('0.00')
-
 
         # Origin Form Layout
         self.orLayout = QFormLayout()
@@ -239,6 +171,7 @@ class MainWindow(QMainWindow):
         self.colorby = QComboBox(self)
         self.colorby.addItem("material")
         self.colorby.addItem("cell")
+        self.colorby.currentTextChanged.connect(self.changeColorBy)
 
         # Basis
         self.basis = QComboBox(self)
@@ -248,7 +181,7 @@ class MainWindow(QMainWindow):
 
         # Advanced Color Options
         self.colorOptionsButton = QPushButton('Color Options...')
-        #self.colorOptionsButton.clicked.connect(self.loadColorOptions)
+        self.colorOptionsButton.clicked.connect(self.showColorDialog)
 
         # Options Form Layout
         self.opLayout = QFormLayout()
@@ -297,6 +230,83 @@ class MainWindow(QMainWindow):
         self.resGroupBox = QGroupBox("RESOLUTION")
         self.resGroupBox.setLayout(self.resLayout)
 
+    def undo(self):
+
+        self.model.undo()
+        self.showCurrentPlot()
+        self.updateControls(self.model.activePlot)
+        self.colorDialog.updateDialogValues()
+
+        if not self.model.previousPlots:
+            self.undoAction.setDisabled(True)
+
+        self.redoAction.setDisabled(False)
+
+    def redo(self):
+
+        self.model.redo()
+        self.showCurrentPlot()
+        self.updateControls(self.model.activePlot)
+        self.colorDialog.updateDialogValues()
+
+
+        if not self.model.subsequentPlots:
+            self.redoAction.setDisabled(True)
+
+        self.undoAction.setDisabled(False)
+
+    def changeColorBy(self):
+
+        colorby = self.colorby.currentText()
+        self.colorDialog.colorbyBox.setCurrentText(colorby)
+
+    def showCurrentPlot(self):
+
+        self.plotIm.scale = self.plotIm.updateScale()
+        self.updateRelativeBases()
+
+        # Update plot image
+        self.pixmap = QtGui.QPixmap('plot.ppm')
+        self.plotIm.setPixmap(self.pixmap)
+        self.plotIm.adjustSize()
+
+        self.adjustWindow()
+
+        if self.model.previousPlots:
+            self.undoAction.setDisabled(False)
+
+        if self.model.subsequentPlots:
+            self.redoAction.setDisabled(False)
+        else:
+            self.redoAction.setDisabled(True)
+
+    def updateRelativeBases(self):
+        # Determine image axes relative to plot
+        if self.model.currentPlot['basis'][0] == 'x':
+            basisX = ('xOr', self.xOr)
+        else:
+            basisX = ('yOr', self.yOr)
+        if self.model.currentPlot['basis'][1] == 'y':
+            basisY = ('yOr', self.yOr)
+        else:
+            basisY = ('zOr', self.zOr)
+        self.plotIm.basisX = basisX
+        self.plotIm.basisY = basisY
+
+    def updateControls(self, plot, include_options=True):
+
+        # Show plot values in GUI controls
+        self.xOr.setText(str(plot['xOr']))
+        self.yOr.setText(str(plot['yOr']))
+        self.zOr.setText(str(plot['zOr']))
+        self.width.setValue(plot['width'])
+        self.height.setValue(plot['height'])
+        if include_options:
+            self.colorby.setCurrentText(plot['colorby'])
+            self.basis.setCurrentText(plot['basis'])
+            self.hRes.setValue(plot['hRes'])
+            self.vRes.setValue(plot['vRes'])
+
     def applyChanges(self):
 
         # Convert origin values to float
@@ -317,9 +327,13 @@ class MainWindow(QMainWindow):
         self.model.activePlot['hRes'] = self.hRes.value()
         self.model.activePlot['vRes'] = self.vRes.value()
 
+        self.model.activePlot['highlightalpha'] = self.colorDialog.alphaBox.value()
+        self.model.activePlot['highlightseed'] = self.colorDialog.seedBox.value()
+
         # Check that active plot is different from current plot
         if self.model.activePlot != self.model.currentPlot:
             self.model.storeCurrent()
+
             # Clear subsequentPlots
             self.model.subsequentPlots = []
 
@@ -372,6 +386,11 @@ class MainWindow(QMainWindow):
         else:
             self.frame.setMinimumHeight(20)
 
+    def showColorDialog(self):
+        self.colorDialog.show()
+        self.colorDialog.raise_()
+        self.colorDialog.activateWindow()
+
 class PlotImage(QLabel):
     def __init__(self, model):
         super(PlotImage, self).__init__()
@@ -388,7 +407,7 @@ class PlotImage(QLabel):
 
         self.scale = self.updateScale()
         self.basisX, self.basisY = (None, None)
- 
+
     def updateScale(self):
         # Determine Scale of image / plot
         scale = (self.model.currentPlot['hRes'] /
@@ -492,10 +511,619 @@ class PlotImage(QLabel):
         else:
             mainWindow.updateControls(self.model.currentPlot, False)
 
+class ColorDialog(QDialog):
+    def __init__(self, model, applyChanges, parent=None):
+        super(ColorDialog, self).__init__(parent)
+
+        #self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.model = model
+        self.applyChanges = applyChanges
+
+        self.matColorButtons = {}
+        self.matColorLabels = {}
+        self.matMaskedChecks = {}
+        self.matHighlightChecks = {}
+        self.cellColorButtons = {}
+        self.cellColorLabels = {}
+        self.cellMaskedChecks = {}
+        self.cellHighlightChecks = {}
+
+        self.createDialogLayout()
+
+    def createDialogLayout(self):
+
+        self.colorDialogLayout = QVBoxLayout()
+
+        # Tabs
+        self.tabs = QTabWidget()
+        self.cellTab = self.createCellsTab()
+        self.matTab = self.createMaterialsTab()
+        self.generalTab = self.createGeneralTab()
+        self.tabs.addTab(self.generalTab, 'General')
+        self.tabs.addTab(self.cellTab, 'Cells')
+        self.tabs.addTab(self.matTab, 'Materials')
+
+        self.createButtonBox()
+
+        self.colorDialogLayout.addWidget(self.tabs)
+        self.colorDialogLayout.addStretch(1)
+        self.colorDialogLayout.addWidget(self.buttonBox)
+
+        self.updateDialogValues()
+
+        self.setLayout(self.colorDialogLayout)
+
+    def createGeneralTab(self):
+
+        # Masking options
+        self.maskCheck = QPushButton('Enabled')
+        self.maskCheck.setCheckable(True)
+        self.maskCheck.clicked.connect(self.toggleMask)
+
+        self.maskColorButton = QPushButton()
+        self.maskColorButton.setFixedWidth(FM.width("XXX"))
+        self.maskColorButton.setFixedHeight(FM.height() * 1.5)
+        self.maskColorButton.clicked.connect(self.changeColorMask)
+
+        self.maskColorRGB = QLabel(str(self.model.currentPlot['maskbg']))
+        self.maskColorRGB.setMinimumWidth(FM.width("(XXX, XXX, XXX)"))
+        maskColorLayout = QHBoxLayout()
+        maskColorLayout.addWidget(self.maskColorButton)
+        maskColorLayout.addWidget(self.maskColorRGB)
+        maskColorLayout.addStretch(1)
+
+        # Highlighting options
+        self.hlCheck = QPushButton('Enabled')
+        self.hlCheck.setCheckable(True)
+        self.hlCheck.clicked.connect(self.toggleHL)
+        self.hlCheck.toggle()
+        self.toggleHL()
+
+        self.hlColorButton = QPushButton()
+        self.hlColorButton.setFixedWidth(FM.width("XXX"))
+        self.hlColorButton.setFixedHeight(FM.height() * 1.5)
+        self.hlColorButton.clicked.connect(self.changeColorHL)
+
+        self.hlColorRGB = QLabel(str(self.model.currentPlot['highlightbg']))
+        self.hlColorRGB.setMinimumWidth(FM.width("(XXX, XXX, XXX)"))
+        hlLayout = QHBoxLayout()
+        hlLayout.addWidget(self.hlColorButton)
+        hlLayout.addWidget(self.hlColorRGB)
+        hlLayout.addStretch(1)
+
+        self.alphaBox = QDoubleSpinBox()
+        self.alphaBox.setRange(0, 1)
+        self.alphaBox.setSingleStep(.05)
+        self.alphaBox.setValue(self.model.currentPlot['highlightalpha'])
+        alphaLayout = QHBoxLayout()
+        alphaLayout.addWidget(self.alphaBox)
+        alphaLayout.addStretch(1)
+
+        self.seedBox = QSpinBox()
+        self.seedBox.setRange(1, 999)
+        self.seedBox.setValue(self.model.currentPlot['highlightseed'])
+        seedLayout = QHBoxLayout()
+        seedLayout.addWidget(self.seedBox)
+        seedLayout.addStretch(1)
+
+        # General options
+        self.bgButton = QPushButton()
+        self.bgButton.setFixedWidth(FM.width("XXX"))
+        self.bgButton.setFixedHeight(FM.height() * 1.5)
+        self.bgButton.clicked.connect(self.changePlotBG)
+
+        self.bgLabelRGB = QLabel(str(self.model.currentPlot['plotbackground']))
+        self.bgLabelRGB.setMinimumWidth(FM.width("(XXX, XXX, XXX)"))
+        bgLayout = QHBoxLayout()
+        bgLayout.addWidget(self.bgButton)
+        bgLayout.addWidget(self.bgLabelRGB)
+        bgLayout.addStretch(1)
+
+        self.colorbyBox = QComboBox(self)
+        self.colorbyBox.addItem("material")
+        self.colorbyBox.addItem("cell")
+        self.colorbyBox.currentTextChanged.connect(self.changeColorBy)
+
+        formLayout = QFormLayout()
+        formLayout.setAlignment(QtCore.Qt.AlignHCenter)
+        formLayout.setFormAlignment(QtCore.Qt.AlignHCenter)
+        #formLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        #formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
+
+        formLayout.addRow('Masking:', self.maskCheck)
+        formLayout.addRow('Mask Background Color:', maskColorLayout)
+        formLayout.addRow(HorizontalLine())
+        formLayout.addRow('Highlighting:', self.hlCheck)
+        formLayout.addRow('Highlight Background Color:', hlLayout)
+        formLayout.addRow('Highlight Alpha:', alphaLayout)
+        formLayout.addRow('Highlight Seed:', seedLayout)
+        formLayout.addRow(HorizontalLine())
+        formLayout.addRow('Plot Background Color:', bgLayout)
+        formLayout.addRow('Color Plot By:', self.colorbyBox)
+        #formLayout.addStretch(1)
+
+        generalTab = QWidget()
+        generalLayout = QHBoxLayout()
+
+        innerWidget = QWidget()
+        innerWidget.setLayout(formLayout)
+
+        generalLayout.addStretch(1)
+        generalLayout.addWidget(innerWidget)
+        generalLayout.addStretch(1)
+
+        generalTab.setLayout(generalLayout)
+
+        return generalTab
+
+    def createCellsTab(self):
+
+        cellTab = QScrollArea()
+        cellTab.setAlignment(QtCore.Qt.AlignCenter)
+        #cellTab.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+
+        gridWidget = QWidget()
+        gridLayout = QGridLayout()
+        gridLayout.setAlignment(QtCore.Qt.AlignCenter)
+        gridLayout.setColumnStretch(1, 4)
+        gridLayout.setColumnStretch(3,1)
+        gridLayout.setRowStretch(0, 0)
+
+        self.cellMaskHeader = QLabel('Mask')
+        self.cellHighLightHeader = QLabel('Highlight')
+
+        for col, header in enumerate(['ID:', 'Name:', 'Color:', '']):
+            gridLayout.addWidget(QLabel(header), 0, col)
+        gridLayout.addWidget(self.cellMaskHeader, 0, 4)
+        gridLayout.addWidget(self.cellHighLightHeader, 0, 5)
+
+        row = 1
+        for id, attr in self.model.activePlot['cells'].items():
+
+            # ID Label
+            idLabel = QLabel(id)
+            idLabel.setMinimumWidth(FM.width("999"))
+
+            # Name Label
+            nameLabel = QLabel(attr['name'])
+            nameLabel.setMinimumWidth(FM.width("XXXXXXXXXXXX"))
+
+            # Color Button
+            button = QPushButton()
+            button.setFixedSize(40, 20)
+            self.cellColorButtons[id] = button
+
+            # Color Label
+            if attr['color']:
+                label = QLabel(str(attr['color']))
+            else:
+                label = QLabel('Default')
+            label.setMinimumWidth(FM.width("(999, 999, 999)"))
+            self.cellColorLabels[id] = label
+
+            # Masked Check
+            maskedcheck = QCheckBox()
+            self.cellMaskedChecks[id] = maskedcheck
+
+            # Highlight Check
+            hlcheck = QCheckBox()
+            self.cellHighlightChecks[id] = hlcheck
+
+            # Add Connections
+            button.clicked.connect(lambda id=id: self.changeCellColor(id))
+            maskedcheck.stateChanged.connect(lambda state, id=id:
+                                             self.changeCellMask(state, id))
+            hlcheck.stateChanged.connect(lambda state, id=id:
+                                         self.changeCellHL(state, id))
+
+            # Layout Row
+            gridLayout.addWidget(idLabel, row, 0)
+            gridLayout.addWidget(nameLabel, row, 1)
+            gridLayout.addWidget(button, row, 2, QtCore.Qt.AlignCenter)
+            gridLayout.addWidget(label, row, 3)
+            gridLayout.addWidget(maskedcheck, row, 4, QtCore.Qt.AlignCenter)
+            gridLayout.addWidget(hlcheck, row, 5, QtCore.Qt.AlignCenter)
+            row += 1
+
+        gridWidget.setLayout(gridLayout)
+        cellTab.setWidget(gridWidget)
+
+        return cellTab
+
+    def createMaterialsTab(self):
+        matTab = QScrollArea()
+        matTab.setAlignment(QtCore.Qt.AlignCenter)
+        #matTab.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+
+        gridWidget = QWidget()
+        gridLayout = QGridLayout()
+        gridLayout.setAlignment(QtCore.Qt.AlignCenter)
+        gridLayout.setColumnStretch(1, 4)
+        gridLayout.setColumnStretch(3,1)
+        gridLayout.setRowStretch(0, 0)
+
+        self.matMaskHeader = QLabel('Mask')
+        self.matHighLightHeader = QLabel('Highlight')
+
+        for col, header in enumerate(['ID:', 'Name:', 'Color:', '']):
+            gridLayout.addWidget(QLabel(header), 0, col)
+        gridLayout.addWidget(self.matMaskHeader, 0, 4)
+        gridLayout.addWidget(self.matHighLightHeader, 0, 5)
+
+        row = 1
+        for id, attr in self.model.activePlot['materials'].items():
+
+            # ID Label
+            idLabel = QLabel(id)
+            idLabel.setMinimumWidth(FM.width("999"))
+
+            # Name Label
+            nameLabel = QLabel(attr['name'])
+            nameLabel.setMinimumWidth(FM.width("XXXXXXXXXXXX"))
+
+            # Color Button
+            button = QPushButton()
+            button.setFixedSize(40, 20)
+            self.matColorButtons[id] = button
+
+            # Color Label
+            if attr['color']:
+                label = QLabel(str(attr['color']))
+            else:
+                label = QLabel('Default')
+            label.setMinimumWidth(FM.width("(999, 999, 999)"))
+            self.matColorLabels[id] = label
+
+            # Masked Check
+            maskedcheck = QCheckBox()
+            self.matMaskedChecks[id] = maskedcheck
+
+            # Highlight Check
+            hlcheck = QCheckBox()
+            self.matHighlightChecks[id] = hlcheck
+
+            # Add Connections
+            button.clicked.connect(lambda id=id: self.changeMatColor(id))
+            maskedcheck.stateChanged.connect(lambda state, id=id:
+                                             self.changeMatMask(state, id))
+            hlcheck.stateChanged.connect(lambda state, id=id:
+                                         self.changeMatHL(state, id))
+
+            # Layout Row
+            gridLayout.addWidget(idLabel, row, 0)
+            gridLayout.addWidget(nameLabel, row, 1)
+            gridLayout.addWidget(button, row, 2, QtCore.Qt.AlignCenter)
+            gridLayout.addWidget(label, row, 3)
+            gridLayout.addWidget(maskedcheck, row, 4, QtCore.Qt.AlignCenter)
+            gridLayout.addWidget(hlcheck, row, 5, QtCore.Qt.AlignCenter)
+            row += 1
+
+        gridWidget.setLayout(gridLayout)
+        matTab.setWidget(gridWidget)
+
+        return matTab
+
+    def createDomainTab(self, domain):
+        domainTab = QScrollArea()
+        domainTab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        domainTab.setWidgetResizable(True)
+
+        gridWidget = QWidget()
+        gridWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        gridLayout = QGridLayout(gridWidget)
+        gridLayout.setColumnStretch(1, 4)
+        gridLayout.setColumnStretch(3,1)
+        gridLayout.setRowStretch(0, 0)
+        #gridLayout.setVerticalSpacing(5)
+        #gridLayout.setHorizontalSpacing(15)
+
+        if domain == self.model.activePlot['cells']:
+            kind = 'cells'
+            groups = [self.cellColorButtons, self.cellColorLabels,
+                      self.cellMaskedChecks, self.cellHighlightChecks]
+        else:
+            kind = 'materials'
+            groups = [self.matColorButtons, self.matColorLabels,
+                      self.matMaskedChecks, self.matHighlightChecks]
+
+        for col, header in enumerate(['ID:', 'Name:', 'Color:', '',
+                                      'Mask:', 'Highlight:']):
+            gridLayout.addWidget(QLabel(header), 0, col)
+
+        row = 1
+        for id, attr in domain.items():
+
+            # ID Label
+            gridLayout.addWidget(QLabel(id), row, 0)
+
+            # Name Label
+            gridLayout.addWidget(QLabel(attr['name']), row, 1)
+
+            # Color Button
+            button = QPushButton()
+            button.setFixedSize(24, 24)
+            button.clicked.connect(lambda id=id, kind=kind:
+                                   self.changeColor(id, kind))
+            groups[0][id] = button
+            gridLayout.addWidget(button, row, 2, QtCore.Qt.AlignCenter)
+
+            # Color Label
+            if attr['color']:
+                label = QLabel(str(attr['color']))
+            else:
+                label = QLabel('Default')
+            label.setMinimumWidth(100)
+            groups[1][id] = label
+            gridLayout.addWidget(label, row, 3)
+
+            # Masked Check
+            maskedcheck = QCheckBox()
+            maskedcheck.stateChanged.connect(lambda state, id=id, kind=kind:
+                self.changeMask(state, id, kind))
+            groups[2][id] = maskedcheck
+            gridLayout.addWidget(maskedcheck, row, 4, QtCore.Qt.AlignCenter)
+
+            # Highlight Check
+            hlcheck = QCheckBox()
+            hlcheck.stateChanged.connect(lambda state, id=id, kind=kind:
+                self.changeHL(state, id, kind))
+            groups[3][id] = hlcheck
+            gridLayout.addWidget(hlcheck, row, 5, QtCore.Qt.AlignCenter)
+
+            row += 1
+
+        domainTab.setMaximumHeight(gridWidget.height())
+        domainTab.setWidget(gridWidget)
+
+        return domainTab
+
+    def createButtonBox(self):
+        self.buttonBox = QWidget()
+        buttonLayout = QHBoxLayout()
+        applyButton = QPushButton("Apply Changes")
+        closeButton = QPushButton("Close")
+        applyButton.clicked.connect(self.applyChanges)
+        closeButton.clicked.connect(self.hide)
+        buttonLayout.addStretch(1)
+        buttonLayout.addWidget(applyButton)
+        buttonLayout.addWidget(closeButton)
+        self.buttonBox.setLayout(buttonLayout)
+
+    def toggleMask(self):
+        if self.maskCheck.isChecked():
+            self.maskCheck.setText('Disabled')
+            self.model.activePlot['mask'] = False
+            self.cellMaskHeader.setDisabled(True)
+            self.matMaskHeader.setDisabled(True)
+            for check in self.matMaskedChecks.values():
+                check.setDisabled(True)
+            for check in self.cellMaskedChecks.values():
+                check.setDisabled(True)
+        else:
+            self.maskCheck.setText('Enabled')
+            self.model.activePlot['mask'] = True
+            self.cellMaskHeader.setDisabled(False)
+            self.matMaskHeader.setDisabled(False)
+            for check in self.matMaskedChecks.values():
+                check.setDisabled(False)
+            for check in self.cellMaskedChecks.values():
+                check.setDisabled(False)
+
+    def toggleHL(self):
+        if self.hlCheck.isChecked():
+            self.hlCheck.setText('Disabled')
+            self.model.activePlot['highlight'] = False
+            self.cellHighLightHeader.setDisabled(True)
+            self.matHighLightHeader.setDisabled(True)
+            for check in self.matHighlightChecks.values():
+                check.setDisabled(True)
+            for check in self.cellHighlightChecks.values():
+                check.setDisabled(True)
+        else:
+            self.hlCheck.setText('Enabled')
+            self.model.activePlot['highlight'] = True
+            self.cellHighLightHeader.setDisabled(False)
+            self.matHighLightHeader.setDisabled(False)
+            for check in self.matHighlightChecks.values():
+                check.setDisabled(False)
+            for check in self.cellHighlightChecks.values():
+                check.setDisabled(False)
+
+    def changeColorMask(self):
+        current_color = self.model.activePlot['maskbg']
+        dlg = QColorDialog(self)
+        dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
+        if dlg.exec_():
+            new_color = dlg.currentColor().getRgb()[:3]
+            self.model.activePlot['maskbg'] = new_color
+            self.maskColorButton.setStyleSheet("background-color: rgb%s" % (str(new_color)))
+            self.maskColorRGB.setText(str(new_color))
+
+        self.raise_()
+        self.activateWindow()
+
+    def changeColorHL(self):
+        current_color = self.model.activePlot['highlightbg']
+        dlg = QColorDialog(self)
+        dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
+        if dlg.exec_():
+            new_color = dlg.currentColor().getRgb()[:3]
+            self.model.activePlot['highlightbg'] = new_color
+            self.hlColorButton.setStyleSheet("background-color: rgb%s" % (str(new_color)))
+            self.hlColorRGB.setText(str(new_color))
+
+        self.raise_()
+        self.activateWindow()
+
+    def changePlotBG(self):
+        current_color = self.model.activePlot['plotbackground']
+        dlg = QColorDialog(self)
+        dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
+        if dlg.exec_():
+            new_color = dlg.currentColor().getRgb()[:3]
+            self.model.activePlot['plotbackground'] = new_color
+            self.bgButton.setStyleSheet("background-color: rgb%s" % (str(new_color)))
+            self.bgLabelRGB.setText(str(new_color))
+        self.raise_()
+        self.activateWindow()
+
+    def changeColorBy(self):
+        selection = self.colorbyBox.currentText()
+        mainWindow.colorby.setCurrentText(selection)
+
+    def changeCellColor(self, id):
+
+        dlg = QColorDialog(self)
+        current_color = self.model.activePlot['cells'][id]['color']
+
+        if current_color is not None:
+            dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
+        if dlg.exec_():
+            new_color = dlg.currentColor().getRgb()[:3]
+            self.model.activePlot['cells'][id]['color'] = new_color
+            self.updateCellColors()
+
+        self.raise_()
+        self.activateWindow()
+
+    def changeMatColor(self, id):
+
+        dlg = QColorDialog(self)
+        current_color = self.model.activePlot['materials'][id]['color']
+
+        if current_color is not None:
+            dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
+        if dlg.exec_():
+            new_color = dlg.currentColor().getRgb()[:3]
+            self.model.activePlot['materials'][id]['color'] = new_color
+            self.updateMatColors()
+
+        self.raise_()
+        self.activateWindow()
+
+    def changeCellMask(self, state, id):
+
+        if state == QtCore.Qt.Checked:
+            self.model.activePlot['cells'][id]['masked'] = True
+        else:
+            self.model.activePlot['cells'][id]['masked'] = False
+
+    def changeMatMask(self, state, id):
+
+        if state == QtCore.Qt.Checked:
+            self.model.activePlot['materials'][id]['masked'] = True
+        else:
+            self.model.activePlot['materials'][id]['masked'] = False
+
+    def changeCellHL(self, state, id):
+        if state == QtCore.Qt.Checked:
+            self.model.activePlot['cells'][id]['highlighted'] = True
+        else:
+            self.model.activePlot['cells'][id]['highlighted'] = False
+
+    def changeMatHL(self, state, id):
+        if state == QtCore.Qt.Checked:
+            self.model.activePlot['materials'][id]['highlighted'] = True
+        else:
+            self.model.activePlot['materials'][id]['highlighted'] = False
+
+    def updateDialogValues(self):
+        self.updateCellColors()
+        self.updateMatColors()
+        self.updateChecks(self.model.activePlot['cells'])
+        self.updateChecks(self.model.activePlot['materials'])
+        self.updateGeneralTab()
+
+    def updateGeneralTab(self):
+
+        self.maskCheck.setChecked(not self.model.activePlot['mask'])
+        self.toggleMask()
+        mask_color = self.model.activePlot['maskbg']
+        self.maskColorButton.setStyleSheet("background-color: rgb%s" % (str(mask_color)))
+        self.maskColorRGB.setText(str(mask_color))
+
+        self.hlCheck.setChecked(not self.model.activePlot['highlight'])
+        self.toggleHL()
+        hl_color = self.model.activePlot['highlightbg']
+        self.hlColorButton.setStyleSheet("background-color: rgb%s" % (str(hl_color)))
+        self.hlColorRGB.setText(str(hl_color))
+        self.alphaBox.setValue(self.model.activePlot['highlightalpha'])
+        self.seedBox.setValue(self.model.activePlot['highlightseed'])
+
+        bg_color = self.model.activePlot['plotbackground']
+        self.bgButton.setStyleSheet("background-color: rgb%s" % (str(bg_color)))
+        self.bgLabelRGB.setText(str(bg_color))
+
+        self.colorbyBox.setCurrentText(self.model.activePlot['colorby'])
+
+    def updateCellColors(self):
+
+        for id, button in self.cellColorButtons.items():
+            color = self.model.activePlot['cells'][id]['color']
+            if color:
+                button.setStyleSheet("background-color: rgb%s" % (str(color)))
+            else:
+                button.setStyleSheet("background-color: 'grey'")
+
+        for id, label in self.cellColorLabels.items():
+            color = self.model.activePlot['cells'][id]['color']
+            if color:
+                label.setText(str(color))
+            else:
+                label.setText('Default')
+
+    def updateMatColors(self):
+
+        for id, button in self.matColorButtons.items():
+            color = self.model.activePlot['materials'][id]['color']
+            if color:
+                button.setStyleSheet("background-color: rgb%s" % (str(color)))
+            else:
+                button.setStyleSheet("background-color: 'grey'")
+
+        for id, label in self.matColorLabels.items():
+            color = self.model.activePlot['materials'][id]['color']
+            if color:
+                label.setText(str(color))
+            else:
+                label.setText('Default')
+
+    def updateChecks(self, domain):
+        if domain == self.model.activePlot['cells']:
+            groups = [self.cellMaskedChecks, self.cellHighlightChecks]
+        else:
+            groups = [self.matMaskedChecks, self.matHighlightChecks]
+
+        for id, checkbox in groups[0].items():
+            if domain[id]['masked']:
+                checkbox.setChecked(True)
+            else:
+                checkbox.setChecked(False)
+
+        for id, checkbox in groups[1].items():
+            if domain[id]['highlighted']:
+                checkbox.setChecked(True)
+            else:
+                checkbox.setChecked(False)
+
+class HorizontalLine(QFrame):
+    def __init__(self):
+        super(HorizontalLine, self).__init__()
+        self.setFrameShape(QFrame.HLine)
+        self.setFrameShadow(QFrame.Sunken)
+
+class ColorButton(QWidget):
+    pass
 
 if __name__ == '__main__':
 
     app = QApplication(sys.argv)
+
+    FM = QtGui.QFontMetricsF(app.font())
+    app.setWindowIcon(QtGui.QIcon('openmc_logo.png'))
+
     mainWindow = MainWindow()
     mainWindow.show()
     sys.exit(app.exec_())
