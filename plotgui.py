@@ -974,6 +974,9 @@ class ColorDialog(QDialog):
             for check in self.cellMaskedChecks.values():
                 check.setDisabled(False)
 
+        self.raise_()
+        self.activateWindow()
+
     def toggleHL(self):
         if self.hlCheck.isChecked():
             self.hlCheck.setText('Disabled')
@@ -993,6 +996,9 @@ class ColorDialog(QDialog):
                 check.setDisabled(False)
             for check in self.cellHighlightChecks.values():
                 check.setDisabled(False)
+
+        self.raise_()
+        self.activateWindow()
 
     def editMaskColor(self):
         current_color = self.model.activePlot['maskbg']
@@ -1036,6 +1042,9 @@ class ColorDialog(QDialog):
         selection = self.colorbyBox.currentText()
         mainWindow.colorby.setCurrentText(selection)
 
+        self.raise_()
+        self.activateWindow()
+
     def editDomainColor(self, id, kind):
 
         if kind == 'Cell':
@@ -1057,6 +1066,9 @@ class ColorDialog(QDialog):
             domain[id]['color'] = new_color
             buttons[id].setStyleSheet("background-color: rgb%s" % (str(new_color)))
             labels[id].setText(str(new_color))
+
+        self.raise_()
+        self.activateWindow()
 
     def toggleDomainMask(self, state, id, kind):
 
@@ -1081,6 +1093,9 @@ class ColorDialog(QDialog):
             domain[id]['highlighted'] = True
         else:
             domain[id]['highlighted'] = False
+
+        self.raise_()
+        self.activateWindow()
 
     def updateDialogValues(self):
 
