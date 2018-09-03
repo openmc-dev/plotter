@@ -8,7 +8,7 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QSpinBox, QDoubleSpinBox, QSizePolicy, QSpacerItem, QMainWindow,
     QCheckBox, QScrollArea, QLayout, QRubberBand, QMenu, QAction, QMenuBar,
     QFileDialog, QDialog, QTabWidget, QGridLayout, QToolButton, QColorDialog,
-    QDialogButtonBox, QFrame, QActionGroup)
+    QDialogButtonBox, QFrame, QActionGroup, QDockWidget)
 from plotmodel import PlotModel
 
 class MainWindow(QMainWindow):
@@ -24,22 +24,30 @@ class MainWindow(QMainWindow):
 
         # Create plot image
         self.plotIm = PlotImage(self.model)
+        self.frame = QScrollArea(self)
+        self.frame.setAlignment(QtCore.Qt.AlignCenter)
+        self.frame.setWidget(self.plotIm)
+        self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setCentralWidget(self.frame)
+
+        # Create Plot Options Dock
+        self.controlDock = QDockWidget('Plot Options Dock', self)
+        self.controlDock.setObjectName('ControlDock')
+        self.controlDock.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.controlDock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea |
+                                    QtCore.Qt.RightDockWidgetArea)
+        self.controlWidget = QWidget()
+        self.createDockLayout()
+        self.controlDock.setWidget(self.controlWidget)
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.controlDock)
 
         # Create menubar
         self.createMenuBar()
-
-        # Create layout:
-        self.createLayout()
 
         # Initiate color dialog
         self.colorDialog = ColorDialog(self.model, self.applyChanges, self)
         self.colorDialog.move(600, 200)
         self.colorDialog.hide()
-
-        # Create, set main widget
-        mainWidget = QWidget()
-        mainWidget.setLayout(self.mainLayout)
-        self.setCentralWidget(mainWidget)
 
         # Load Plot
         self.model.generatePlot()
@@ -94,17 +102,16 @@ class MainWindow(QMainWindow):
         self.editMenu.addAction(self.undoAction)
         self.editMenu.addAction(self.redoAction)
 
+        self.viewMenu = self.mainMenu.addMenu('&View')
+        self.viewDockAction = QAction('Show Plot Options Dock', self)
+        self.viewMenu.addAction(self.viewDockAction)
+        self.viewDockAction.triggered.connect(self.showDock)
+
         self.windowMenu = self.mainMenu.addMenu('&Window')
         self.windowMenu.addAction(self.mainWindowAction)
         self.windowMenu.addAction(self.colorDialogAction)
 
-    def createLayout(self):
-
-        # Scroll Area
-        self.frame = QScrollArea(self)
-        self.frame.setAlignment(QtCore.Qt.AlignCenter)
-        self.frame.setWidget(self.plotIm)
-        self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+    def createDockLayout(self):
 
         # Create Controls
         self.createOriginBox()
@@ -123,11 +130,7 @@ class MainWindow(QMainWindow):
         self.controlLayout.addWidget(self.submitButton)
         self.controlLayout.addStretch()
 
-        # Create main Layout
-        self.mainLayout = QHBoxLayout()
-        self.mainLayout.addWidget(self.frame, 1)
-        self.mainLayout.addLayout(self.controlLayout, 0)
-        self.setLayout(self.mainLayout)
+        self.controlWidget.setLayout(self.controlLayout)
 
     def createOriginBox(self):
 
@@ -277,6 +280,7 @@ class MainWindow(QMainWindow):
 
     def applyChanges(self):
 
+        print ('apply changes')
         self.statusBar().showMessage('Generating Plot...')
 
         # Convert origin values to float
@@ -386,6 +390,7 @@ class MainWindow(QMainWindow):
             f"Color By: {cp['colorby']}  |  Basis: {cp['basis']}")
         self.statusBar().showMessage(message)
 
+
     def adjustWindow(self):
         # Get screen dimensions
         self.screen = app.desktop().screenGeometry()
@@ -401,10 +406,14 @@ class MainWindow(QMainWindow):
         else:
             self.frame.setMinimumHeight(20)
 
+
     def showColorDialog(self):
         self.colorDialog.show()
         self.colorDialog.raise_()
         self.colorDialog.activateWindow()
+
+    def showDock(self):
+        self.controlDock.setVisible(True)
 
 class PlotImage(QLabel):
     def __init__(self, model):
@@ -644,6 +653,8 @@ class PlotImage(QLabel):
 class ColorDialog(QDialog):
     def __init__(self, model, applyChanges, parent=None):
         super(ColorDialog, self).__init__(parent)
+
+        self.setWindowTitle('Advanced Color Options')
 
         #self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
