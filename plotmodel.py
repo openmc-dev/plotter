@@ -4,12 +4,14 @@
 import sys, openmc, copy, struct
 import numpy as np
 import xml.etree.ElementTree as ET
- 
+
 class PlotModel():
     def __init__(self):
 
         self.cells = self.getCells()
         self.materials = self.getMaterials()
+
+        self.ids = self.getIDs()
 
         self.previousPlots = []
         self.subsequentPlots = []
@@ -30,7 +32,7 @@ class PlotModel():
             if 'name' in cell.attrib:
                 attr['name'] = cell.attrib['name']
             else:
-                attr['name'] = f"Cell {id}"
+                attr['name'] = None
             attr['color'] = None
             attr['masked'] = False
             attr['highlighted'] = False
@@ -52,13 +54,23 @@ class PlotModel():
             if 'name' in mat.attrib:
                 attr['name'] = mat.attrib['name']
             else:
-                attr['name'] = f"Material {id}"
+                attr['name'] = None
             attr['color'] = None
             attr['masked'] = False
             attr['highlighted'] = False
             materials[id] = attr
 
         return materials
+
+    def getIDs(self):
+
+        with open('plot_ids.binary', 'rb') as f:
+            px, py, wx, wy = struct.unpack('iidd', f.read(4*2 + 8*2))
+            ids = np.zeros((py, px), dtype=int)
+            for i in range(py):
+                ids[i] = struct.unpack('{}i'.format(px), f.read(4*px))
+
+        return ids
 
     def getDefaultPlot(self):
 
@@ -84,13 +96,12 @@ class PlotModel():
         default = {'xOr': xcenter, 'yOr': ycenter, 'zOr': zcenter,
                    'colorby': 'material', 'basis': 'xy',
                    'width': width + 2, 'height': height + 2,
-                   'hRes': 500, 'vRes': 500,
-                   'cells': copy.deepcopy(self.cells),
-                   'materials': copy.deepcopy(self.materials),
+                   'hRes': 500, 'vRes': 500, 'aspectlock': True,
+                   'cells': self.cells, 'materials': self.materials,
                    'mask': True, 'maskbg': (0, 0, 0),
-                   'highlight': True, 'highlightbg': (125, 125, 125),
+                   'highlight': False, 'highlightbg': (125, 125, 125),
                    'highlightalpha': 0.5, 'highlightseed': 1,
-                   'plotbackground': (0, 0, 0)}
+                   'plotbackground': (50, 50, 50)}
 
         return default
 
@@ -168,6 +179,8 @@ class PlotModel():
         plots = openmc.Plots([plot])
         plots.export_to_xml()
         openmc.plot_geometry()
+
+        self.ids = self.getIDs()
 
     def undo(self):
         self.subsequentPlots.append(copy.deepcopy(self.currentPlot))
