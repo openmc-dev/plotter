@@ -4,6 +4,7 @@
 import sys, openmc, copy, struct
 import numpy as np
 import xml.etree.ElementTree as ET
+from threading import Thread
 
 class PlotModel():
     def __init__(self):
@@ -107,6 +108,12 @@ class PlotModel():
 
     def generatePlot(self):
 
+        t = Thread(target=self.makePlot)
+        t.start()
+        t.join()
+
+    def makePlot(self):
+
         self.currentPlot = copy.deepcopy(self.activePlot)
 
         ap = self.activePlot
@@ -119,6 +126,7 @@ class PlotModel():
         plot.origin = (ap['xOr'], ap['yOr'], ap['zOr'])
         plot.width = (ap['width'], ap['height'])
         plot.pixels = (ap['hRes'], ap['vRes'])
+        plot.background = ap['plotbackground']
 
         # Cell Colors
         cell_colors = {}
@@ -172,8 +180,6 @@ class PlotModel():
             seed = ap['highlightseed']
 
             plot.highlight_domains(self.geom, domains, seed, alpha, background)
-
-        plot.background = ap['plotbackground']
 
         # Generate plot.xml
         plots = openmc.Plots([plot])

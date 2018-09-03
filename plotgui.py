@@ -41,13 +41,13 @@ class MainWindow(QMainWindow):
         self.controlDock.setWidget(self.controlWidget)
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.controlDock)
 
-        # Create menubar
-        self.createMenuBar()
-
         # Initiate color dialog
         self.colorDialog = ColorDialog(self.model, self.applyChanges, self)
         self.colorDialog.move(600, 200)
         self.colorDialog.hide()
+
+        # Create menubar
+        self.createMenuBar()
 
         # Load Plot
         self.model.generatePlot()
@@ -81,13 +81,6 @@ class MainWindow(QMainWindow):
         self.redoAction.setShortcut(QtGui.QKeySequence.Redo)
         self.redoAction.triggered.connect(self.redo)
 
-        # Windows
-        self.colorDialogAction = QAction('&Color Dialog', self)
-        self.colorDialogAction.triggered.connect(self.showColorDialog)
-
-        self.mainWindowAction = QAction('&Main Window', self)
-        self.mainWindowAction.triggered.connect(lambda : self.raise_())
-
         # Menus
         self.mainMenu = self.menuBar()
         #self.mainMenu.setNativeMenuBar(False)
@@ -103,13 +96,50 @@ class MainWindow(QMainWindow):
         self.editMenu.addAction(self.redoAction)
 
         self.viewMenu = self.mainMenu.addMenu('&View')
-        self.viewDockAction = QAction('Show Plot Options Dock', self)
-        self.viewMenu.addAction(self.viewDockAction)
-        self.viewDockAction.triggered.connect(self.showDock)
+        self.viewMenu.aboutToShow.connect(self.createViewMenu)
 
         self.windowMenu = self.mainMenu.addMenu('&Window')
+        self.windowMenu.aboutToShow.connect(self.createWindowMenu)
+
+        self.createWindowMenu()
+        self.createViewMenu()
+
+    def createViewMenu(self):
+
+        self.viewMenu.clear()
+
+        if self.controlDock.isVisible():
+            self.viewDockAction = QAction('Hide Options Dock', self)
+            self.viewDockAction.triggered.connect(
+                                    lambda : self.controlDock.hide())
+        else:
+            self.viewDockAction = QAction ('Show Options Dock', self)
+            self.viewDockAction.triggered.connect(
+                                    lambda : self.controlDock.setVisible(True))
+
+        self.viewDockAction.setShortcut("Ctrl+D")
+        self.viewMenu.addAction(self.viewDockAction)
+
+    def createWindowMenu(self):
+
+        self.windowMenu.clear()
+
+        self.colorDialogAction = QAction('&Color Dialog', self)
+        self.colorDialogAction.setCheckable(True)
+        self.colorDialogAction.setChecked(self.colorDialog.isActiveWindow())
+        self.colorDialogAction.triggered.connect(self.showColorDialog)
+
+        self.mainWindowAction = QAction('&Main Window', self)
+        self.mainWindowAction.setCheckable(True)
+        self.mainWindowAction.setChecked(self.isActiveWindow())
+        self.mainWindowAction.triggered.connect(self.showMainWindow)
+
         self.windowMenu.addAction(self.mainWindowAction)
         self.windowMenu.addAction(self.colorDialogAction)
+
+    def showMainWindow(self):
+        self.raise_()
+        self.activateWindow()
 
     def createDockLayout(self):
 
@@ -246,6 +276,9 @@ class MainWindow(QMainWindow):
 
     def undo(self):
 
+        self.statusBar().showMessage('Generating Plot...')
+        QApplication.processEvents()
+
         self.model.undo()
         self.showCurrentPlot()
         self.updateControls(self.model.activePlot)
@@ -257,6 +290,9 @@ class MainWindow(QMainWindow):
         self.redoAction.setDisabled(False)
 
     def redo(self):
+
+        self.statusBar().showMessage('Generating Plot...')
+        QApplication.processEvents()
 
         self.model.redo()
         self.showCurrentPlot()
@@ -278,10 +314,14 @@ class MainWindow(QMainWindow):
             else:
                 self.pixmap.save(filename)
 
+            mainWindow.statusBar().showMessage('Plot Image Saved', 5000)
+
     def applyChanges(self):
 
-        print ('apply changes')
+        self.plotIm.setFocus()
+
         self.statusBar().showMessage('Generating Plot...')
+        QApplication.processEvents()
 
         # Convert origin values to float
         for value in [self.xOr, self.yOr, self.zOr]:
@@ -315,8 +355,6 @@ class MainWindow(QMainWindow):
             self.model.generatePlot()
             self.showCurrentPlot()
 
-            self.showStatusPlot()
-
     def showCurrentPlot(self):
 
         self.plotIm.scale = self.plotIm.updateScale()
@@ -336,6 +374,8 @@ class MainWindow(QMainWindow):
             self.redoAction.setDisabled(False)
         else:
             self.redoAction.setDisabled(True)
+
+        self.showStatusPlot()
 
     def toggleColorBy(self):
 
@@ -385,11 +425,10 @@ class MainWindow(QMainWindow):
 
     def showStatusPlot(self):
         cp = self.model.currentPlot
-        message = (f"Origin: ({cp['xOr']}, {cp['yOr']}, {cp['zOr']})  |  "
-            f"Width: {cp['width']} Height: {cp['height']}  |  "
-            f"Color By: {cp['colorby']}  |  Basis: {cp['basis']}")
-        self.statusBar().showMessage(message)
-
+        message = (f"Current Plot: ({round(cp['xOr'], 3)}, {round(cp['yOr'], 3)}, {round(cp['zOr'], 3)})  |  "
+            f"{cp['width']} x {cp['height']}  |  {cp['basis']} basis | "
+            f"color by {cp['colorby']}")
+        self.statusBar().showMessage(message, 5000)
 
     def adjustWindow(self):
         # Get screen dimensions
@@ -406,14 +445,10 @@ class MainWindow(QMainWindow):
         else:
             self.frame.setMinimumHeight(20)
 
-
     def showColorDialog(self):
         self.colorDialog.show()
         self.colorDialog.raise_()
         self.colorDialog.activateWindow()
-
-    def showDock(self):
-        self.controlDock.setVisible(True)
 
 class PlotImage(QLabel):
     def __init__(self, model):
@@ -467,6 +502,22 @@ class PlotImage(QLabel):
         self.rubberBand.setGeometry(QtCore.QRect(self.bandOrigin, QtCore.QSize()))
 
         QLabel.mousePressEvent(self, event)
+
+    def mouseDoubleClickEvent(self, event):
+
+        cp = self.model.currentPlot
+
+        # Cursor position in pixels relative to center of plot image
+        xPos = event.pos().x() - (cp['hRes'] / 2)
+        yPos = -event.pos().y() + (cp['vRes'] / 2)
+
+        # Curson position in plot units relative to model
+        xCenter = (xPos / self.scale[0]) + cp[self.basisX[0]]
+        yCenter = (yPos / self.scale[1]) + cp[self.basisY[0]]
+
+        self.basisX[1].setText(str(round(xCenter, 9)))
+        self.basisY[1].setText(str(round(yCenter, 9)))
+        mainWindow.applyChanges()
 
     def mouseMoveEvent(self, event):
 
@@ -585,6 +636,10 @@ class PlotImage(QLabel):
         else:
             bgColorAction = self.menu.addAction('Edit Background Color...')
             bgColorAction.triggered.connect(self.editBGColor)
+
+        self.menu.addSeparator()
+
+        self.menu.addAction(mainWindow.saveAction)
 
         self.menu.addSeparator()
 
