@@ -230,8 +230,8 @@ class MainWindow(QMainWindow):
         # Options Form Layout
         self.opLayout = QFormLayout()
         self.opLayout.addRow('Width:', self.width)
-        self.opLayout.addRow('Height', self.height)
-        self.opLayout.addRow('Basis', self.basis)
+        self.opLayout.addRow('Height:', self.height)
+        self.opLayout.addRow('Basis:', self.basis)
         self.opLayout.addRow('Color By:', self.colorby)
         self.opLayout.addRow(self.colorOptionsButton)
         self.opLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
@@ -250,7 +250,7 @@ class MainWindow(QMainWindow):
         self.hRes.valueChanged.connect(self.onRatioChange)
 
         # Vertical Resolution
-        self.vResLabel = QLabel('Pixel Height')
+        self.vResLabel = QLabel('Pixel Height:')
         self.vResLabel.setDisabled(True)
         self.vRes = QSpinBox(self)
         self.vRes.setRange(1, 10000000)
@@ -667,6 +667,11 @@ class PlotImage(QLabel):
         matAction.setChecked(self.model.currentPlot['colorby'] == 'material')
         matAction.triggered.connect(lambda : self.editColorBy('material'))
 
+        if not mainWindow.controlDock.isVisible():
+            self.menu.addSeparator()
+            dockAction = self.menu.addAction('Show &Dock')
+            dockAction.triggered.connect(lambda : mainWindow.controlDock.setVisible(True))
+
         self.menu.exec_(event.globalPos())
 
     def toggleMask(self, bool, id, domain_kind):
@@ -858,7 +863,8 @@ class ColorDialog(QDialog):
     def createDomainTab(self, kind):
 
         domainTab = QScrollArea()
-        domainTab.setAlignment(QtCore.Qt.AlignCenter)
+        domainTab.setAlignment(QtCore.Qt.AlignHCenter)
+        domainTab.setMinimumHeight(100)
         #cellTab.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
         gridWidget = QWidget()
@@ -877,8 +883,8 @@ class ColorDialog(QDialog):
             groups = [self.matColorButtons, self.matColorLabels,
                       self.matMaskedChecks, self.matHighlightChecks]
 
-        self.maskHeaders[kind] = QLabel('Mask')
-        self.highlightHeaders[kind] = QLabel('Highlight')
+        self.maskHeaders[kind] = QLabel('Mask:')
+        self.highlightHeaders[kind] = QLabel('Highlight:')
 
         for col, header in enumerate(['ID:', 'Name:', 'Color:', '']):
             gridLayout.addWidget(QLabel(header), 0, col)
@@ -887,7 +893,6 @@ class ColorDialog(QDialog):
 
         row = 1
         for id, attr in domain.items():
-            print (id)
 
             # ID Label
             idLabel = QLabel(id)

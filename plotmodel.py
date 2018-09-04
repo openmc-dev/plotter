@@ -12,7 +12,15 @@ class PlotModel():
         self.cells = self.getCells()
         self.materials = self.getMaterials()
 
+        # Cell/Material ID by coordinates
         self.ids = self.getIDs()
+
+        # Read geometry.xml
+        self.geom = openmc.Geometry.from_xml('geometry.xml')
+
+        # OpenMC Cells/Materials
+        self.modelCells = self.geom.get_all_cells()
+        self.modelMaterials = self.geom.get_all_materials()
 
         self.previousPlots = []
         self.subsequentPlots = []
@@ -75,8 +83,7 @@ class PlotModel():
 
     def getDefaultPlot(self):
 
-        # Read geometry.xml
-        self.geom = openmc.Geometry.from_xml('geometry.xml')
+        # Get bounding box
         lower_left, upper_right = self.geom.bounding_box
 
         # Check for valid dimension
@@ -100,7 +107,7 @@ class PlotModel():
                    'hRes': 500, 'vRes': 500, 'aspectlock': True,
                    'cells': self.cells, 'materials': self.materials,
                    'mask': True, 'maskbg': (0, 0, 0),
-                   'highlight': False, 'highlightbg': (125, 125, 125),
+                   'highlight': False, 'highlightbg': (80, 80, 80),
                    'highlightalpha': 0.5, 'highlightseed': 1,
                    'plotbackground': (50, 50, 50)}
 
@@ -132,13 +139,13 @@ class PlotModel():
         cell_colors = {}
         for id, attr in ap['cells'].items():
             if attr['color']:
-                cell_colors[openmc.Cell(int(id))] = attr['color']
+                cell_colors[self.modelCells[int(id)]] = attr['color']
 
         # Material Colors
         mat_colors = {}
         for id, attr in ap['materials'].items():
             if attr['color']:
-                mat_colors[openmc.Material(int(id))] = attr['color']
+                mat_colors[self.modelMaterials[int(id)]] = attr['color']
 
         if ap['colorby'] == 'cell':
             plot.colors = cell_colors
@@ -150,11 +157,11 @@ class PlotModel():
             cell_mask_components = []
             for cell, attr in ap['cells'].items():
                 if not attr['masked']:
-                    cell_mask_components.append(openmc.Cell(int(cell)))
+                    cell_mask_components.append(self.modelCells[int(cell)])
             material_mask_compenents = []
             for mat, attr in ap['materials'].items():
                 if not attr['masked']:
-                    material_mask_compenents.append(openmc.Material(int(mat)))
+                    material_mask_compenents.append(self.modelMaterials[int(mat)])
             if ap['colorby'] == 'cell':
                 plot.mask_components = cell_mask_components
             else:
@@ -166,11 +173,11 @@ class PlotModel():
             highlighted_cells = []
             for cell, attr in ap['cells'].items():
                 if attr['highlighted']:
-                    highlighted_cells.append(openmc.Cell(int(cell)))
+                    highlighted_cells.append(self.modelCells[int(cell)])
             highlighted_materials = []
             for mat, attr in ap['materials'].items():
                 if attr['highlighted']:
-                    highlighted_materials.append(openmc.Material(int(mat)))
+                    highlighted_materials.append(self.modelMaterials[int(mat)])
             if ap['colorby'] == 'cell':
                 domains = highlighted_cells
             else:
