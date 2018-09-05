@@ -31,15 +31,15 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.frame)
 
         # Create Plot Options Dock
-        self.controlDock = QDockWidget('Plot Options Dock', self)
-        self.controlDock.setObjectName('ControlDock')
-        self.controlDock.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-        self.controlDock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea |
+        self.optionsDock = QDockWidget('Options Dock', self)
+        self.optionsDock.setObjectName('optionsDock')
+        self.optionsDock.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.optionsDock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea |
                                     QtCore.Qt.RightDockWidgetArea)
-        self.controlWidget = QWidget()
+        self.optionsWidget = QWidget()
         self.createDockLayout()
-        self.controlDock.setWidget(self.controlWidget)
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.controlDock)
+        self.optionsDock.setWidget(self.optionsWidget)
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.optionsDock)
 
         # Initiate color dialog
         self.colorDialog = ColorDialog(self.model, self.applyChanges, self)
@@ -58,7 +58,12 @@ class MainWindow(QMainWindow):
 
     def createMenuBar(self):
 
-        # Actions
+        # Menus
+        self.mainMenu = self.menuBar()
+
+        # File Menu
+        self.fileMenu = self.mainMenu.addMenu('&File')
+
         self.saveAction = QAction("&Save Image As...", self)
         self.saveAction.setShortcut(QtGui.QKeySequence.Save)
         self.saveAction.triggered.connect(self.saveImage)
@@ -66,6 +71,13 @@ class MainWindow(QMainWindow):
         self.quitAction = QAction("&Quit", self)
         self.quitAction.setShortcut(QtGui.QKeySequence.Quit)
         self.quitAction.triggered.connect(self.close)
+
+        self.fileMenu.addAction(self.saveAction)
+        self.fileMenu.addSeparator()
+        self.fileMenu.addAction(self.quitAction)
+
+        # Edit Menu
+        self.editMenu = self.mainMenu.addMenu('&Edit')
 
         self.applyAction = QAction("&Apply Changes", self)
         self.applyAction.setShortcut("Shift+Return")
@@ -81,65 +93,112 @@ class MainWindow(QMainWindow):
         self.redoAction.setShortcut(QtGui.QKeySequence.Redo)
         self.redoAction.triggered.connect(self.redo)
 
-        # Menus
-        self.mainMenu = self.menuBar()
-        #self.mainMenu.setNativeMenuBar(False)
-        self.fileMenu = self.mainMenu.addMenu('&File')
-        self.fileMenu.addAction(self.saveAction)
-        self.fileMenu.addSeparator()
-        self.fileMenu.addAction(self.quitAction)
+        self.restoreAction = QAction("&Restore To Default", self)
+        self.restoreAction.setShortcut("Ctrl+R")
+        self.restoreAction.triggered.connect(self.restoreDefault)
 
-        self.editMenu = self.mainMenu.addMenu('&Edit')
         self.editMenu.addAction(self.applyAction)
         self.editMenu.addSeparator()
         self.editMenu.addAction(self.undoAction)
         self.editMenu.addAction(self.redoAction)
+        self.editMenu.addAction(self.restoreAction)
+        self.editMenu.addSeparator()
 
+        # Edit -> Basis Menu
+        self.xyAction = QAction('&xy  ', self)
+        self.xyAction.setCheckable(True)
+        self.xyAction.setShortcut('Alt+X')
+        self.xyAction.triggered.connect(lambda : self.editBasis('xy'))
+
+        self.xzAction = QAction('x&z  ', self)
+        self.xzAction.setCheckable(True)
+        self.xzAction.setShortcut('Alt+Z')
+        self.xzAction.triggered.connect(lambda : self.editBasis('xz'))
+
+        self.yzAction = QAction('&yz  ', self)
+        self.yzAction.setCheckable(True)
+        self.yzAction.setShortcut('Alt+Y')
+        self.yzAction.triggered.connect(lambda : self.editBasis('yz'))
+
+        self.basisMenu = self.editMenu.addMenu('&Basis')
+        self.basisMenu.addAction(self.xyAction)
+        self.basisMenu.addAction(self.xzAction)
+        self.basisMenu.addAction(self.yzAction)
+        self.basisMenu.aboutToShow.connect(self.updateBasisMenu)
+
+        # Edit -> Color By Menu
+        self.cellAction = QAction('&Cell', self)
+        self.cellAction.setCheckable(True)
+        self.cellAction.setShortcut('Alt+C')
+        self.cellAction.triggered.connect(lambda : self.editColorBy('cell'))
+
+        self.materialAction = QAction('&Material', self)
+        self.materialAction.setCheckable(True)
+        self.materialAction.setShortcut('Alt+M')
+        self.materialAction.triggered.connect(lambda : self.editColorBy('material'))
+
+        self.colorbyMenu = self.editMenu.addMenu('&Color By')
+        self.colorbyMenu.addAction(self.cellAction)
+        self.colorbyMenu.addAction(self.materialAction)
+        self.colorbyMenu.aboutToShow.connect(self.updateColorbyMenu)
+
+        # View Menu
         self.viewMenu = self.mainMenu.addMenu('&View')
-        self.viewMenu.aboutToShow.connect(self.createViewMenu)
-
-        self.windowMenu = self.mainMenu.addMenu('&Window')
-        self.windowMenu.aboutToShow.connect(self.createWindowMenu)
-
-        self.createWindowMenu()
-        self.createViewMenu()
-
-    def createViewMenu(self):
-
-        self.viewMenu.clear()
-
-        if self.controlDock.isVisible():
-            self.viewDockAction = QAction('Hide Options Dock', self)
-            self.viewDockAction.triggered.connect(
-                                    lambda : self.controlDock.hide())
-        else:
-            self.viewDockAction = QAction ('Show Options Dock', self)
-            self.viewDockAction.triggered.connect(
-                                    lambda : self.controlDock.setVisible(True))
-
+        self.viewDockAction = QAction('Hide Options &Dock', self)
         self.viewDockAction.setShortcut("Ctrl+D")
+        self.viewDockAction.triggered.connect(self.toggleDockView)
         self.viewMenu.addAction(self.viewDockAction)
+        self.viewMenu.aboutToShow.connect(self.updateViewMenu)
 
-    def createWindowMenu(self):
-
-        self.windowMenu.clear()
-
-        self.colorDialogAction = QAction('&Color Dialog', self)
-        self.colorDialogAction.setCheckable(True)
-        self.colorDialogAction.setChecked(self.colorDialog.isActiveWindow())
-        self.colorDialogAction.triggered.connect(self.showColorDialog)
-
+        # Window Menu
+        self.windowMenu = self.mainMenu.addMenu('&Window')
         self.mainWindowAction = QAction('&Main Window', self)
+        self.mainWindowAction.setShortcut('Alt+W')
         self.mainWindowAction.setCheckable(True)
-        self.mainWindowAction.setChecked(self.isActiveWindow())
         self.mainWindowAction.triggered.connect(self.showMainWindow)
-
+        self.colorDialogAction = QAction('Color &Dialog', self)
+        self.colorDialogAction.setShortcut('Alt+D')
+        self.colorDialogAction.setCheckable(True)
+        self.colorDialogAction.triggered.connect(self.showColorDialog)
         self.windowMenu.addAction(self.mainWindowAction)
         self.windowMenu.addAction(self.colorDialogAction)
+        self.windowMenu.aboutToShow.connect(self.updateWindowMenu)
+
+    def updateBasisMenu(self):
+
+        self.xyAction.setChecked(self.model.currentPlot['basis'] == 'xy')
+        self.xzAction.setChecked(self.model.currentPlot['basis'] == 'xz')
+        self.yzAction.setChecked(self.model.currentPlot['basis'] == 'yz')
+
+    def updateColorbyMenu(self):
+
+        self.cellAction.setChecked(self.model.currentPlot['colorby'] == 'cell')
+        self.materialAction.setChecked(self.model.currentPlot['colorby'] == 'material')
+
+    def updateViewMenu(self):
+
+        if self.optionsDock.isVisible():
+            self.viewDockAction.setText('Hide Options &Dock')
+        else:
+            self.viewDockAction.setText('Show Options &Dock')
+
+    def updateWindowMenu(self):
+
+        self.colorDialogAction.setChecked(self.colorDialog.isActiveWindow())
+        self.mainWindowAction.setChecked(self.isActiveWindow())
 
     def showMainWindow(self):
         self.raise_()
         self.activateWindow()
+
+    def toggleDockView(self):
+
+        if self.optionsDock.isVisible():
+            self.optionsDock.hide()
+        else:
+            self.optionsDock.setVisible(True)
+
+        self.showMainWindow()
 
     def createDockLayout(self):
 
@@ -160,7 +219,7 @@ class MainWindow(QMainWindow):
         self.controlLayout.addWidget(self.submitButton)
         self.controlLayout.addStretch()
 
-        self.controlWidget.setLayout(self.controlLayout)
+        self.optionsWidget.setLayout(self.controlLayout)
 
     def createOriginBox(self):
 
@@ -316,12 +375,33 @@ class MainWindow(QMainWindow):
 
             mainWindow.statusBar().showMessage('Plot Image Saved', 5000)
 
+    def restoreDefault(self):
+
+        if self.model.currentPlot != self.model.getDefaultPlot():
+
+            self.statusBar().showMessage('Generating Plot...')
+            QApplication.processEvents()
+
+            self.model.storeCurrent()
+            self.model.activePlot = self.model.getDefaultPlot()
+            self.model.generatePlot()
+            self.showCurrentPlot()
+            self.updateControls(self.model.activePlot)
+            self.colorDialog.updateDialogValues()
+
+            self.model.subsequentPlots = []
+
+    def editBasis(self, basis):
+        self.basis.setCurrentText(basis)
+        self.applyChanges()
+
+    def editColorBy(self, domain_kind):
+        self.colorby.setCurrentText(domain_kind)
+        self.applyChanges()
+
     def applyChanges(self):
 
         self.plotIm.setFocus()
-
-        self.statusBar().showMessage('Generating Plot...')
-        QApplication.processEvents()
 
         # Convert origin values to float
         for value in [self.xOr, self.yOr, self.zOr]:
@@ -346,6 +426,10 @@ class MainWindow(QMainWindow):
 
         # Check that active plot is different from current plot
         if self.model.activePlot != self.model.currentPlot:
+
+            self.statusBar().showMessage('Generating Plot...')
+            QApplication.processEvents()
+
             self.model.storeCurrent()
 
             # Clear subsequentPlots
@@ -638,39 +722,40 @@ class PlotImage(QLabel):
             bgColorAction.triggered.connect(self.editBGColor)
 
         self.menu.addSeparator()
-
         self.menu.addAction(mainWindow.saveAction)
-
         self.menu.addSeparator()
 
         basisMenu = self.menu.addMenu('&Basis')
+
         xyAction = basisMenu.addAction('xy')
         xyAction.setCheckable(True)
         xyAction.setChecked(self.model.currentPlot['basis'] == 'xy')
-        xyAction.triggered.connect(lambda : self.editBasis('xy'))
+        xyAction.triggered.connect(lambda : mainWindow.editBasis('xy'))
         xzAction = basisMenu.addAction('xz')
         xzAction.setCheckable(True)
         xzAction.setChecked(self.model.currentPlot['basis'] == 'xz')
-        xzAction.triggered.connect(lambda : self.editBasis('xz'))
+        xzAction.triggered.connect(lambda : mainWindow.editBasis('xz'))
         yzAction = basisMenu.addAction('yz')
         yzAction.setCheckable(True)
         yzAction.setChecked(self.model.currentPlot['basis'] == 'yz')
-        yzAction.triggered.connect(lambda : self.editBasis('yz'))
+        yzAction.triggered.connect(lambda : mainWindow.editBasis('yz'))
 
         colorbyMenu = self.menu.addMenu('&Color By')
+
         cellAction = colorbyMenu.addAction('Cell')
         cellAction.setCheckable(True)
         cellAction.setChecked(self.model.currentPlot['colorby'] == 'cell')
-        cellAction.triggered.connect(lambda : self.editColorBy('cell'))
+        cellAction.triggered.connect(lambda : mainWindow.editColorBy('cell'))
         matAction = colorbyMenu.addAction('Material')
         matAction.setCheckable(True)
         matAction.setChecked(self.model.currentPlot['colorby'] == 'material')
-        matAction.triggered.connect(lambda : self.editColorBy('material'))
+        matAction.triggered.connect(lambda : mainWindow.editColorBy('material'))
 
-        if not mainWindow.controlDock.isVisible():
+        if not mainWindow.optionsDock.isVisible():
             self.menu.addSeparator()
-            dockAction = self.menu.addAction('Show &Dock')
-            dockAction.triggered.connect(lambda : mainWindow.controlDock.setVisible(True))
+            dockAction = self.menu.addAction('Show Options &Dock')
+            dockAction.setShortcut('Ctrl+D')
+            dockAction.triggered.connect(lambda : mainWindow.optionsDock.setVisible(True))
 
         self.menu.exec_(event.globalPos())
 
@@ -698,16 +783,8 @@ class PlotImage(QLabel):
         mainWindow.colorDialog.editDomainColor(id, domain_kind)
         mainWindow.applyChanges()
 
-    def editBasis(self, basis):
-        mainWindow.basis.setCurrentText(basis)
-        mainWindow.applyChanges()
-
     def editBGColor(self):
         mainWindow.colorDialog.editBackgroundColor()
-        mainWindow.applyChanges()
-
-    def editColorBy(self, domain_kind):
-        mainWindow.colorby.setCurrentText(domain_kind)
         mainWindow.applyChanges()
 
 class ColorDialog(QDialog):
@@ -760,9 +837,8 @@ class ColorDialog(QDialog):
     def createGeneralTab(self):
 
         # Masking options
-        self.maskCheck = QPushButton('Enabled')
-        self.maskCheck.setCheckable(True)
-        self.maskCheck.clicked.connect(self.toggleMask)
+        self.maskCheck = QCheckBox('')
+        self.maskCheck.stateChanged.connect(self.toggleMask)
 
         self.maskColorButton = QPushButton()
         self.maskColorButton.setFixedWidth(FM.width("XXX"))
@@ -777,11 +853,8 @@ class ColorDialog(QDialog):
         maskColorLayout.addStretch(1)
 
         # Highlighting options
-        self.hlCheck = QPushButton('Enabled')
-        self.hlCheck.setCheckable(True)
-        self.hlCheck.clicked.connect(self.toggleHL)
-        self.hlCheck.toggle()
-        self.toggleHL()
+        self.hlCheck = QCheckBox('')
+        self.hlCheck.stateChanged.connect(self.toggleHL)
 
         self.hlColorButton = QPushButton()
         self.hlColorButton.setFixedWidth(FM.width("XXX"))
@@ -832,17 +905,17 @@ class ColorDialog(QDialog):
         formLayout.setAlignment(QtCore.Qt.AlignHCenter)
         formLayout.setFormAlignment(QtCore.Qt.AlignHCenter)
         #formLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
-        #formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
+        formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
 
         formLayout.addRow('Masking:', self.maskCheck)
-        formLayout.addRow('Mask Background Color:', maskColorLayout)
+        formLayout.addRow('Mask Color:', maskColorLayout)
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Highlighting:', self.hlCheck)
-        formLayout.addRow('Highlight Background Color:', hlLayout)
+        formLayout.addRow('Highlight Color:', hlLayout)
         formLayout.addRow('Highlight Alpha:', alphaLayout)
         formLayout.addRow('Highlight Seed:', seedLayout)
         formLayout.addRow(HorizontalLine())
-        formLayout.addRow('Plot Background Color:', bgLayout)
+        formLayout.addRow('Background Color:', bgLayout)
         formLayout.addRow('Color Plot By:', self.colorbyBox)
         #formLayout.addStretch(1)
 
@@ -886,8 +959,9 @@ class ColorDialog(QDialog):
         self.maskHeaders[kind] = QLabel('Mask:')
         self.highlightHeaders[kind] = QLabel('Highlight:')
 
-        for col, header in enumerate(['ID:', 'Name:', 'Color:', '']):
+        for col, header in enumerate(['ID:', 'Name:']):
             gridLayout.addWidget(QLabel(header), 0, col)
+        gridLayout.addWidget(QLabel('Custom Color (RGB):'), 0, 2, 1, 2)
         gridLayout.addWidget(self.maskHeaders[kind], 0, 4)
         gridLayout.addWidget(self.highlightHeaders[kind], 0, 5)
 
@@ -910,10 +984,7 @@ class ColorDialog(QDialog):
             groups[0][id] = button
 
             # Color Label
-            if attr['color']:
-                label = QLabel(str(attr['color']))
-            else:
-                label = QLabel('Default')
+            label = QLabel('--')
             label.setMinimumWidth(FM.width("(999, 999, 999)"))
             groups[1][id] = label
 
@@ -960,47 +1031,42 @@ class ColorDialog(QDialog):
         self.buttonBox.setLayout(buttonLayout)
 
     def toggleMask(self):
-        if self.maskCheck.isChecked():
-            self.maskCheck.setText('Disabled')
-            self.model.activePlot['mask'] = False
-            for header in self.maskHeaders.values():
-                header.setDisabled(True)
-            for check in self.matMaskedChecks.values():
-                check.setDisabled(True)
-            for check in self.cellMaskedChecks.values():
-                check.setDisabled(True)
-        else:
+
+        checked = self.maskCheck.isChecked()
+
+        if checked:
             self.maskCheck.setText('Enabled')
-            self.model.activePlot['mask'] = True
-            for header in self.maskHeaders.values():
-                header.setDisabled(False)
-            for check in self.matMaskedChecks.values():
-                check.setDisabled(False)
-            for check in self.cellMaskedChecks.values():
-                check.setDisabled(False)
+        else:
+            self.maskCheck.setText('Disabled')
+
+        self.model.activePlot['mask'] = checked
+        for header in self.maskHeaders.values():
+            header.setDisabled(not checked)
+        for check in self.matMaskedChecks.values():
+            check.setDisabled(not checked)
+        for check in self.cellMaskedChecks.values():
+            check.setDisabled(not checked)
 
         self.raise_()
         self.activateWindow()
 
     def toggleHL(self):
-        if self.hlCheck.isChecked():
-            self.hlCheck.setText('Disabled')
-            self.model.activePlot['highlight'] = False
-            for header in self.highlightHeaders.values():
-                header.setDisabled(True)
-            for check in self.matHighlightChecks.values():
-                check.setDisabled(True)
-            for check in self.cellHighlightChecks.values():
-                check.setDisabled(True)
-        else:
+
+        checked = self.hlCheck.isChecked()
+
+        if checked:
             self.hlCheck.setText('Enabled')
-            self.model.activePlot['highlight'] = True
-            for header in self.highlightHeaders.values():
-                header.setDisabled(False)
-            for check in self.matHighlightChecks.values():
-                check.setDisabled(False)
-            for check in self.cellHighlightChecks.values():
-                check.setDisabled(False)
+        else:
+            self.hlCheck.setText('Disabled')
+
+        self.model.activePlot['highlight'] = checked
+        for header in self.highlightHeaders.values():
+            header.setDisabled(not checked)
+        for check in self.matHighlightChecks.values():
+            check.setDisabled(not checked)
+        for check in self.cellHighlightChecks.values():
+            check.setDisabled(not checked)
+
 
         self.raise_()
         self.activateWindow()
@@ -1105,13 +1171,13 @@ class ColorDialog(QDialog):
     def updateDialogValues(self):
 
         # Update General Tab
-        self.maskCheck.setChecked(not self.model.activePlot['mask'])
+        self.maskCheck.setChecked(self.model.activePlot['mask'])
         self.toggleMask()
         mask_color = self.model.activePlot['maskbg']
         self.maskColorButton.setStyleSheet("background-color: rgb%s" % (str(mask_color)))
         self.maskColorRGB.setText(str(mask_color))
 
-        self.hlCheck.setChecked(not self.model.activePlot['highlight'])
+        self.hlCheck.setChecked(self.model.activePlot['highlight'])
         self.toggleHL()
         hl_color = self.model.activePlot['highlightbg']
         self.hlColorButton.setStyleSheet("background-color: rgb%s" % (str(hl_color)))
@@ -1138,7 +1204,7 @@ class ColorDialog(QDialog):
             if color:
                 label.setText(str(color))
             else:
-                label.setText('Default')
+                label.setText('--')
 
         # Update Material Colors
         for id, button in self.matColorButtons.items():
@@ -1153,7 +1219,7 @@ class ColorDialog(QDialog):
             if color:
                 label.setText(str(color))
             else:
-                label.setText('Default')
+                label.setText('--')
 
         # Update Cell Checks
         self.updateChecks(self.model.activePlot['cells'])
