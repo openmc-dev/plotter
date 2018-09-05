@@ -13,7 +13,7 @@ class PlotModel():
         self.materials = self.getMaterials()
 
         # Cell/Material ID by coordinates
-        self.ids = self.getIDs()
+        self.ids = None
 
         # Read geometry.xml
         self.geom = openmc.Geometry.from_xml('geometry.xml')

@@ -54,6 +54,12 @@ class MainWindow(QMainWindow):
         self.showCurrentPlot()
         self.updateControls(self.model.currentPlot)
 
+        # Status Bar
+        #self.statusBar().setSizeGripEnabled(False)
+        self.coordLabel = QLabel()
+        self.statusBar().addPermanentWidget(self.coordLabel)
+        self.coordLabel.hide()
+
         self.showStatusPlot()
 
     def createMenuBar(self):
@@ -509,7 +515,7 @@ class MainWindow(QMainWindow):
 
     def showStatusPlot(self):
         cp = self.model.currentPlot
-        message = (f"Current Plot: ({round(cp['xOr'], 3)}, {round(cp['yOr'], 3)}, {round(cp['zOr'], 3)})  |  "
+        message = (f"Current Plot: ({round(cp['xOr'], 2)}, {round(cp['yOr'], 2)}, {round(cp['zOr'], 2)})  |  "
             f"{cp['width']} x {cp['height']}  |  {cp['basis']} basis | "
             f"color by {cp['colorby']}")
         self.statusBar().showMessage(message, 5000)
@@ -563,9 +569,11 @@ class PlotImage(QLabel):
 
     def enterEvent(self, event):
         self.setCursor(QtCore.Qt.CrossCursor)
+        mainWindow.coordLabel.show()
 
     def leaveEvent(self, event):
         mainWindow.showStatusPlot()
+        mainWindow.coordLabel.hide()
 
     def mousePressEvent(self, event):
 
@@ -605,6 +613,8 @@ class PlotImage(QLabel):
 
     def mouseMoveEvent(self, event):
 
+        id, domain, domain_kind = self.getIDinfo(event)
+
         cp = self.model.currentPlot
 
         # Cursor position in pixels relative to center of image
@@ -620,12 +630,22 @@ class PlotImage(QLabel):
         xzPos = f"({round(xPlotPos, 2)}, {round(cp['yOr'], 2)}, {round(yPlotPos, 2)})"
         yzPos = f"({round(cp['xOr'], 2)}, {round(xPlotPos, 2)}, {round(yPlotPos, 2)})"
 
-        if cp['basis'] == 'xy':
-            mainWindow.statusBar().showMessage(f"Plot Position: {xyPos}")
-        elif cp['basis'] == 'xz':
-            mainWindow.statusBar().showMessage(f"Plot Position: {xzPos}")
+        if id != '-1':
+            if domain[id]['name']:
+                domainInfo = f"{domain_kind} {id}: {domain[id]['name']}"
+            else:
+                domainInfo = f"{domain_kind} {id}"
         else:
-            mainWindow.statusBar().showMessage(f"Plot Position: {yzPos}")
+            domainInfo = ""
+
+        mainWindow.statusBar().showMessage(f" {domainInfo}")
+
+        if cp['basis'] == 'xy':
+            mainWindow.coordLabel.setText(f'{xyPos}')
+        elif cp['basis'] == 'xz':
+            mainWindow.coordLabel.setText(f'{xzPos}')
+        else:
+            mainWindow.coordLabel.setText(f'{yzPos}')
 
         # Update rubber band and values if mouse button held down
         if app.mouseButtons() in [QtCore.Qt.LeftButton, QtCore.Qt.RightButton]:
@@ -679,16 +699,9 @@ class PlotImage(QLabel):
 
         self.menu.clear()
 
-        id = f"{self.model.ids[event.pos().y()][event.pos().x()]}"
+        id, domain, domain_kind = self.getIDinfo(event)
 
         if id != '-1':
-
-            if self.model.currentPlot['colorby'] == 'cell':
-                domain = self.model.currentPlot['cells']
-                domain_kind = 'Cell'
-            else:
-                domain = self.model.currentPlot['materials']
-                domain_kind = 'Material'
 
             domainID = self.menu.addAction(f"{domain_kind} {id}")
             domainID.setDisabled(True)
@@ -786,6 +799,23 @@ class PlotImage(QLabel):
     def editBGColor(self):
         mainWindow.colorDialog.editBackgroundColor()
         mainWindow.applyChanges()
+
+    def getIDinfo(self, event):
+
+        if event.pos().y() < self.model.currentPlot['vRes'] \
+            and event.pos().x() < self.model.currentPlot['hRes']:
+            id = f"{self.model.ids[event.pos().y()][event.pos().x()]}"
+        else:
+            id = '-1'
+
+        if self.model.currentPlot['colorby'] == 'cell':
+            domain = self.model.currentPlot['cells']
+            domain_kind = 'Cell'
+        else:
+            domain = self.model.currentPlot['materials']
+            domain_kind = 'Material'
+
+        return id, domain, domain_kind
 
 class ColorDialog(QDialog):
     def __init__(self, model, applyChanges, parent=None):
