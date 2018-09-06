@@ -30,16 +30,8 @@ class MainWindow(QMainWindow):
         self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setCentralWidget(self.frame)
 
-        # Create Plot Options Dock
-        self.optionsDock = QDockWidget('Options Dock', self)
-        self.optionsDock.setObjectName('optionsDock')
-        self.optionsDock.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-        self.optionsDock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea |
-                                    QtCore.Qt.RightDockWidgetArea)
-        self.optionsWidget = QWidget()
-        self.createDockLayout()
-        self.optionsDock.setWidget(self.optionsWidget)
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.optionsDock)
+        # Create Dock
+        self.createOptionsDock()
 
         # Initiate color dialog
         self.colorDialog = ColorDialog(self.model, self.applyChanges, self)
@@ -55,7 +47,6 @@ class MainWindow(QMainWindow):
         self.updateControls(self.model.currentPlot)
 
         # Status Bar
-        #self.statusBar().setSizeGripEnabled(False)
         self.coordLabel = QLabel()
         self.statusBar().addPermanentWidget(self.coordLabel)
         self.coordLabel.hide()
@@ -99,7 +90,7 @@ class MainWindow(QMainWindow):
         self.redoAction.setShortcut(QtGui.QKeySequence.Redo)
         self.redoAction.triggered.connect(self.redo)
 
-        self.restoreAction = QAction("&Restore To Default", self)
+        self.restoreAction = QAction("&Restore Default Plot", self)
         self.restoreAction.setShortcut("Ctrl+R")
         self.restoreAction.triggered.connect(self.restoreDefault)
 
@@ -107,8 +98,10 @@ class MainWindow(QMainWindow):
         self.editMenu.addSeparator()
         self.editMenu.addAction(self.undoAction)
         self.editMenu.addAction(self.redoAction)
+        self.editMenu.addSeparator()
         self.editMenu.addAction(self.restoreAction)
         self.editMenu.addSeparator()
+        self.editMenu.aboutToShow.connect(self.updateEditMenu)
 
         # Edit -> Basis Menu
         self.xyAction = QAction('&xy  ', self)
@@ -148,6 +141,16 @@ class MainWindow(QMainWindow):
         self.colorbyMenu.addAction(self.materialAction)
         self.colorbyMenu.aboutToShow.connect(self.updateColorbyMenu)
 
+        self.editMenu.addSeparator()
+
+        self.maskingAction = self.editMenu.addAction('Enable &Masking')
+        self.maskingAction.setShortcut('Ctrl+M')
+        self.maskingAction.triggered.connect(self.toggleMasking)
+
+        self.hlAction = self.editMenu.addAction('Disable High&lighting')
+        self.hlAction.setShortcut('Ctrl+L')
+        self.hlAction.triggered.connect(self.toggleHighlighting)
+
         # View Menu
         self.viewMenu = self.mainMenu.addMenu('&View')
         self.viewDockAction = QAction('Hide Options &Dock', self)
@@ -169,6 +172,21 @@ class MainWindow(QMainWindow):
         self.windowMenu.addAction(self.mainWindowAction)
         self.windowMenu.addAction(self.colorDialogAction)
         self.windowMenu.aboutToShow.connect(self.updateWindowMenu)
+
+    def updateEditMenu(self):
+
+        changed = self.model.currentPlot != self.model.defaultPlot
+        self.restoreAction.setDisabled(not changed)
+
+        if self.model.currentPlot['mask']:
+            self.maskingAction.setText('Disable &Masking')
+        else:
+            self.maskingAction.setText('Enable &Masking')
+
+        if self.model.currentPlot['highlight']:
+            self.hlAction.setText('Disable High&lighting')
+        else:
+            self.hlAction.setText('Enable High&lighting')
 
     def updateBasisMenu(self):
 
@@ -206,7 +224,16 @@ class MainWindow(QMainWindow):
 
         self.showMainWindow()
 
-    def createDockLayout(self):
+    def createOptionsDock(self):
+
+        self.optionsDock = QDockWidget('Options Dock', self)
+        self.optionsDock.setObjectName('optionsDock')
+        self.optionsDock.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.optionsDock.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea |
+                                         QtCore.Qt.RightDockWidgetArea)
+        self.optionsWidget = QWidget()
+        self.optionsDock.setWidget(self.optionsWidget)
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.optionsDock)
 
         # Create Controls
         self.createOriginBox()
@@ -254,6 +281,7 @@ class MainWindow(QMainWindow):
         self.orLayout.addRow('X:', self.xOr)
         self.orLayout.addRow('Y:', self.yOr)
         self.orLayout.addRow('Z:', self.zOr)
+        self.orLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
         self.orLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         # Origin Group Box
@@ -266,13 +294,13 @@ class MainWindow(QMainWindow):
 
         # Width
         self.width = QDoubleSpinBox(self)
-        self.width.setRange(.1, 10000000)
+        self.width.setRange(.1, 99999)
         self.width.setValue(cp['width'])
         self.width.valueChanged.connect(self.onRatioChange)
 
         # Height
         self.height = QDoubleSpinBox(self)
-        self.height.setRange(.1, 10000000)
+        self.height.setRange(.1, 99999)
         self.height.setValue(cp['height'])
         self.height.valueChanged.connect(self.onRatioChange)
 
@@ -299,6 +327,7 @@ class MainWindow(QMainWindow):
         self.opLayout.addRow('Basis:', self.basis)
         self.opLayout.addRow('Color By:', self.colorby)
         self.opLayout.addRow(self.colorOptionsButton)
+        self.opLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
         self.opLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         # Options Group Box
@@ -309,7 +338,7 @@ class MainWindow(QMainWindow):
 
         # Horizontal Resolution
         self.hRes = QSpinBox(self)
-        self.hRes.setRange(1, 10000000)
+        self.hRes.setRange(1, 99999)
         self.hRes.setValue(500)
         self.hRes.setSingleStep(25)
         self.hRes.valueChanged.connect(self.onRatioChange)
@@ -318,7 +347,7 @@ class MainWindow(QMainWindow):
         self.vResLabel = QLabel('Pixel Height:')
         self.vResLabel.setDisabled(True)
         self.vRes = QSpinBox(self)
-        self.vRes.setRange(1, 10000000)
+        self.vRes.setRange(1, 99999)
         self.vRes.setValue(500)
         self.vRes.setSingleStep(25)
         self.vRes.setDisabled(True)
@@ -333,6 +362,7 @@ class MainWindow(QMainWindow):
         self.resLayout.addRow(self.ratioCheck)
         self.resLayout.addRow('Pixel Width:', self.hRes)
         self.resLayout.addRow(self.vResLabel, self.vRes)
+        self.resLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
         self.resLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         # Resolution Group Box
@@ -383,7 +413,7 @@ class MainWindow(QMainWindow):
 
     def restoreDefault(self):
 
-        if self.model.currentPlot != self.model.getDefaultPlot():
+        if self.model.currentPlot != self.model.defaultPlot:
 
             self.statusBar().showMessage('Generating Plot...')
             QApplication.processEvents()
@@ -396,6 +426,15 @@ class MainWindow(QMainWindow):
             self.colorDialog.updateDialogValues()
 
             self.model.subsequentPlots = []
+
+    def toggleMasking(self):
+
+        self.colorDialog.maskCheck.setChecked(not self.model.currentPlot['mask'])
+        self.applyChanges()
+
+    def toggleHighlighting(self):
+        self.colorDialog.hlCheck.setChecked(not self.model.currentPlot['highlight'])
+        self.applyChanges()
 
     def editBasis(self, basis):
         self.basis.setCurrentText(basis)
@@ -516,9 +555,9 @@ class MainWindow(QMainWindow):
     def showStatusPlot(self):
         cp = self.model.currentPlot
         message = (f"Current Plot: ({round(cp['xOr'], 2)}, {round(cp['yOr'], 2)}, {round(cp['zOr'], 2)})  |  "
-            f"{cp['width']} x {cp['height']}  |  {cp['basis']} basis | "
-            f"color by {cp['colorby']}")
-        self.statusBar().showMessage(message, 5000)
+            f"{cp['width']} x {cp['height']}  |  Basis: {cp['basis']} | "
+            f"Color By: {cp['colorby']}")
+        self.statusBar().showMessage(message, 3000)
 
     def adjustWindow(self):
         # Get screen dimensions
@@ -712,6 +751,10 @@ class PlotImage(QLabel):
 
             self.menu.addSeparator()
 
+            self.menu.addAction(mainWindow.undoAction)
+            self.menu.addAction(mainWindow.redoAction)
+            self.menu.addSeparator()
+
             colorAction = self.menu.addAction(f'Edit {domain_kind} Color...')
             colorAction.triggered.connect(lambda :
                                     self.editDomainColor(id, domain_kind))
@@ -731,6 +774,10 @@ class PlotImage(QLabel):
                                     self.toggleHL(bool, id, domain_kind))
 
         else:
+            self.menu.addAction(mainWindow.undoAction)
+            self.menu.addAction(mainWindow.redoAction)
+            self.menu.addSeparator()
+
             bgColorAction = self.menu.addAction('Edit Background Color...')
             bgColorAction.triggered.connect(self.editBGColor)
 
@@ -763,6 +810,23 @@ class PlotImage(QLabel):
         matAction.setCheckable(True)
         matAction.setChecked(self.model.currentPlot['colorby'] == 'material')
         matAction.triggered.connect(lambda : mainWindow.editColorBy('material'))
+
+        self.menu.addSeparator()
+
+        maskingAction = self.menu.addAction('')
+        maskingAction.triggered.connect(mainWindow.toggleMasking)
+        if self.model.currentPlot['mask']:
+            maskingAction.setText('Disable Masking')
+        else:
+            maskingAction.setText('Enable Masking')
+
+        hlAction = self.menu.addAction('')
+        hlAction.triggered.connect(mainWindow.toggleHighlighting)
+        if self.model.currentPlot['highlight']:
+            hlAction.setText('Disable Highlighting')
+        else:
+            hlAction.setText('Enable Highlighting')
+
 
         if not mainWindow.optionsDock.isVisible():
             self.menu.addSeparator()
@@ -1023,7 +1087,7 @@ class ColorDialog(QDialog):
             if attr['name']:
                 nameLabel = QLabel(attr['name'])
             else: nameLabel = QLabel(f'{kind} {id}')
-            nameLabel.setMinimumWidth(FM.width("XXXXXXXXXX"))
+            nameLabel.setMinimumWidth(FM.width("XXXXXXXXXXXX"))
 
             # Color Button
             button = QPushButton(" ")
@@ -1120,7 +1184,6 @@ class ColorDialog(QDialog):
         for check in self.cellHighlightChecks.values():
             check.setDisabled(not checked)
 
-
         self.raise_()
         self.activateWindow()
 
@@ -1162,6 +1225,7 @@ class ColorDialog(QDialog):
             self.bgButton.setStyleSheet("border-radius: 8px;"
                                 "background-color: rgb%s" % (str(new_color)))
             self.bgLabelRGB.setText(str(new_color))
+
         self.raise_()
         self.activateWindow()
 
@@ -1328,11 +1392,6 @@ class HorizontalLine(QFrame):
         super(HorizontalLine, self).__init__()
         self.setFrameShape(QFrame.HLine)
         self.setFrameShadow(QFrame.Sunken)
-        #self.setContentsMargins(0,5,0, 0)
-        self.setStyleSheet("padding: 0px")
-
-class ColorButton(QWidget):
-    pass
 
 if __name__ == '__main__':
 

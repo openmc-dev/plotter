@@ -24,8 +24,9 @@ class PlotModel():
 
         self.previousPlots = []
         self.subsequentPlots = []
-        self.currentPlot = self.getDefaultPlot()
-        self.activePlot = copy.deepcopy(self.currentPlot)
+        self.defaultPlot = self.getDefaultPlot()
+        self.currentPlot = copy.deepcopy(self.defaultPlot)
+        self.activePlot = copy.deepcopy(self.defaultPlot)
 
     def getCells(self):
 
