@@ -9,18 +9,15 @@ from threading import Thread
 class PlotModel():
     def __init__(self):
 
-        self.cells = self.getCells()
-        self.materials = self.getMaterials()
-
-        # Cell/Material ID by coordinates
-        self.ids = None
-
         # Read geometry.xml
         self.geom = openmc.Geometry.from_xml('geometry.xml')
 
-        # OpenMC Cells/Materials
+        # Retrieve OpenMC Cells/Materials
         self.modelCells = self.geom.get_all_cells()
         self.modelMaterials = self.geom.get_all_materials()
+
+        # Cell/Material ID by coordinates
+        self.ids = None
 
         self.previousPlots = []
         self.subsequentPlots = []
@@ -28,61 +25,29 @@ class PlotModel():
         self.currentPlot = copy.deepcopy(self.defaultPlot)
         self.activePlot = copy.deepcopy(self.defaultPlot)
 
-    def getCells(self):
+    def getDomains(self, file, type_):
+        """ Return cells/materials from .xml files """
 
-        # Read geometry.xml
-        celldoc = ET.parse('geometry.xml')
-        cellroot = celldoc.getroot()
+        doc = ET.parse(file)
+        root = doc.getroot()
 
-        # Create dictionary of cells
-        cells = {}
-        for cell in cellroot.findall('cell'):
-            attr = {}
-            id = cell.attrib['id']
-            if 'name' in cell.attrib:
-                attr['name'] = cell.attrib['name']
+        domains = {}
+        for dom in root.findall(type_):
+            attr ={}
+            id = dom.attrib['id']
+            if 'name' in dom.attrib:
+                attr['name'] = dom.attrib['name']
             else:
                 attr['name'] = None
             attr['color'] = None
             attr['masked'] = False
             attr['highlighted'] = False
-            cells[id] = attr
+            domains[id] = attr
 
-        return cells
-
-    def getMaterials(self):
-
-        # Read materials.xml
-        matdoc = ET.parse('materials.xml')
-        matroot = matdoc.getroot()
-
-        # Create dictionary of materials
-        materials = {}
-        for mat in matroot.findall('material'):
-            attr = {}
-            id = mat.attrib['id']
-            if 'name' in mat.attrib:
-                attr['name'] = mat.attrib['name']
-            else:
-                attr['name'] = None
-            attr['color'] = None
-            attr['masked'] = False
-            attr['highlighted'] = False
-            materials[id] = attr
-
-        return materials
-
-    def getIDs(self):
-
-        with open('plot_ids.binary', 'rb') as f:
-            px, py, wx, wy = struct.unpack('iidd', f.read(4*2 + 8*2))
-            ids = np.zeros((py, px), dtype=int)
-            for i in range(py):
-                ids[i] = struct.unpack('{}i'.format(px), f.read(4*px))
-
-        return ids
+        return domains
 
     def getDefaultPlot(self):
+        """ Return default plot for given geometry """
 
         # Get bounding box
         lower_left, upper_right = self.geom.bounding_box
@@ -106,14 +71,24 @@ class PlotModel():
                    'colorby': 'material', 'basis': 'xy',
                    'width': width + 2, 'height': height + 2,
                    'hRes': 600, 'vRes': 600, 'aspectlock': True,
-                   'cells': copy.deepcopy(self.cells),
-                   'materials': copy.deepcopy(self.materials),
+                   'cells': self.getDomains('geometry.xml', 'cell'),
+                   'materials': self.getDomains('materials.xml', 'material'),
                    'mask': True, 'maskbg': (0, 0, 0),
                    'highlight': False, 'highlightbg': (80, 80, 80),
                    'highlightalpha': 0.5, 'highlightseed': 1,
                    'plotbackground': (50, 50, 50)}
 
         return default
+
+    def getIDs(self):
+
+        with open('plot_ids.binary', 'rb') as f:
+            px, py, wx, wy = struct.unpack('iidd', f.read(4*2 + 8*2))
+            ids = np.zeros((py, px), dtype=int)
+            for i in range(py):
+                ids[i] = struct.unpack('{}i'.format(px), f.read(4*px))
+
+        return ids
 
     def generatePlot(self):
 
@@ -123,70 +98,51 @@ class PlotModel():
 
     def makePlot(self):
 
-        self.currentPlot = copy.deepcopy(self.activePlot)
-
-        ap = self.activePlot
+        cp = self.currentPlot = copy.deepcopy(self.activePlot)
 
         # Generate plot.xml
         plot = openmc.Plot()
         plot.filename = 'plot'
-        plot.color_by = ap['colorby']
-        plot.basis = ap['basis']
-        plot.origin = (ap['xOr'], ap['yOr'], ap['zOr'])
-        plot.width = (ap['width'], ap['height'])
-        plot.pixels = (ap['hRes'], ap['vRes'])
-        plot.background = ap['plotbackground']
+        plot.color_by = cp['colorby']
+        plot.basis = cp['basis']
+        plot.origin = (cp['xOr'], cp['yOr'], cp['zOr'])
+        plot.width = (cp['width'], cp['height'])
+        plot.pixels = (cp['hRes'], cp['vRes'])
+        plot.background = cp['plotbackground']
 
-        # Cell Colors
-        cell_colors = {}
-        for id, attr in ap['cells'].items():
-            if attr['color']:
-                cell_colors[self.modelCells[int(id)]] = attr['color']
-
-        # Material Colors
-        mat_colors = {}
-        for id, attr in ap['materials'].items():
-            if attr['color']:
-                mat_colors[self.modelMaterials[int(id)]] = attr['color']
-
-        if ap['colorby'] == 'cell':
-            plot.colors = cell_colors
+        # Determine domain type and source
+        if cp['colorby'] == 'cell':
+            domain = 'cells'
+            source = self.modelCells
         else:
-            plot.colors = mat_colors
+            domain = 'materials'
+            source = self.modelMaterials
+
+        # Custom Colors
+        plot.colors = {}
+        for id, attr in cp[domain].items():
+            if attr['color']:
+                plot.colors[source[int(id)]] = attr['color']
 
         # Masking options
-        if ap['mask']:
-            cell_mask_components = []
-            for cell, attr in ap['cells'].items():
+        if cp['mask']:
+            plot.mask_components = []
+            for id, attr in cp[domain].items():
                 if not attr['masked']:
-                    cell_mask_components.append(self.modelCells[int(cell)])
-            material_mask_compenents = []
-            for mat, attr in ap['materials'].items():
-                if not attr['masked']:
-                    material_mask_compenents.append(self.modelMaterials[int(mat)])
-            if ap['colorby'] == 'cell':
-                plot.mask_components = cell_mask_components
-            else:
-                plot.mask_components = material_mask_compenents
-            plot.mask_background = ap['maskbg']
+                    plot.mask_components.append(source[int(id)])
 
-        # Highlight options
-        if ap['highlight']:
-            highlighted_cells = []
-            for cell, attr in ap['cells'].items():
+            plot.mask_background = cp['maskbg']
+
+        # Highlighting options
+        if cp['highlight']:
+            domains = []
+            for id, attr in cp[domain].items():
                 if attr['highlighted']:
-                    highlighted_cells.append(self.modelCells[int(cell)])
-            highlighted_materials = []
-            for mat, attr in ap['materials'].items():
-                if attr['highlighted']:
-                    highlighted_materials.append(self.modelMaterials[int(mat)])
-            if ap['colorby'] == 'cell':
-                domains = highlighted_cells
-            else:
-                domains = highlighted_materials
-            background = ap['highlightbg']
-            alpha = ap['highlightalpha']
-            seed = ap['highlightseed']
+                    domains.append(source[int(id)])
+
+            background = cp['highlightbg']
+            alpha = cp['highlightalpha']
+            seed = cp['highlightseed']
 
             plot.highlight_domains(self.geom, domains, seed, alpha, background)
 
