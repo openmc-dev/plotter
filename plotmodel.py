@@ -104,7 +104,7 @@ class PlotModel():
         default = {'xOr': xcenter, 'yOr': ycenter, 'zOr': zcenter,
                    'colorby': 'material', 'basis': 'xy',
                    'width': width + 2, 'height': height + 2,
-                   'hRes': 500, 'vRes': 500, 'aspectlock': True,
+                   'hRes': 600, 'vRes': 600, 'aspectlock': True,
                    'cells': copy.deepcopy(self.cells),
                    'materials': copy.deepcopy(self.materials),
                    'mask': True, 'maskbg': (0, 0, 0),
