@@ -973,13 +973,13 @@ class ColorDialog(QDialog):
 
         domainTab = QScrollArea()
         domainTab.setAlignment(QtCore.Qt.AlignHCenter)
-        domainTab.setMinimumHeight(100)
+        #domainTab.setMinimumHeight(100)
         #domainTab.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
         gridWidget = QWidget()
         gridLayout = QGridLayout()
         gridLayout.setAlignment(QtCore.Qt.AlignCenter)
-        gridLayout.setVerticalSpacing(9)
+        gridLayout.setVerticalSpacing(6)
 
         if kind == 'Cell':
             domain = self.model.activePlot['cells']
@@ -1030,7 +1030,12 @@ class ColorDialog(QDialog):
             button.setCursor(QtCore.Qt.PointingHandCursor)
             button.setFixedWidth(FM.width("XXXXX"))
             button.setFixedHeight(FM.height() * 1.5)
-            button.setStyleSheet("margin-left: 5px")
+            button.setStyleSheet("font: 16px;"
+                                 "text-align: center center;"
+                                 "color: lightgrey;"
+                                 "margin-left: 3px; margin-bottom: 3px;"
+                                 "border-radius: 8px;"
+                                 "background-color: 'grey'")
             button.clicked.connect(lambda id=id, kind=kind:
                                    self.editDomainColor(id, kind))
             groups[0][id] = button
@@ -1055,7 +1060,7 @@ class ColorDialog(QDialog):
             # Layout Row
             gridLayout.addWidget(idLabel, row, 0)
             gridLayout.addWidget(nameLabel, row, 1)
-            gridLayout.addWidget(button, row, 2, QtCore.Qt.AlignVCenter)
+            gridLayout.addWidget(button, row, 2, QtCore.Qt.AlignTop)
             gridLayout.addWidget(label, row, 3)
             gridLayout.addWidget(maskedcheck, row, 4, QtCore.Qt.AlignCenter)
             gridLayout.addWidget(hlcheck, row, 5, QtCore.Qt.AlignCenter)
@@ -1126,7 +1131,7 @@ class ColorDialog(QDialog):
         if dlg.exec_():
             new_color = dlg.currentColor().getRgb()[:3]
             self.model.activePlot['maskbg'] = new_color
-            self.maskColorButton.setStyleSheet("border-radius: 10px;"
+            self.maskColorButton.setStyleSheet("border-radius: 8px;"
                                 "background-color: rgb%s" % (str(new_color)))
             self.maskColorRGB.setText(str(new_color))
 
@@ -1140,7 +1145,7 @@ class ColorDialog(QDialog):
         if dlg.exec_():
             new_color = dlg.currentColor().getRgb()[:3]
             self.model.activePlot['highlightbg'] = new_color
-            self.hlColorButton.setStyleSheet("border-radius: 10px;"
+            self.hlColorButton.setStyleSheet("border-radius: 8px;"
                                 "background-color: rgb%s" % (str(new_color)))
             self.hlColorRGB.setText(str(new_color))
 
@@ -1154,7 +1159,7 @@ class ColorDialog(QDialog):
         if dlg.exec_():
             new_color = dlg.currentColor().getRgb()[:3]
             self.model.activePlot['plotbackground'] = new_color
-            self.bgButton.setStyleSheet("border-radius: 10px;"
+            self.bgButton.setStyleSheet("border-radius: 8px;"
                                 "background-color: rgb%s" % (str(new_color)))
             self.bgLabelRGB.setText(str(new_color))
         self.raise_()
@@ -1187,8 +1192,8 @@ class ColorDialog(QDialog):
             new_color = dlg.currentColor().getRgb()[:3]
             domain[id]['color'] = new_color
             buttons[id].setText("")
-            buttons[id].setStyleSheet("margin-left: 3px;"
-                                      "border-radius: 10px;"
+            buttons[id].setStyleSheet("margin-left: 3px; margin-bottom: 3px;"
+                                      "border-radius: 8px;"
                                       "background-color: rgb%s" % (str(new_color)))
             labels[id].setText(str(new_color))
 
@@ -1228,21 +1233,21 @@ class ColorDialog(QDialog):
         self.maskCheck.setChecked(self.model.activePlot['mask'])
         self.toggleMask()
         mask_color = self.model.activePlot['maskbg']
-        self.maskColorButton.setStyleSheet("border-radius: 10px;"
+        self.maskColorButton.setStyleSheet("border-radius: 8px;"
                                 "background-color: rgb%s" % (str(mask_color)))
         self.maskColorRGB.setText(str(mask_color))
 
         self.hlCheck.setChecked(self.model.activePlot['highlight'])
         self.toggleHL()
         hl_color = self.model.activePlot['highlightbg']
-        self.hlColorButton.setStyleSheet("border-radius: 10px;"
+        self.hlColorButton.setStyleSheet("border-radius: 8px;"
                                     "background-color: rgb%s" % (str(hl_color)))
         self.hlColorRGB.setText(str(hl_color))
         self.alphaBox.setValue(self.model.activePlot['highlightalpha'])
         self.seedBox.setValue(self.model.activePlot['highlightseed'])
 
         bg_color = self.model.activePlot['plotbackground']
-        self.bgButton.setStyleSheet("border-radius: 10px;"
+        self.bgButton.setStyleSheet("border-radius: 8px;"
                                     "background-color: rgb%s" % (str(bg_color)))
         self.bgLabelRGB.setText(str(bg_color))
 
@@ -1252,16 +1257,19 @@ class ColorDialog(QDialog):
         for id, button in self.cellColorButtons.items():
             color = self.model.activePlot['cells'][id]['color']
             if color:
-                button.setText(" ")
-                button.setStyleSheet("margin-left: 3px;"
-                                     "border-radius: 10px;"
-                                     "background-color: rgb%s" % (str(color)))
-            else:
-                button.setText("-")
+                button.setText("  ")
                 button.setStyleSheet("font: 16px;"
                                      "text-align: center center;"
-                                     "color: lightgrey; margin-left: 3px;"
-                                     "border-radius: 10px;"
+                                     "margin-left: 3px; margin-bottom: 3px;"
+                                     "border-radius: 8px;"
+                                     "background-color: rgb%s" % (str(color)))
+            else:
+                button.setText("--")
+                button.setStyleSheet("font: 16px;"
+                                     "text-align: center center;"
+                                     "color: lightgrey;"
+                                     "margin-left: 3px; margin-bottom: 3px;"
+                                     "border-radius: 8px;"
                                      "background-color: 'grey'")
 
         for id, label in self.cellColorLabels.items():
@@ -1275,16 +1283,15 @@ class ColorDialog(QDialog):
         for id, button in self.matColorButtons.items():
             color = self.model.activePlot['materials'][id]['color']
             if color:
-                button.setText(" ")
-                button.setStyleSheet("margin-left: 3px;"
-                                     "border-radius: 10px;"
+                button.setText("  ")
+                button.setStyleSheet("margin-left: 3px; margin-bottom: 3px;"
+                                     "border-radius: 8px;"
                                      "background-color: rgb%s" % (str(color)))
             else:
-                button.setText("-")
-                button.setStyleSheet("font: 16px;"
-                                     "text-align: center center;"
-                                     "color: lightgrey; margin-left: 3px;"
-                                     "border-radius: 10px;"
+                button.setText("--")
+                button.setStyleSheet("color: lightgrey;"
+                                     "margin-left: 3px; margin-bottom: 3px;"
+                                     "border-radius: 8px;"
                                      "background-color: 'grey'")
 
         for id, label in self.matColorLabels.items():
@@ -1321,7 +1328,7 @@ class HorizontalLine(QFrame):
         super(HorizontalLine, self).__init__()
         self.setFrameShape(QFrame.HLine)
         self.setFrameShadow(QFrame.Sunken)
-        self.setContentsMargins(0,4,0,0)
+        #self.setContentsMargins(0,5,0, 0)
         self.setStyleSheet("padding: 0px")
 
 class ColorButton(QWidget):
