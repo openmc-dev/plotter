@@ -19,35 +19,13 @@ class PlotModel():
         # Cell/Material ID by coordinates
         self.ids = None
 
-        self.previousPlots = []
-        self.subsequentPlots = []
-        self.defaultPlot = self.getDefaultPlot()
-        self.currentPlot = copy.deepcopy(self.defaultPlot)
-        self.activePlot = copy.deepcopy(self.defaultPlot)
+        self.previousViews = []
+        self.subsequentViews = []
+        self.defaultView = self.getDefaultView()
+        self.currentView = copy.deepcopy(self.defaultView)
+        self.activeView = copy.deepcopy(self.defaultView)
 
-    def getDomains(self, file, type_):
-        """ Return cells/materials from .xml files """
-
-        doc = ET.parse(file)
-        root = doc.getroot()
-
-        domains = {}
-        for dom in root.findall(type_):
-            attr ={}
-            id = dom.attrib['id']
-            if 'name' in dom.attrib:
-                attr['name'] = dom.attrib['name']
-            else:
-                attr['name'] = None
-            attr['color'] = None
-            attr['masked'] = False
-            attr['highlighted'] = False
-            domains[id] = attr
-
-        return domains
-
-    def getDefaultPlot(self):
-        """ Return default plot for given geometry """
+    def getDefaultView(self):
 
         # Get bounding box
         lower_left, upper_right = self.geom.bounding_box
@@ -66,18 +44,8 @@ class PlotModel():
         else:
             zcenter = 0.00
 
-        # Generate default plot values
-        default = {'xOr': xcenter, 'yOr': ycenter, 'zOr': zcenter,
-                   'colorby': 'material', 'basis': 'xy',
-                   'width': width + 2, 'height': height + 2,
-                   'hRes': 600, 'vRes': 600, 'aspectlock': True,
-                   'cells': self.getDomains('geometry.xml', 'cell'),
-                   'materials': self.getDomains('materials.xml', 'material'),
-                   'mask': True, 'maskbg': (0, 0, 0),
-                   'highlight': False, 'highlightbg': (80, 80, 80),
-                   'highlightalpha': 0.5, 'highlightseed': 1,
-                   'plotbackground': (50, 50, 50)}
 
+        default = PlotView([xcenter, ycenter, zcenter], width, height)
         return default
 
     def getIDs(self):
@@ -98,51 +66,51 @@ class PlotModel():
 
     def makePlot(self):
 
-        cp = self.currentPlot = copy.deepcopy(self.activePlot)
+        cv = self.currentView = copy.deepcopy(self.activeView)
 
         # Generate plot.xml
         plot = openmc.Plot()
         plot.filename = 'plot'
-        plot.color_by = cp['colorby']
-        plot.basis = cp['basis']
-        plot.origin = (cp['xOr'], cp['yOr'], cp['zOr'])
-        plot.width = (cp['width'], cp['height'])
-        plot.pixels = (cp['hRes'], cp['vRes'])
-        plot.background = cp['plotbackground']
+        plot.color_by = cv.colorby
+        plot.basis = cv.basis
+        plot.origin = cv.origin
+        plot.width = (cv.width, cv.height)
+        plot.pixels = (cv.hRes, cv.vRes)
+        plot.background = cv.plotBackground
 
         # Determine domain type and source
-        if cp['colorby'] == 'cell':
-            domain = 'cells'
+        if cv.colorby == 'cell':
+            domain = self.currentView.cells
             source = self.modelCells
         else:
-            domain = 'materials'
+            domain = self.currentView.materials
             source = self.modelMaterials
 
         # Custom Colors
         plot.colors = {}
-        for id, attr in cp[domain].items():
-            if attr['color']:
-                plot.colors[source[int(id)]] = attr['color']
+        for id, dom in domain.items():
+            if dom.color:
+                plot.colors[source[int(id)]] = dom.color
 
         # Masking options
-        if cp['mask']:
+        if cv.masking:
             plot.mask_components = []
-            for id, attr in cp[domain].items():
-                if not attr['masked']:
+            for id, dom in domain.items():
+                if not dom.masked:
                     plot.mask_components.append(source[int(id)])
 
-            plot.mask_background = cp['maskbg']
+            plot.mask_background = cv.maskBackground
 
         # Highlighting options
-        if cp['highlight']:
+        if cv.highlighting:
             domains = []
-            for id, attr in cp[domain].items():
-                if attr['highlighted']:
+            for id, dom in domain.items():
+                if dom.highlighted:
                     domains.append(source[int(id)])
 
-            background = cp['highlightbg']
-            alpha = cp['highlightalpha']
-            seed = cp['highlightseed']
+            background = cv.highlightBackground
+            alpha = cv.highlightAlpha
+            seed = cv.highlightSeed
 
             plot.highlight_domains(self.geom, domains, seed, alpha, background)
 
@@ -154,14 +122,88 @@ class PlotModel():
         self.ids = self.getIDs()
 
     def undo(self):
-        self.subsequentPlots.append(copy.deepcopy(self.currentPlot))
-        self.activePlot = self.previousPlots.pop()
-        self.generatePlot()
+        if self.previousViews:
+            self.subsequentViews.append(copy.deepcopy(self.currentView))
+            self.activeView = self.previousViews.pop()
+            self.generatePlot()
 
     def redo(self):
-        self.storeCurrent()
-        self.activePlot = self.subsequentPlots.pop()
-        self.generatePlot()
+        if self.subsequentViews:
+            self.storeCurrent()
+            self.activeView = self.subsequentViews.pop()
+            self.generatePlot()
 
     def storeCurrent(self):
-        self.previousPlots.append(copy.deepcopy(self.currentPlot))
+        self.previousViews.append(copy.deepcopy(self.currentView))
+
+
+class PlotView():
+    def __init__(self, origin, width, height):
+
+        self.origin = origin
+        self.width = width + 2
+        self.height = height + 2
+
+        self.hRes = 600
+        self.vRes = 600
+        self.aspectLock = True
+
+        self.basis = 'xy'
+        self.colorby = 'material'
+
+        self.cells = self.getDomains('geometry.xml', 'cell')
+        self.materials = self.getDomains('materials.xml', 'material')
+
+        self.masking = True
+        self.maskBackground = (0,0,0)
+        self.highlighting = False
+        self.highlightBackground = (80, 80, 80)
+        self.highlightAlpha = 0.5
+        self.highlightSeed = 1
+        self.plotBackground = (50, 50, 50)
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return self.__dict__ != other.__dict__
+
+    def getDomains(self, file, type_):
+
+        doc = ET.parse(file)
+        root = doc.getroot()
+
+        domains = {}
+        for dom in root.findall(type_):
+            id = dom.attrib['id']
+            if 'name' in dom.attrib:
+                name = dom.attrib['name']
+            else:
+                name = None
+            color = None
+            masked = False
+            highlighted = False
+            domain = Domain(id, type_, name, color, masked, highlighted)
+            domains[domain.id] = domain
+
+        return domains
+
+
+class Domain():
+    def __init__(self, id, type_, name, color, masked, highlighted):
+
+        self.id = id
+        self.type_ = type_
+        self.name = name
+        self.color = color
+        self.masked = masked
+        self.highlighted = highlighted
+
+    def __repr__(self):
+        return f"{self.type_}: {self.id}"
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return self.__dict__ != other.__dict__
