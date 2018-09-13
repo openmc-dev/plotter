@@ -8,7 +8,9 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QSpinBox, QDoubleSpinBox, QSizePolicy, QSpacerItem, QMainWindow,
     QCheckBox, QScrollArea, QLayout, QRubberBand, QMenu, QAction, QMenuBar,
     QFileDialog, QDialog, QTabWidget, QGridLayout, QToolButton, QColorDialog,
-    QDialogButtonBox, QFrame, QActionGroup, QDockWidget)
+    QDialogButtonBox, QFrame, QActionGroup, QDockWidget, QTableView,
+    QItemDelegate, QHeaderView)
+from plotmodel import DomainTableModel, DomainDelegate
 
 class PlotImage(QLabel):
     def __init__(self, model, controller, FM):
@@ -135,21 +137,21 @@ class PlotImage(QLabel):
 
             colorAction = self.menu.addAction(f'Edit {domain_kind} Color...')
             colorAction.triggered.connect(lambda :
-                self.cont.editDomainColor(domain_kind, id, apply=True))
+                self.cont.editDomainColor(domain_kind, id))
 
             maskAction = self.menu.addAction(f'Mask {domain_kind}')
             maskAction.setCheckable(True)
             maskAction.setChecked(domain[id].masked)
             maskAction.setDisabled(not self.model.currentView.masking)
             maskAction.triggered[bool].connect(lambda bool=bool:
-                self.cont.toggleDomainMask(bool, domain_kind, id, apply=True))
+                self.cont.toggleDomainMask(bool, domain_kind, id))
 
             highlightAction = self.menu.addAction(f'Highlight {domain_kind}')
             highlightAction.setCheckable(True)
             highlightAction.setChecked(domain[id].highlighted)
             highlightAction.setDisabled(not self.model.currentView.highlighting)
             highlightAction.triggered[bool].connect(lambda bool=bool:
-                self.cont.toggleDomainHighlight(bool, domain_kind, id, apply=True))
+                self.cont.toggleDomainHighlight(bool, domain_kind, id))
 
         else:
             self.menu.addAction(self.cont.undoAction)
@@ -451,6 +453,8 @@ class ColorDialog(QDialog):
 
         self.createDialogLayout()
 
+        print (f"Dialog created in: {round(time.time() - start, 5)} seconds")
+
     ''' Create GUI Elements'''
 
     def createDialogLayout(self):
@@ -459,10 +463,12 @@ class ColorDialog(QDialog):
 
         # Tabs
         self.createGeneralTab()
-        self.cellTab = self.createDomainTab('Cell')
-        self.matTab = self.createDomainTab('Material')
+        self.createDomainTabs()
 
         self.tabs = QTabWidget()
+        self.tabs.setMinimumWidth(500)
+        self.tabs.setMaximumHeight(600)
+        self.tabs.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.tabs.addTab(self.generalTab, 'General')
         self.tabs.addTab(self.cellTab, 'Cells')
         self.tabs.addTab(self.matTab, 'Materials')
@@ -470,7 +476,7 @@ class ColorDialog(QDialog):
         self.createButtonBox()
 
         self.colorDialogLayout.addWidget(self.tabs)
-        self.colorDialogLayout.addStretch(1)
+        #self.colorDialogLayout.addStretch(1)
         self.colorDialogLayout.addWidget(self.buttonBox)
         self.setLayout(self.colorDialogLayout)
 
@@ -545,107 +551,37 @@ class ColorDialog(QDialog):
         self.generalTab = QWidget()
         self.generalTab.setLayout(generalLayout)
 
-    def createDomainTab(self, domain_kind):
+    def createDomainTabs(self):
+        self.cellTable = QTableView()
+        self.cellTable.setModel(self.cont.cellsModel)
+        self.cellTable.setItemDelegate(DomainDelegate(self))
+        self.cellTable.verticalHeader().setVisible(False)
+        self.cellTable.resizeColumnsToContents()
+        self.cellTable.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.cellTable.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
 
-        domainTab = QScrollArea()
-        domainTab.setAlignment(QtCore.Qt.AlignHCenter)
-        #domainTab.setMinimumHeight(100)
-        #domainTab.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.cellTab = QWidget()
+        self.cellTab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.cellTab.setMaximumHeight(700)
+        self.cellLayout = QVBoxLayout()
+        self.cellLayout.addWidget(self.cellTable)
+        self.cellTab.setLayout(self.cellLayout)
 
-        gridWidget = QWidget()
-        gridLayout = QGridLayout()
-        gridLayout.setAlignment(QtCore.Qt.AlignCenter)
-        gridLayout.setVerticalSpacing(6)
+        self.matTable = QTableView()
+        self.matTable.setModel(self.cont.materialsModel)
+        self.matTable.setItemDelegate(DomainDelegate(self))
+        self.matTable.verticalHeader().setVisible(False)
+        self.matTable.resizeColumnsToContents()
+        self.matTable.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.matTable.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
 
-        if domain_kind == 'Cell':
-            domain = self.model.activeView.cells
-            groups = [self.cellColorButtons, self.cellColorLabels,
-                      self.cellMaskedChecks, self.cellHighlightChecks]
-        else:
-            domain = self.model.activeView.materials
-            groups = [self.matColorButtons, self.matColorLabels,
-                      self.matMaskedChecks, self.matHighlightChecks]
-
-        idHeader = QLabel('ID:')
-        nameHeader = QLabel('Name:')
-        colorHeader = QLabel('Custom Color (RGB):')
-        maskHeader = QLabel('Mask:')
-        highlightHeader = QLabel('Highlight:')
-        #for header in (idHeader, nameHeader, colorHeader, maskHeader, highlightHeader):
-        #    header.setStyleSheet("font: bold")
-
-        self.colorHeaders.append(colorHeader)
-        self.maskHeaders.append(maskHeader)
-        self.highlightHeaders.append(highlightHeader)
-
-        gridLayout.addWidget(idHeader, 0, 0)
-        gridLayout.addWidget(nameHeader, 0, 1)
-        gridLayout.addWidget(colorHeader, 0, 2, 1, 2)
-        gridLayout.addWidget(maskHeader, 0, 4)
-        gridLayout.addWidget(highlightHeader, 0, 5)
-
-        row = 2
-        for id, dom in domain.items():
-
-            # Horizontal Line
-            gridLayout.addWidget(HorizontalLine(), row-1, 0, 1, 6)
-
-            # ID Label
-            idLabel = QLabel(id)
-            idLabel.setMinimumWidth(self.FM.width("999"))
-
-            # Name Label
-            if dom.name:
-                nameLabel = QLabel(dom.name)
-            else:
-                nameLabel = QLabel(f'{domain_kind} {id}')
-            nameLabel.setMinimumWidth(self.FM.width("XXXXXXXXX"))
-
-            # Color Button
-            button = QPushButton(" ")
-            button.setCursor(QtCore.Qt.PointingHandCursor)
-            button.setFixedWidth(self.FM.width("XXXXX"))
-            button.setFixedHeight(self.FM.height() * 1.5)
-            button.setStyleSheet("font: 16px;"
-                                 "text-align: center center;"
-                                 "color: lightgrey;"
-                                 "margin-left: 3px; margin-bottom: 3px;"
-                                 "border-radius: 8px;"
-                                 "background-color: 'grey'")
-            button.clicked.connect(lambda id=id, kind=domain_kind:
-                 self.cont.editDomainColor(kind, id))
-            groups[0][id] = button
-
-            # Color Label
-            label = QLabel('--')
-            label.setMinimumWidth(self.FM.width("X(999, 999, 999)"))
-            groups[1][id] = label
-
-            # Masked Check
-            maskedcheck = QCheckBox()
-            maskedcheck.stateChanged.connect(lambda state, id=id, kind=domain_kind:
-                self.cont.toggleDomainMask(state, kind, id))
-            groups[2][id] = maskedcheck
-
-            # Highlight Check
-            hlcheck = QCheckBox()
-            hlcheck.stateChanged.connect(lambda state, id=id, kind=domain_kind:
-                self.cont.toggleDomainHighlight(state, kind, id))
-            groups[3][id] = hlcheck
-
-            # Layout Row
-            gridLayout.addWidget(idLabel, row, 0)
-            gridLayout.addWidget(nameLabel, row, 1)
-            gridLayout.addWidget(button, row, 2, QtCore.Qt.AlignTop)
-            gridLayout.addWidget(label, row, 3)
-            gridLayout.addWidget(maskedcheck, row, 4, QtCore.Qt.AlignCenter)
-            gridLayout.addWidget(hlcheck, row, 5, QtCore.Qt.AlignCenter)
-            row += 2
-
-        gridWidget.setLayout(gridLayout)
-        domainTab.setWidget(gridWidget)
-
-        return domainTab
+        self.matTab = QWidget()
+        self.matTab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        #self.matTab.setMinimumWidth(self.matTable.width() + 20)
+        self.matTab.setMaximumHeight(700)
+        self.matLayout = QVBoxLayout()
+        self.matLayout.addWidget(self.matTable)
+        self.matTab.setLayout(self.matLayout)
 
     def createButtonBox(self):
 
@@ -675,28 +611,12 @@ class ColorDialog(QDialog):
         self.updateBackgroundColor()
         self.updateColorBy()
 
-        for id in self.model.activeView.cells:
-            self.updateDomainColor('Cell', id)
-        for id in self.model.activeView.materials:
-            self.updateDomainColor('Material', id)
-
-        for id in self.model.activeView.cells:
-            self.updateMask('Cell', id)
-            self.updateHighlight('Cell', id)
-        for id in self.model.activeView.materials:
-            self.updateMask('Material', id)
-            self.updateHighlight('Material', id)
+        self.updateDomainTabs()
 
     def updateMasking(self):
         masking = self.model.activeView.masking
 
         self.maskingCheck.setChecked(masking)
-        for check in self.cellMaskedChecks.values():
-            check.setDisabled(not masking)
-        for check in self.matMaskedChecks.values():
-            check.setDisabled(not masking)
-        for header in self.maskHeaders:
-            header.setDisabled(not masking)
         self.maskColorButton.setDisabled(not masking)
 
     def updateMaskingColor(self):
@@ -708,12 +628,6 @@ class ColorDialog(QDialog):
         highlighting = self.model.activeView.highlighting
 
         self.hlCheck.setChecked(highlighting)
-        for check in self.cellHighlightChecks.values():
-            check.setDisabled(not highlighting)
-        for check in self.matHighlightChecks.values():
-            check.setDisabled(not highlighting)
-        for header in self.highlightHeaders:
-            header.setDisabled(not highlighting)
         self.hlColorButton.setDisabled(not highlighting)
 
     def updateHighlightColor(self):
@@ -735,57 +649,9 @@ class ColorDialog(QDialog):
     def updateColorBy(self):
         self.colorbyBox.setCurrentText(self.model.activeView.colorby)
 
-    def updateDomainColor(self, kind, id):
-
-        if kind == 'Cell':
-            domain = self.model.activeView.cells
-            buttons = self.cellColorButtons
-            labels = self.cellColorLabels
-        else:
-            domain = self.model.activeView.materials
-            buttons = self.matColorButtons
-            labels = self.matColorLabels
-
-        color = domain[id].color
-        if color:
-            buttons[id].setText("  ")
-            labels[id].setText(str(color))
-            buttons[id].setStyleSheet("font: 16px;"
-                                 "text-align: center center;"
-                                 "margin-left: 3px; margin-bottom: 3px;"
-                                 "border-radius: 8px;"
-                                 "background-color: rgb%s" % (str(color)))
-        else:
-            buttons[id].setText("--")
-            labels[id].setText('--')
-            buttons[id].setStyleSheet("font: 16px;"
-                                 "text-align: center center;"
-                                 "color: lightgrey;"
-                                 "margin-left: 3px; margin-bottom: 3px;"
-                                 "border-radius: 8px;"
-                                 "background-color: 'grey'")
-
-    def updateMask(self, kind, id):
-
-        if kind == 'Cell':
-            domain = self.model.activeView.cells
-            checks = self.cellMaskedChecks
-        elif kind == 'Material':
-            domain = self.model.activeView.materials
-            checks = self.matMaskedChecks
-
-        checks[id].setChecked(domain[id].masked)
-
-    def updateHighlight(self, kind, id):
-
-        if kind == 'Cell':
-            domain = self.model.activeView.cells
-            checks = self.cellHighlightChecks
-        elif kind == 'Material':
-            domain = self.model.activeView.materials
-            checks = self.matHighlightChecks
-
-        checks[id].setChecked(domain[id].highlighted)
+    def updateDomainTabs(self):
+        self.cellTable.setModel(self.cont.cellsModel)
+        self.matTable.setModel(self.cont.materialsModel)
 
 
 class HorizontalLine(QFrame):

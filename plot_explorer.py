@@ -5,7 +5,7 @@ import sys, openmc, copy, time
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
     QScrollArea, QMenu, QAction, QFileDialog, QColorDialog)
-from plotmodel import PlotModel, PlotView, Domain
+from plotmodel import PlotModel, PlotView, Domain, DomainTableModel
 from plotgui import PlotImage, ColorDialog, OptionsDock
 
 class MainWindow(QMainWindow):
@@ -21,6 +21,9 @@ class MainWindow(QMainWindow):
 
         self.model = PlotModel()
         self.scale = (1, 1)
+
+        self.cellsModel = DomainTableModel(self.model.activeView.cells)
+        self.materialsModel = DomainTableModel(self.model.activeView.materials)
 
         # Create plot image
 
@@ -43,16 +46,16 @@ class MainWindow(QMainWindow):
         # Create menubar
         self.createMenuBar()
 
-        # Load Plot
-        self.model.generatePlot()
-        self.showcurrentView()
-        self.dock.updateDock()
-        self.colorDialog.updateDialogValues()
-
         # Status Bar
         self.coordLabel = QLabel()
         self.statusBar().addPermanentWidget(self.coordLabel)
         self.coordLabel.hide()
+
+        # Load Plot
+        self.model.generatePlot()
+        self.showCurrentView()
+        self.dock.updateDock()
+        self.colorDialog.updateDialogValues()
 
     ''' Create / Update Menus '''
 
@@ -233,7 +236,7 @@ class MainWindow(QMainWindow):
 
     def applyChanges(self):
 
-        self.plotIm.setFocus()
+        #self.plotIm.setFocus
 
         # Check that active plot is different from current plot
         if self.model.activeView != self.model.currentView:
@@ -244,7 +247,8 @@ class MainWindow(QMainWindow):
             self.model.storeCurrent()
             self.model.subsequentViews = []
             self.model.generatePlot()
-            self.showcurrentView()
+            self.resetModels()
+            self.showCurrentView()
 
     def undo(self):
 
@@ -252,7 +256,8 @@ class MainWindow(QMainWindow):
         QApplication.processEvents()
 
         self.model.undo()
-        self.showcurrentView()
+        self.resetModels()
+        self.showCurrentView()
         self.dock.updateDock()
         self.colorDialog.updateDialogValues()
 
@@ -267,7 +272,8 @@ class MainWindow(QMainWindow):
         QApplication.processEvents()
 
         self.model.redo()
-        self.showcurrentView()
+        self.resetModels()
+        self.showCurrentView()
         self.dock.updateDock()
         self.colorDialog.updateDialogValues()
 
@@ -287,7 +293,7 @@ class MainWindow(QMainWindow):
             self.model.storeCurrent()
             self.model.activeView = copy.deepcopy(self.model.defaultView)
             self.model.generatePlot()
-            self.showcurrentView()
+            self.showCurrentView()
             self.dock.updateDock()
             self.colorDialog.updateDialogValues()
 
@@ -421,54 +427,6 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
-    def editDomainColor(self, kind, id, apply=False):
-
-        if kind == 'Cell':
-            domain = self.model.activeView.cells
-        else:
-            domain = self.model.activeView.materials
-
-        current_color = domain[id].color
-        dlg = QColorDialog(self)
-
-        if current_color is not None:
-            dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
-        if dlg.exec_():
-            new_color = dlg.currentColor().getRgb()[:3]
-            domain[id].color = new_color
-
-        self.colorDialog.updateDomainColor(kind, id)
-
-        if apply:
-            self.applyChanges()
-
-    def toggleDomainMask(self, state, kind, id, apply=False):
-
-        if kind == 'Cell':
-            domain = self.model.activeView.cells
-        else:
-            domain = self.model.activeView.materials
-
-        domain[id].masked = bool(state)
-
-        if apply:
-            self.applyChanges()
-
-        self.colorDialog.updateMask(kind, id)
-
-    def toggleDomainHighlight(self, state, kind, id, apply=False):
-
-        if kind == 'Cell':
-            domain = self.model.activeView.cells
-        else:
-            domain = self.model.activeView.materials
-
-        domain[id].highlighted = bool(state)
-        self.colorDialog.updateHighlight(kind, id)
-
-        if apply:
-            self.applyChanges()
-
     ''' Plot Image Options '''
 
     def editPlotOrigin(self, xOr, yOr, zOr=None, apply=False):
@@ -487,9 +445,56 @@ class MainWindow(QMainWindow):
     def revertDockControls(self):
         self.dock.revertToCurrent()
 
+    def editDomainColor(self, kind, id):
+
+        if kind == 'Cell':
+            domain = self.model.activeView.cells
+        else:
+            domain = self.model.activeView.materials
+
+        current_color = domain[id].color
+        dlg = QColorDialog(self)
+
+        if current_color is not None:
+            dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
+        if dlg.exec_():
+            new_color = dlg.currentColor().getRgb()[:3]
+            domain[id].color = new_color
+
+        self.applyChanges()
+
+    def toggleDomainMask(self, state, kind, id):
+
+        if kind == 'Cell':
+            domain = self.model.activeView.cells
+        else:
+            domain = self.model.activeView.materials
+
+        domain[id].masked = bool(state)
+        self.applyChanges()
+
+    def toggleDomainHighlight(self, state, kind, id):
+
+        if kind == 'Cell':
+            domain = self.model.activeView.cells
+        else:
+            domain = self.model.activeView.materials
+
+        domain[id].highlighted = bool(state)
+        self.applyChanges()
+
     ''' Helper Methods '''
 
-    def showcurrentView(self):
+    def resetModels(self):
+        self.cellsModel = DomainTableModel(self.model.activeView.cells)
+        self.materialsModel = DomainTableModel(self.model.activeView.materials)
+        self.cellsModel.beginResetModel()
+        self.cellsModel.endResetModel()
+        self.materialsModel.beginResetModel()
+        self.materialsModel.endResetModel()
+        self.colorDialog.updateDomainTabs()
+
+    def showCurrentView(self):
 
         self.updateScale()
         self.updateRelativeBases()
@@ -578,4 +583,5 @@ if __name__ == '__main__':
     app.setWindowIcon(QtGui.QIcon('openmc_logo.png'))
     mainWindow = MainWindow()
     mainWindow.show()
+
     sys.exit(app.exec_())
