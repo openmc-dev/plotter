@@ -277,7 +277,6 @@ class MainWindow(QMainWindow):
         self.dock.updateDock()
         self.colorDialog.updateDialogValues()
 
-
         if not self.model.subsequentViews:
             self.redoAction.setDisabled(True)
 
@@ -293,6 +292,7 @@ class MainWindow(QMainWindow):
             self.model.storeCurrent()
             self.model.activeView = copy.deepcopy(self.model.defaultView)
             self.model.generatePlot()
+            self.resetModels()
             self.showCurrentView()
             self.dock.updateDock()
             self.colorDialog.updateDialogValues()
