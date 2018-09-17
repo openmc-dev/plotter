@@ -632,6 +632,8 @@ if __name__ == '__main__':
     app.setOrganizationDomain("github.com/openmc-dev/")
     app.setApplicationName("OpenMC Plot Explorer")
     app.setWindowIcon(QtGui.QIcon('openmc_logo.png'))
+    app.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
+
 
     FM = QtGui.QFontMetricsF(app.font())
     mainWindow = MainWindow()
