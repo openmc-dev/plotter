@@ -1,11 +1,11 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import sys, openmc, copy, time
+import os, sys, copy, pickle, time, openmc
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
     QScrollArea, QMenu, QAction, QFileDialog, QColorDialog)
-from plotmodel import PlotModel, PlotView, Domain, DomainTableModel
+from plotmodel import PlotModel, PlotView, Domain, DomainTableModel, DomainDelegate
 from plotgui import PlotImage, ColorDialog, OptionsDock
 
 class MainWindow(QMainWindow):
@@ -15,20 +15,19 @@ class MainWindow(QMainWindow):
 
         # Set Window Title
         self.setWindowTitle('OpenMC Plot Explorer')
-        self.move(100,100)
 
         # Create model
-
         self.model = PlotModel()
-        self.scale = (1, 1)
+        self.restored = False
+        self.restoreModelSettings()
 
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
 
         # Create plot image
-
         self.plotIm = PlotImage(self.model, self, FM)
         self.frame = QScrollArea(self)
+        self.frame.setMinimumSize(600,600)
         self.frame.setAlignment(QtCore.Qt.AlignCenter)
         self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.frame.setWidget(self.plotIm)
@@ -36,12 +35,15 @@ class MainWindow(QMainWindow):
 
         # Create Dock
         self.dock = OptionsDock(self.model, self, FM)
+        self.dock.setObjectName("OptionsDock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
 
         # Initiate color dialog
         self.colorDialog = ColorDialog(self.model, self, FM, self)
-        self.colorDialog.move(600, 200)
         self.colorDialog.hide()
+
+        # Restore Settings
+        self.restoreWindowSettings()
 
         # Create menubar
         self.createMenuBar()
@@ -52,10 +54,17 @@ class MainWindow(QMainWindow):
         self.coordLabel.hide()
 
         # Load Plot
-        self.model.generatePlot()
-        self.showCurrentView()
+        self.statusBar().showMessage('Generating Plot...')
         self.dock.updateDock()
         self.colorDialog.updateDialogValues()
+
+
+        if self.restored:
+            self.model.getIDs()
+            self.showCurrentView()
+        else:
+            QtCore.QTimer.singleShot(0, self.model.generatePlot)
+            QtCore.QTimer.singleShot(0, self.showCurrentView)
 
     ''' Create / Update Menus '''
 
@@ -485,6 +494,33 @@ class MainWindow(QMainWindow):
 
     ''' Helper Methods '''
 
+    def restoreWindowSettings(self):
+        settings = QtCore.QSettings()
+        self.resize(settings.value("mainWindow/Size", QtCore.QSize(800,600)))
+        self.move(settings.value("mainWindow/Position", QtCore.QPoint(100,100)))
+        self.restoreState(settings.value("mainWindow/State"))
+
+        self.colorDialog.resize(settings.value("colorDialog/Size", QtCore.QSize(400, 500)))
+        self.colorDialog.move(settings.value("colorDialog/Position", QtCore.QPoint(600, 200)))
+        self.colorDialog.setVisible(settings.value("colorDialog/Visible", False))
+        if settings.value("colorDialog/Active", False):
+            self.colorDialog.raise_()
+            self.colorDialog.activateWindow()
+
+    def restoreModelSettings(self):
+
+        if os.path.isfile("plotsettings.pkl"):
+
+            with open('plotsettings.pkl', 'rb') as file:
+                model = pickle.load(file)
+
+            if model.defaultView == self.model.defaultView:
+                self.model.currentView = model.currentView
+                self.model.activeView = copy.deepcopy(model.currentView)
+                self.model.previousViews = model.previousViews
+                self.model.subsequentViews = model.subsequentViews
+                self.restored = True
+
     def resetModels(self):
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
@@ -575,13 +611,29 @@ class MainWindow(QMainWindow):
 
         self.coordLabel.setText(f'{coords}')
 
+    def closeEvent(self, event):
+        settings = QtCore.QSettings()
+        settings.setValue("mainWindow/Size", self.size())
+        settings.setValue("mainWindow/Position", self.pos())
+        settings.setValue("mainWindow/State", self.saveState())
+
+        settings.setValue("colorDialog/Size", self.colorDialog.size())
+        settings.setValue("colorDialog/Position", self.colorDialog.pos())
+        settings.setValue("colorDialog/Visible", self.colorDialog.isVisible())
+        settings.setValue("colorDialog/Active", self.colorDialog.isActiveWindow())
+
+        with open('plotsettings.pkl', 'wb') as file:
+            pickle.dump(self.model, file)
 
 if __name__ == '__main__':
 
     app = QApplication(sys.argv)
-    FM = QtGui.QFontMetricsF(app.font())
+    app.setOrganizationName("OpenMC")
+    app.setOrganizationDomain("github.com/openmc-dev/")
+    app.setApplicationName("OpenMC Plot Explorer")
     app.setWindowIcon(QtGui.QIcon('openmc_logo.png'))
+
+    FM = QtGui.QFontMetricsF(app.font())
     mainWindow = MainWindow()
     mainWindow.show()
-
     sys.exit(app.exec_())

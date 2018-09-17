@@ -10,7 +10,7 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QFileDialog, QDialog, QTabWidget, QGridLayout, QToolButton, QColorDialog,
     QDialogButtonBox, QFrame, QActionGroup, QDockWidget, QTableView,
     QItemDelegate, QHeaderView)
-from plotmodel import DomainTableModel, DomainDelegate
+from plotmodel import DomainDelegate
 
 class PlotImage(QLabel):
     def __init__(self, model, controller, FM):
@@ -222,6 +222,7 @@ class OptionsDock(QDockWidget):
         self.cont = controller
         self.FM = FM
 
+        self.setStyleSheet("font: 11px")
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea |
                              QtCore.Qt.RightDockWidgetArea)
@@ -233,7 +234,6 @@ class OptionsDock(QDockWidget):
 
         # Create submit button
         self.submitButton = QPushButton("Apply Changes", self)
-        self.submitButton.setMinimumHeight(self.FM.height() * 2)
         self.submitButton.clicked.connect(self.cont.applyChanges)
 
         # Create Layout
@@ -467,7 +467,7 @@ class ColorDialog(QDialog):
 
         self.tabs = QTabWidget()
         self.tabs.setMinimumWidth(500)
-        self.tabs.setMaximumHeight(600)
+        self.tabs.setMaximumHeight(800)
         self.tabs.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.tabs.addTab(self.generalTab, 'General')
         self.tabs.addTab(self.cellTab, 'Cells')
@@ -537,12 +537,12 @@ class ColorDialog(QDialog):
         formLayout.addRow('Highlight Alpha:', self.alphaBox)
         formLayout.addRow('Highlight Seed:', self.seedBox)
         formLayout.addRow(HorizontalLine())
-        formLayout.addRow('Background Color:', self.bgButton)
+        formLayout.addRow('Background Color:          ', self.bgButton)
         formLayout.addRow('Color Plot By:', self.colorbyBox)
-        #formLayout.addStretch(1)
 
         generalLayout = QHBoxLayout()
         innerWidget = QWidget()
+        generalLayout.setAlignment(QtCore.Qt.AlignVCenter)
         innerWidget.setLayout(formLayout)
         generalLayout.addStretch(1)
         generalLayout.addWidget(innerWidget)
@@ -554,7 +554,7 @@ class ColorDialog(QDialog):
     def createDomainTabs(self):
         self.cellTable = QTableView()
         self.cellTable.setModel(self.cont.cellsModel)
-        self.cellTable.setItemDelegate(DomainDelegate(self))
+        self.cellTable.setItemDelegate(DomainDelegate(self.cellTable))
         self.cellTable.verticalHeader().setVisible(False)
         self.cellTable.resizeColumnsToContents()
         self.cellTable.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -562,14 +562,14 @@ class ColorDialog(QDialog):
 
         self.cellTab = QWidget()
         self.cellTab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.cellTab.setMaximumHeight(700)
         self.cellLayout = QVBoxLayout()
         self.cellLayout.addWidget(self.cellTable)
+        self.cellLayout.addWidget(QLabel("Double-click '+' to edit color. Right-click to clear."))
         self.cellTab.setLayout(self.cellLayout)
 
         self.matTable = QTableView()
         self.matTable.setModel(self.cont.materialsModel)
-        self.matTable.setItemDelegate(DomainDelegate(self))
+        self.matTable.setItemDelegate(DomainDelegate(self.matTable))
         self.matTable.verticalHeader().setVisible(False)
         self.matTable.resizeColumnsToContents()
         self.matTable.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -577,10 +577,9 @@ class ColorDialog(QDialog):
 
         self.matTab = QWidget()
         self.matTab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        #self.matTab.setMinimumWidth(self.matTable.width() + 20)
-        self.matTab.setMaximumHeight(700)
         self.matLayout = QVBoxLayout()
         self.matLayout.addWidget(self.matTable)
+        self.matLayout.addWidget(QLabel("Double-click '+' to edit color. Right-click to clear."))
         self.matTab.setLayout(self.matLayout)
 
     def createButtonBox(self):

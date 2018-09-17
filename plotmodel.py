@@ -63,13 +63,14 @@ class PlotModel():
             for i in range(py):
                 ids[i] = struct.unpack('{}i'.format(px), f.read(4*px))
 
-        return ids
+        self.ids = ids
 
     def generatePlot(self):
 
         t = Thread(target=self.makePlot)
         t.start()
         t.join()
+
 
     def makePlot(self):
 
@@ -126,7 +127,7 @@ class PlotModel():
         plots.export_to_xml()
         openmc.plot_geometry()
 
-        self.ids = self.getIDs()
+        self.getIDs()
 
     def undo(self):
         if self.previousViews:
@@ -170,7 +171,8 @@ class PlotView():
         self.plotBackground = (50, 50, 50)
 
     def __eq__(self, other):
-        return self.__dict__ == other.__dict__
+        if isinstance(other, PlotView):
+            return self.__dict__ == other.__dict__
 
     def __ne__(self, other):
         return self.__dict__ != other.__dict__
@@ -188,8 +190,8 @@ class PlotView():
             else:
                 name = None
             color = None
-            masked = 0
-            highlighted = 0
+            masked = False
+            highlighted = False
             domain = Domain(id, name, color, masked, highlighted)
             domains[id] = domain
 
@@ -241,9 +243,9 @@ class DomainTableModel(QtCore.QAbstractTableModel):
             elif column == COLORLABEL:
                 return str(domain.color) if domain.color is not None else '--'
             elif column == MASK:
-                return domain.masked
+                return None
             elif column == HIGHLIGHT:
-                return domain.highlighted
+                return None
 
         elif role == QtCore.Qt.TextAlignmentRole:
             if column in (MASK, HIGHLIGHT, COLOR):
@@ -255,6 +257,17 @@ class DomainTableModel(QtCore.QAbstractTableModel):
                     return QtGui.QColor.fromRgb(*domain.color)
                 else:
                     return QtGui.QColor.fromRgb(255, 255, 255)
+        elif role == QtCore.Qt.CheckStateRole:
+            if column == MASK:
+                if self.domains[index.row()].masked:
+                    return QtCore.Qt.Checked
+                else:
+                    return QtCore.Qt.Unchecked
+            elif column == HIGHLIGHT:
+                if self.domains[index.row()].highlighted:
+                    return QtCore.Qt.Checked
+                else:
+                    return QtCore.Qt.Unchecked
         return None
 
     def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
@@ -282,15 +295,20 @@ class DomainTableModel(QtCore.QAbstractTableModel):
     def flags(self, index):
         if not index.isValid():
             return Qt.ItemIsEnabled
-        if index.column() in (MASK, HIGHLIGHT):
-            return QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsUserCheckable |
-                 QtCore.Qt.ItemIsEditable |
-                 QtCore.QAbstractTableModel.flags(self, index))
-        elif index.column() in (NAME, COLOR):
-            return QtCore.Qt.ItemFlags(QtCore.QAbstractTableModel.flags(self, index) |
-                            QtCore.Qt.ItemIsEditable)
+        elif index.column() in (MASK, HIGHLIGHT):
+            return QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
+                                       QtCore.Qt.ItemIsUserCheckable |
+                                       QtCore.Qt.ItemIsSelectable)
+        elif index.column() == NAME:
+            return QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
+                                       QtCore.Qt.ItemIsEditable |
+                                       QtCore.Qt.ItemIsSelectable)
+        elif index.column() == COLOR:
+            return QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
+                                       QtCore.Qt.ItemIsEditable)
         else:
-            return QtCore.Qt.ItemFlags(0)
+            return QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
+                                       QtCore.Qt.ItemIsSelectable)
 
     def setData(self, index, value, role=QtCore.Qt.EditRole):
         if index.isValid() and 0 <= index.row() < len(self.domains):
@@ -305,9 +323,11 @@ class DomainTableModel(QtCore.QAbstractTableModel):
             elif column == COLORLABEL:
                 domain.color = value
             elif column == MASK:
-                domain.masked = value
+                if role == QtCore.Qt.CheckStateRole:
+                    domain.masked = True if value == QtCore.Qt.Checked else False
             elif column == HIGHLIGHT:
-                domain.highlighted = value
+                if role == QtCore.Qt.CheckStateRole:
+                    domain.highlighted = True if value == QtCore.Qt.Checked else False
             self.dataChanged.emit(index, index)
             return True
         return False
@@ -317,12 +337,6 @@ class DomainDelegate(QItemDelegate):
 
     def __init__(self, parent=None):
         super(DomainDelegate, self).__init__(parent)
-
-    def paint(self, painter, option, index):
-        if index.column() == MASK or index.column() == HIGHLIGHT:
-            self.drawCheck(painter, option, option.rect, QtCore.Qt.Unchecked if int(index.data()) == 0 else QtCore.Qt.Checked)
-        else:
-            QItemDelegate.paint(self, painter, option, index)
 
     def sizeHint(self, option, index):
         fm = option.fontMetrics
@@ -337,9 +351,7 @@ class DomainDelegate(QItemDelegate):
         return QItemDelegate.sizeHint(self, option, index)
 
     def createEditor(self, parent, option, index):
-        if index.column() == MASK or index.column() == HIGHLIGHT:
-            return None
-        elif index.column() == COLOR:
+        if index.column() == COLOR:
             dialog = QColorDialog(parent)
             return dialog
         else:
@@ -357,12 +369,13 @@ class DomainDelegate(QItemDelegate):
             text = (index.model().data(index, QtCore.Qt.DisplayRole))
             if text != '--':
                 editor.setText(text)
+
     def editorEvent(self, event, model, option, index):
-        if index.column() == MASK or index.column() == HIGHLIGHT:
+        if index.column() == COLOR:
             if not int(index.flags() & QtCore.Qt.ItemIsEditable) > 0:
                 return False
             if event.type() == QtCore.QEvent.MouseButtonRelease \
-                and event.button() == QtCore.Qt.LeftButton:
+                and event.button() == QtCore.Qt.RightButton:
                 self.setModelData(None, model, index)
                 return True
             return False
@@ -372,11 +385,15 @@ class DomainDelegate(QItemDelegate):
     def setModelData(self, editor, model, index):
         row = index.row()
         column = index.column()
-        if column == MASK or column == HIGHLIGHT:
-            model.setData(index, 1 if int(index.data()) == 0 else 0, QtCore.Qt.EditRole)
-        elif column == COLOR:
-            color = editor.currentColor().getRgb()[:3]
-            model.setData(index, color, QtCore.Qt.BackgroundColorRole)
-            model.setData(model.index(row, column+1), color, QtCore.Qt.DisplayRole)
+        if column == COLOR:
+            if editor is None:
+                model.setData(index, None, QtCore.Qt.BackgroundColorRole)
+                model.setData(model.index(row, column+1), None, QtCore.Qt.DisplayRole)
+            else:
+                color = editor.currentColor()
+                if color != QtGui.QColor():
+                    color = color.getRgb()[:3]
+                    model.setData(index, color, QtCore.Qt.BackgroundColorRole)
+                    model.setData(model.index(row, column+1), color, QtCore.Qt.DisplayRole)
         else:
             QItemDelegate.setModelData(self, editor, model, index)
