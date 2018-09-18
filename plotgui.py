@@ -1,15 +1,13 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import time
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QApplication, QGroupBox, QFormLayout, QLabel, QLineEdit, QComboBox,
     QSpinBox, QDoubleSpinBox, QSizePolicy, QSpacerItem, QMainWindow,
-    QCheckBox, QScrollArea, QLayout, QRubberBand, QMenu, QAction, QMenuBar,
-    QFileDialog, QDialog, QTabWidget, QGridLayout, QToolButton, QColorDialog,
-    QDialogButtonBox, QFrame, QActionGroup, QDockWidget, QTableView,
-    QItemDelegate, QHeaderView)
+    QCheckBox, QRubberBand, QMenu, QAction, QMenuBar, QFileDialog, QDialog,
+    QTabWidget, QGridLayout, QToolButton, QColorDialog, QFrame, QDockWidget,
+    QTableView, QItemDelegate, QHeaderView)
 from plotmodel import DomainDelegate
 
 class PlotImage(QLabel):
@@ -99,8 +97,8 @@ class PlotImage(QLabel):
                 bandheight = abs(self.bandOrigin.y() - event.pos().y())
                 height = cv.height * (cv.vRes / max(bandheight, .001))
             else: # Zoom in
-                width = max(abs(self.xPlotOrigin - xPlotPos), 1)
-                height = max(abs(self.yPlotOrigin - yPlotPos), 1)
+                width = max(abs(self.xPlotOrigin - xPlotPos), 0.1)
+                height = max(abs(self.yPlotOrigin - yPlotPos), 0.1)
 
             self.cont.editWidth(width)
             self.cont.editHeight(height)
@@ -162,7 +160,7 @@ class PlotImage(QLabel):
                 self.cont.editBackgroundColor(apply=True))
 
         self.menu.addSeparator()
-        self.menu.addAction(self.cont.saveAction)
+        self.menu.addAction(self.cont.saveImageAction)
         self.menu.addSeparator()
         self.menu.addMenu(self.cont.basisMenu)
         self.menu.addMenu(self.cont.colorbyMenu)
@@ -222,7 +220,7 @@ class OptionsDock(QDockWidget):
         self.cont = controller
         self.FM = FM
 
-        self.setStyleSheet("font: 11px")
+        #self.setStyleSheet("font: 11px")
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea |
                              QtCore.Qt.RightDockWidgetArea)
@@ -233,15 +231,16 @@ class OptionsDock(QDockWidget):
         self.createResolutionBox()
 
         # Create submit button
-        self.submitButton = QPushButton("Apply Changes", self)
-        self.submitButton.clicked.connect(self.cont.applyChanges)
+        self.applyButton = QPushButton("Apply Changes")
+        self.applyButton.setMinimumHeight(self.FM.height() * 1.6)
+        self.applyButton.clicked.connect(self.cont.applyChanges)
 
         # Create Layout
         self.controlLayout = QVBoxLayout()
         self.controlLayout.addWidget(self.originGroupBox)
         self.controlLayout.addWidget(self.optionsGroupBox)
         self.controlLayout.addWidget(self.resGroupBox)
-        self.controlLayout.addWidget(self.submitButton)
+        self.controlLayout.addWidget(self.applyButton)
         self.controlLayout.addStretch()
 
         self.optionsWidget = QWidget()
@@ -249,11 +248,7 @@ class OptionsDock(QDockWidget):
 
         self.setWidget(self.optionsWidget)
 
-    ''' Create GUI Elements '''
-
     def createOriginBox(self):
-
-        cv = self.model.currentView
 
         # X Origin
         self.xOrBox = QDoubleSpinBox()
@@ -291,8 +286,6 @@ class OptionsDock(QDockWidget):
 
     def createOptionsBox(self):
 
-        cv = self.model.currentView
-
         # Width
         self.widthBox = QDoubleSpinBox(self)
         self.widthBox.setRange(.1, 99999)
@@ -318,7 +311,7 @@ class OptionsDock(QDockWidget):
 
         # Advanced Color Options
         self.colorOptionsButton = QPushButton('Color Options...')
-        self.colorOptionsButton.setMinimumHeight(self.FM.height() * 2)
+        self.colorOptionsButton.setMinimumHeight(self.FM.height() * 1.6)
         self.colorOptionsButton.clicked.connect(self.cont.showColorDialog)
 
         # Options Form Layout
@@ -360,15 +353,12 @@ class OptionsDock(QDockWidget):
         self.resLayout.addRow(self.ratioCheck)
         self.resLayout.addRow('Pixel Width:', self.hResBox)
         self.resLayout.addRow(self.vResLabel, self.vResBox)
-        #self.resLayout.setVerticalSpacing(4)
         self.resLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
         self.resLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         # Resolution Group Box
         self.resGroupBox = QGroupBox("Resolution")
         self.resGroupBox.setLayout(self.resLayout)
-
-    ''' Update GUI '''
 
     def updateDock(self):
         self.updateOrigin()
@@ -428,7 +418,6 @@ class ColorDialog(QDialog):
     def __init__(self, model, controller, FM, parent=None):
         super(ColorDialog, self).__init__(parent)
 
-        start = time.time()
         self.setWindowTitle('Advanced Color Options')
         #self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
@@ -453,9 +442,6 @@ class ColorDialog(QDialog):
 
         self.createDialogLayout()
 
-        print (f"Dialog created in: {round(time.time() - start, 5)} seconds")
-
-    ''' Create GUI Elements'''
 
     def createDialogLayout(self):
 
@@ -596,8 +582,6 @@ class ColorDialog(QDialog):
 
         self.buttonBox = QWidget()
         self.buttonBox.setLayout(buttonLayout)
-
-    ''' Update GUI Elements'''
 
     def updateDialogValues(self):
 

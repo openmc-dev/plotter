@@ -1,17 +1,14 @@
-import sys, openmc, copy, struct
+import copy, struct, openmc
 import numpy as np
 import xml.etree.ElementTree as ET
 from threading import Thread
-from PySide2 import QtCore, QtGui
-from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
-    QApplication, QGroupBox, QFormLayout, QLabel, QLineEdit, QComboBox,
-    QSpinBox, QDoubleSpinBox, QSizePolicy, QSpacerItem, QMainWindow,
-    QCheckBox, QScrollArea, QLayout, QRubberBand, QMenu, QAction, QMenuBar,
-    QFileDialog, QDialog, QTabWidget, QGridLayout, QToolButton, QColorDialog,
-    QDialogButtonBox, QFrame, QActionGroup, QDockWidget, QTableView,
-    QItemDelegate)
+from PySide2.QtWidgets import QTableView, QItemDelegate, QColorDialog
+from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
+from PySide2.QtGui import QColor
+
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = (range(0,6))
+
 
 class PlotModel():
     def __init__(self):
@@ -46,31 +43,26 @@ class PlotModel():
         else:
             xcenter, ycenter, width, height = (0.00, 0.00, 25, 25)
 
-        if  lower_left[2] != -np.inf and upper_right[2] != np.inf:
+        if lower_left[2] != -np.inf and upper_right[2] != np.inf:
             zcenter = (upper_right[2] + lower_left[2])/2
         else:
             zcenter = 0.00
-
 
         default = PlotView([xcenter, ycenter, zcenter], width, height)
         return default
 
     def getIDs(self):
-
         with open('plot_ids.binary', 'rb') as f:
             px, py, wx, wy = struct.unpack('iidd', f.read(4*2 + 8*2))
             ids = np.zeros((py, px), dtype=int)
             for i in range(py):
                 ids[i] = struct.unpack('{}i'.format(px), f.read(4*px))
-
         self.ids = ids
 
     def generatePlot(self):
-
         t = Thread(target=self.makePlot)
         t.start()
         t.join()
-
 
     def makePlot(self):
 
@@ -175,7 +167,8 @@ class PlotView():
             return self.__dict__ == other.__dict__
 
     def __ne__(self, other):
-        return self.__dict__ != other.__dict__
+        if isinstance(other, PlotView):
+            return self.__dict__ != other.__dict__
 
     def getDomains(self, file, type_):
 
@@ -203,43 +196,45 @@ class Domain():
 
         self.id = id
         self.name = name
-        self.color = None
+        self.color = color
         self.masked = masked
         self.highlighted = highlighted
 
     def __repr__(self):
-        return (f"id: {self.id} \nname: {self.name} \ncolor: {self.color} \nmask: {self.masked} \nhighlight: {self.highlighted}\n\n")
+        return (f"id: {self.id} \nname: {self.name} \ncolor: {self.color} \
+                \nmask: {self.masked} \nhighlight: {self.highlighted}\n\n")
 
     def __eq__(self, other):
-        return self.__dict__ == other.__dict__
+        if isinstance(other, Domain):
+            return self.__dict__ == other.__dict__
 
 
-class DomainTableModel(QtCore.QAbstractTableModel):
-
+class DomainTableModel(QAbstractTableModel):
     def __init__(self, domains):
         super(DomainTableModel, self).__init__()
-
         self.domains = [dom for dom in domains.values()]
 
-    def rowCount(self, index=QtCore.QModelIndex()):
+    def rowCount(self, index=QModelIndex()):
         return len(self.domains)
 
-    def columnCount(self, index=QtCore.QModelIndex()):
+    def columnCount(self, index=QModelIndex()):
         return 6
 
-    def data(self, index, role=QtCore.Qt.DisplayRole):
-        if not index.isValid() or \
-           not (0 <= index.row() < len(self.domains)):
+    def data(self, index, role=Qt.DisplayRole):
+
+        if not index.isValid() or not (0 <= index.row() < len(self.domains)):
             return None
+
         domain = self.domains[index.row()]
         column = index.column()
-        if role == QtCore.Qt.DisplayRole:
+
+        if role == Qt.DisplayRole:
             if column == ID:
                 return domain.id
             elif column == NAME:
-                return domain.name if domain.name else '--'
+                return domain.name if domain.name is not None else '--'
             elif column == COLOR:
-                return '+' if domain.color is None else ""
+                return '' if domain.color is not None else '+'
             elif column == COLORLABEL:
                 return str(domain.color) if domain.color is not None else '--'
             elif column == MASK:
@@ -247,110 +242,103 @@ class DomainTableModel(QtCore.QAbstractTableModel):
             elif column == HIGHLIGHT:
                 return None
 
-        elif role == QtCore.Qt.TextAlignmentRole:
+        elif role == Qt.TextAlignmentRole:
             if column in (MASK, HIGHLIGHT, COLOR):
-                return int(QtCore.Qt.AlignCenter | QtCore.Qt.AlignVCenter)
-            return int(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-        elif role == QtCore.Qt.BackgroundColorRole:
+                return int(Qt.AlignCenter | Qt.AlignVCenter)
+            else:
+                return int(Qt.AlignLeft | Qt.AlignVCenter)
+
+        elif role == Qt.BackgroundColorRole:
             if column == COLOR:
                 if domain.color is not None:
-                    return QtGui.QColor.fromRgb(*domain.color)
-                else:
-                    return QtGui.QColor.fromRgb(255, 255, 255)
-        elif role == QtCore.Qt.CheckStateRole:
+                    return QColor.fromRgb(*domain.color)
+
+        elif role == Qt.CheckStateRole:
             if column == MASK:
-                if self.domains[index.row()].masked:
-                    return QtCore.Qt.Checked
-                else:
-                    return QtCore.Qt.Unchecked
+                return Qt.Checked if domain.masked else Qt.Unchecked
             elif column == HIGHLIGHT:
-                if self.domains[index.row()].highlighted:
-                    return QtCore.Qt.Checked
-                else:
-                    return QtCore.Qt.Unchecked
+                return Qt.Checked if domain.highlighted else Qt.Unchecked
+
         return None
 
-    def headerData(self, section, orientation, role=QtCore.Qt.DisplayRole):
-        if role == QtCore.Qt.TextAlignmentRole:
-            if orientation == QtCore.Qt.Horizontal:
-                return int(QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
-            return int(QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter)
-        if role != QtCore.Qt.DisplayRole:
-            return None
-        if orientation == QtCore.Qt.Horizontal:
-            if section == ID:
-                return "ID"
-            elif section == NAME:
-                return "Name"
-            elif section == COLOR:
-                return "Color"
-            elif section == COLORLABEL:
-                return "RGB"
-            elif section == MASK:
-                return "Mask"
-            elif section == HIGHLIGHT:
-                return "Highlight"
-        return int(section + 1)
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+
+        if role == Qt.TextAlignmentRole:
+            if orientation == Qt.Horizontal:
+                return int(Qt.AlignLeft|Qt.AlignVCenter)
+            return int(Qt.AlignRight|Qt.AlignVCenter)
+
+        elif role == Qt.DisplayRole:
+            if orientation == Qt.Horizontal:
+                headers = ['ID', 'Name', 'Color', 'RGB', 'Mask', 'Highlight']
+                return headers[section]
+            return int(section + 1)
+
+        return None
 
     def flags(self, index):
+
         if not index.isValid():
             return Qt.ItemIsEnabled
-        elif index.column() in (MASK, HIGHLIGHT):
-            return QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
-                                       QtCore.Qt.ItemIsUserCheckable |
-                                       QtCore.Qt.ItemIsSelectable)
-        elif index.column() == NAME:
-            return QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
-                                       QtCore.Qt.ItemIsEditable |
-                                       QtCore.Qt.ItemIsSelectable)
-        elif index.column() == COLOR:
-            return QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
-                                       QtCore.Qt.ItemIsEditable)
-        else:
-            return QtCore.Qt.ItemFlags(QtCore.Qt.ItemIsEnabled |
-                                       QtCore.Qt.ItemIsSelectable)
 
-    def setData(self, index, value, role=QtCore.Qt.EditRole):
-        if index.isValid() and 0 <= index.row() < len(self.domains):
-            domain = self.domains[index.row()]
-            column = index.column()
-            if column == ID:
-                domain.id = value
-            elif column == NAME:
-                domain.name = value if value else None
-            elif column == COLOR:
-                domain.color = value
-            elif column == COLORLABEL:
-                domain.color = value
-            elif column == MASK:
-                if role == QtCore.Qt.CheckStateRole:
-                    domain.masked = True if value == QtCore.Qt.Checked else False
-            elif column == HIGHLIGHT:
-                if role == QtCore.Qt.CheckStateRole:
-                    domain.highlighted = True if value == QtCore.Qt.Checked else False
-            self.dataChanged.emit(index, index)
-            return True
-        return False
+        elif index.column() in (MASK, HIGHLIGHT):
+            return Qt.ItemFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable |
+                                Qt.ItemIsSelectable)
+        elif index.column() == NAME:
+            return Qt.ItemFlags(Qt.ItemIsEnabled | Qt.ItemIsEditable |
+                                Qt.ItemIsSelectable)
+        elif index.column() == COLOR:
+            return Qt.ItemFlags(Qt.ItemIsEnabled | Qt.ItemIsEditable)
+        else:
+            return Qt.ItemFlags(Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+
+    def setData(self, index, value, role=Qt.EditRole):
+
+        if not index.isValid() or not (0 <= index.row() < len(self.domains)):
+            return False
+
+        domain = self.domains[index.row()]
+        column = index.column()
+
+        if column == NAME:
+            domain.name = value if value else None
+        elif column == COLOR:
+            domain.color = value
+        elif column == COLORLABEL:
+            domain.color = value
+        elif column == MASK:
+            if role == Qt.CheckStateRole:
+                domain.masked = True if value == Qt.Checked else False
+        elif column == HIGHLIGHT:
+            if role == Qt.CheckStateRole:
+                domain.highlighted = True if value == Qt.Checked else False
+
+        self.dataChanged.emit(index, index)
+        return True
 
 
 class DomainDelegate(QItemDelegate):
-
     def __init__(self, parent=None):
         super(DomainDelegate, self).__init__(parent)
 
     def sizeHint(self, option, index):
+
         fm = option.fontMetrics
-        if index.column() == ID:
-            return QtCore.QSize(fm.width("XXXXXX"), fm.height())
-        elif index.column() == COLOR:
-            return QtCore.QSize(fm.width("XXXXXX"), fm.height())
-        elif index.column() == COLORLABEL:
-            return QtCore.QSize(fm.width("X(XXX, XXX, XXX)X"), fm.height())
-        elif index.column() in (MASK, HIGHLIGHT):
-            return QtCore.QSize(fm.width("XXXXXXX"), fm.height())
-        return QItemDelegate.sizeHint(self, option, index)
+        column = index.column()
+
+        if column == ID:
+            return QSize(fm.width("XXXXXX"), fm.height())
+        elif column == COLOR:
+            return QSize(fm.width("XXXXXX"), fm.height())
+        elif column == COLORLABEL:
+            return QSize(fm.width("X(XXX, XXX, XXX)X"), fm.height())
+        elif column in (MASK, HIGHLIGHT):
+            return QSize(fm.width("XXXXXXX"), fm.height())
+        else:
+            return QItemDelegate.sizeHint(self, option, index)
 
     def createEditor(self, parent, option, index):
+
         if index.column() == COLOR:
             dialog = QColorDialog(parent)
             return dialog
@@ -358,24 +346,22 @@ class DomainDelegate(QItemDelegate):
             return QItemDelegate.createEditor(self, parent, option, index)
 
     def setEditorData(self, editor, index):
+
         if index.column() == COLOR:
-            color = index.data(QtCore.Qt.BackgroundColorRole)
+            color = index.data(Qt.BackgroundColorRole)
             editor.setCurrentColor(color)
-        elif index.column() == COLORLABEL:
-            text = index.model().data(index, QtCore.Qt.DisplayRole)
-            if text != '--':
-                editor.setText(text)
         elif index.column() == NAME:
-            text = (index.model().data(index, QtCore.Qt.DisplayRole))
+            text = index.data(Qt.DisplayRole)
             if text != '--':
                 editor.setText(text)
 
     def editorEvent(self, event, model, option, index):
+
         if index.column() == COLOR:
-            if not int(index.flags() & QtCore.Qt.ItemIsEditable) > 0:
+            if not int(index.flags() & Qt.ItemIsEditable) > 0:
                 return False
-            if event.type() == QtCore.QEvent.MouseButtonRelease \
-                and event.button() == QtCore.Qt.RightButton:
+            if event.type() == QEvent.MouseButtonRelease \
+                and event.button() == Qt.RightButton:
                 self.setModelData(None, model, index)
                 return True
             return False
@@ -383,17 +369,18 @@ class DomainDelegate(QItemDelegate):
             return QItemDelegate.editorEvent(self, event, model, option, index)
 
     def setModelData(self, editor, model, index):
+
         row = index.row()
         column = index.column()
-        if column == COLOR:
-            if editor is None:
-                model.setData(index, None, QtCore.Qt.BackgroundColorRole)
-                model.setData(model.index(row, column+1), None, QtCore.Qt.DisplayRole)
-            else:
-                color = editor.currentColor()
-                if color != QtGui.QColor():
-                    color = color.getRgb()[:3]
-                    model.setData(index, color, QtCore.Qt.BackgroundColorRole)
-                    model.setData(model.index(row, column+1), color, QtCore.Qt.DisplayRole)
+
+        if column == COLOR and editor is None:
+            model.setData(index, None, Qt.BackgroundColorRole)
+            model.setData(model.index(row, column+1), None, Qt.DisplayRole)
+        elif column == COLOR:
+            color = editor.currentColor()
+            if color != QColor():
+                color = color.getRgb()[:3]
+                model.setData(index, color, Qt.BackgroundColorRole)
+                model.setData(model.index(row, column+1), color, Qt.DisplayRole)
         else:
             QItemDelegate.setModelData(self, editor, model, index)

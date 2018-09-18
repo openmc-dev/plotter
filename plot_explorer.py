@@ -1,15 +1,14 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import os, sys, copy, pickle, time, openmc
+import os, sys, copy, pickle, openmc
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
     QScrollArea, QMenu, QAction, QFileDialog, QColorDialog)
-from plotmodel import PlotModel, PlotView, Domain, DomainTableModel, DomainDelegate
+from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, ColorDialog, OptionsDock
 
 class MainWindow(QMainWindow):
-
     def __init__(self):
         super(MainWindow, self).__init__()
 
@@ -76,15 +75,26 @@ class MainWindow(QMainWindow):
         # File Menu
         self.fileMenu = self.mainMenu.addMenu('&File')
 
-        self.saveAction = QAction("&Save Image As...", self)
-        self.saveAction.setShortcut(QtGui.QKeySequence.Save)
-        self.saveAction.triggered.connect(self.saveImage)
+        self.saveImageAction = QAction("&Save Image As...", self)
+        self.saveImageAction.setShortcut("Ctrl+Shift+S")
+        self.saveImageAction.triggered.connect(self.saveImage)
+
+        self.saveViewAction = QAction("Save &View Settings...", self)
+        self.saveViewAction.setShortcut(QtGui.QKeySequence.Save)
+        self.saveViewAction.triggered.connect(self.saveView)
+
+        self.openAction = QAction("&Open View Settings...", self)
+        self.openAction.setShortcut(QtGui.QKeySequence.Open)
+        self.openAction.triggered.connect(self.openView)
 
         self.quitAction = QAction("&Quit", self)
         self.quitAction.setShortcut(QtGui.QKeySequence.Quit)
         self.quitAction.triggered.connect(self.close)
 
-        self.fileMenu.addAction(self.saveAction)
+        self.fileMenu.addAction(self.saveImageAction)
+        self.fileMenu.addSeparator()
+        self.fileMenu.addAction(self.saveViewAction)
+        self.fileMenu.addAction(self.openAction)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.quitAction)
 
@@ -240,8 +250,39 @@ class MainWindow(QMainWindow):
                 self.pixmap.save(filename + ".png")
             else:
                 self.pixmap.save(filename)
+            self.statusBar().showMessage('Plot Image Saved', 5000)
 
-            mainWindow.statusBar().showMessage('Plot Image Saved', 5000)
+    def saveView(self):
+        filename, ext = QFileDialog.getSaveFileName(self, "Save View Settings",
+                                        "untitled", "View Settings (*.pltvw)")
+        if filename:
+            if "." not in filename:
+                filename += ".pltvw"
+
+            saved = {'default': self.model.defaultView,
+                     'current': self.model.currentView}
+
+            with open(filename, 'wb') as file:
+                pickle.dump(saved, file)
+
+    def openView(self):
+        filename, ext = QFileDialog.getOpenFileName(self, "Open View Settings",
+                                                    ".", "*.pltvw")
+        if filename:
+            try:
+                with open(filename, 'rb') as file:
+                    saved = pickle.load(file)
+            except Exception:
+                message = 'Error loading plot settings'
+                saved = {'default': None, 'current': None}
+            if saved['default'] == self.model.defaultView:
+                self.model.activeView = saved['current']
+                self.dock.updateDock()
+                self.applyChanges()
+                message = f'{filename} settings loaded'
+            else:
+                message = 'Error loading plot settings. Incompatible model.'
+            self.statusBar().showMessage(message, 5000)
 
     def applyChanges(self):
 
@@ -509,9 +550,9 @@ class MainWindow(QMainWindow):
 
     def restoreModelSettings(self):
 
-        if os.path.isfile("plotsettings.pkl"):
+        if os.path.isfile("plot_settings.pkl"):
 
-            with open('plotsettings.pkl', 'rb') as file:
+            with open('plot_settings.pkl', 'rb') as file:
                 model = pickle.load(file)
 
             if model.defaultView == self.model.defaultView:
@@ -622,7 +663,7 @@ class MainWindow(QMainWindow):
         settings.setValue("colorDialog/Visible", self.colorDialog.isVisible())
         settings.setValue("colorDialog/Active", self.colorDialog.isActiveWindow())
 
-        with open('plotsettings.pkl', 'wb') as file:
+        with open('plot_settings.pkl', 'wb') as file:
             pickle.dump(self.model, file)
 
 if __name__ == '__main__':
@@ -633,7 +674,6 @@ if __name__ == '__main__':
     app.setApplicationName("OpenMC Plot Explorer")
     app.setWindowIcon(QtGui.QIcon('openmc_logo.png'))
     app.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
-
 
     FM = QtGui.QFontMetricsF(app.font())
     mainWindow = MainWindow()
