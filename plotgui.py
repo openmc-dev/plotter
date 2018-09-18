@@ -11,13 +11,13 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
 from plotmodel import DomainDelegate
 
 class PlotImage(QLabel):
-    def __init__(self, model, controller, FM):
+    def __init__(self, model, mainwindow, FM):
         super(PlotImage, self).__init__()
 
         self.FM = FM
 
         self.model = model
-        self.cont = controller
+        self.mw = mainwindow
 
         self.setAlignment(QtCore.Qt.AlignCenter)
         self.setMouseTracking(True)
@@ -31,11 +31,11 @@ class PlotImage(QLabel):
 
     def enterEvent(self, event):
         self.setCursor(QtCore.Qt.CrossCursor)
-        self.cont.coordLabel.show()
+        self.mw.coordLabel.show()
 
     def leaveEvent(self, event):
-        self.cont.showStatusPlot()
-        self.cont.coordLabel.hide()
+        self.mw.showStatusPlot()
+        self.mw.coordLabel.hide()
 
     def mousePressEvent(self, event):
 
@@ -51,7 +51,7 @@ class PlotImage(QLabel):
     def mouseDoubleClickEvent(self, event):
 
         xCenter, yCenter = self.getPlotCoords(event.pos())
-        self.cont.editPlotOrigin(xCenter, yCenter, apply=True)
+        self.mw.editPlotOrigin(xCenter, yCenter, apply=True)
 
         QLabel.mouseDoubleClickEvent(self, event)
 
@@ -59,7 +59,7 @@ class PlotImage(QLabel):
 
         # Show Cursor position relative to plot in status bar
         xPlotPos, yPlotPos = self.getPlotCoords(event.pos())
-        self.cont.showCoords(xPlotPos, yPlotPos)
+        self.mw.showCoords(xPlotPos, yPlotPos)
 
         # Show Cell/Material ID, Name in status bar
         id, domain, domain_kind = self.getIDinfo(event)
@@ -69,7 +69,7 @@ class PlotImage(QLabel):
             domainInfo = f"{domain_kind} {id}"
         else:
             domainInfo = ""
-        self.cont.statusBar().showMessage(f" {domainInfo}")
+        self.mw.statusBar().showMessage(f" {domainInfo}")
 
         # Update rubber band and values if mouse button held down
         if event.buttons() == QtCore.Qt.LeftButton:
@@ -85,7 +85,7 @@ class PlotImage(QLabel):
             # Update plot X Origin
             xCenter = (self.xPlotOrigin + xPlotPos) / 2
             yCenter = (self.yPlotOrigin + yPlotPos) / 2
-            self.cont.editPlotOrigin(xCenter, yCenter)
+            self.mw.editPlotOrigin(xCenter, yCenter)
 
             modifiers = QApplication.keyboardModifiers()
 
@@ -100,16 +100,16 @@ class PlotImage(QLabel):
                 width = max(abs(self.xPlotOrigin - xPlotPos), 0.1)
                 height = max(abs(self.yPlotOrigin - yPlotPos), 0.1)
 
-            self.cont.editWidth(width)
-            self.cont.editHeight(height)
+            self.mw.editWidth(width)
+            self.mw.editHeight(height)
 
     def mouseReleaseEvent(self, event):
 
         if self.rubberBand.isVisible():
             self.rubberBand.hide()
-            self.cont.applyChanges()
+            self.mw.applyChanges()
         else:
-            self.cont.revertDockControls()
+            self.mw.revertDockControls()
 
     def contextMenuEvent(self, event):
 
@@ -129,54 +129,55 @@ class PlotImage(QLabel):
                 domainName.setDisabled(True)
 
             self.menu.addSeparator()
-            self.menu.addAction(self.cont.undoAction)
-            self.menu.addAction(self.cont.redoAction)
+            self.menu.addAction(self.mw.undoAction)
+            self.menu.addAction(self.mw.redoAction)
             self.menu.addSeparator()
 
             colorAction = self.menu.addAction(f'Edit {domain_kind} Color...')
+            colorAction.setDisabled(self.model.currentView.highlighting)
             colorAction.triggered.connect(lambda :
-                self.cont.editDomainColor(domain_kind, id))
+                self.mw.editDomainColor(domain_kind, id))
 
             maskAction = self.menu.addAction(f'Mask {domain_kind}')
             maskAction.setCheckable(True)
             maskAction.setChecked(domain[id].masked)
             maskAction.setDisabled(not self.model.currentView.masking)
             maskAction.triggered[bool].connect(lambda bool=bool:
-                self.cont.toggleDomainMask(bool, domain_kind, id))
+                self.mw.toggleDomainMask(bool, domain_kind, id))
 
             highlightAction = self.menu.addAction(f'Highlight {domain_kind}')
             highlightAction.setCheckable(True)
             highlightAction.setChecked(domain[id].highlighted)
             highlightAction.setDisabled(not self.model.currentView.highlighting)
             highlightAction.triggered[bool].connect(lambda bool=bool:
-                self.cont.toggleDomainHighlight(bool, domain_kind, id))
+                self.mw.toggleDomainHighlight(bool, domain_kind, id))
 
         else:
-            self.menu.addAction(self.cont.undoAction)
-            self.menu.addAction(self.cont.redoAction)
+            self.menu.addAction(self.mw.undoAction)
+            self.menu.addAction(self.mw.redoAction)
             self.menu.addSeparator()
             bgColorAction = self.menu.addAction('Edit Background Color...')
             bgColorAction.triggered.connect(lambda :
-                self.cont.editBackgroundColor(apply=True))
+                self.mw.editBackgroundColor(apply=True))
 
         self.menu.addSeparator()
-        self.menu.addAction(self.cont.saveImageAction)
+        self.menu.addAction(self.mw.saveImageAction)
         self.menu.addSeparator()
-        self.menu.addMenu(self.cont.basisMenu)
-        self.menu.addMenu(self.cont.colorbyMenu)
+        self.menu.addMenu(self.mw.basisMenu)
+        self.menu.addMenu(self.mw.colorbyMenu)
         self.menu.addSeparator()
-        self.menu.addAction(self.cont.maskingAction)
-        self.menu.addAction(self.cont.highlightingAct)
+        self.menu.addAction(self.mw.maskingAction)
+        self.menu.addAction(self.mw.highlightingAct)
         self.menu.addSeparator()
-        self.menu.addAction(self.cont.dockAction)
+        self.menu.addAction(self.mw.dockAction)
 
-        self.cont.maskingAction.setChecked(self.model.currentView.masking)
-        self.cont.highlightingAct.setChecked(self.model.currentView.highlighting)
+        self.mw.maskingAction.setChecked(self.model.currentView.masking)
+        self.mw.highlightingAct.setChecked(self.model.currentView.highlighting)
 
-        if self.cont.dock.isVisible():
-            self.cont.dockAction.setText('Hide Options &Dock')
+        if self.mw.dock.isVisible():
+            self.mw.dockAction.setText('Hide Options &Dock')
         else:
-            self.cont.dockAction.setText('Show Options &Dock')
+            self.mw.dockAction.setText('Show Options &Dock')
 
         self.menu.exec_(event.globalPos())
 
@@ -189,8 +190,8 @@ class PlotImage(QLabel):
         yPos = -pos.y() + (cv.vRes / 2)
 
         # Curson position in plot coordinates
-        xPlotCoord = (xPos / self.cont.scale[0]) + cv.origin[self.cont.xBasis]
-        yPlotCoord = (yPos / self.cont.scale[1]) + cv.origin[self.cont.yBasis]
+        xPlotCoord = (xPos / self.mw.scale[0]) + cv.origin[self.mw.xBasis]
+        yPlotCoord = (yPos / self.mw.scale[1]) + cv.origin[self.mw.yBasis]
 
         return (xPlotCoord, yPlotCoord)
 
@@ -213,11 +214,11 @@ class PlotImage(QLabel):
 
 
 class OptionsDock(QDockWidget):
-    def __init__(self, model, controller, FM):
+    def __init__(self, model, mainwindow, FM):
         super(OptionsDock, self).__init__()
 
         self.model = model
-        self.cont = controller
+        self.mw = mainwindow
         self.FM = FM
 
         #self.setStyleSheet("font: 11px")
@@ -233,18 +234,18 @@ class OptionsDock(QDockWidget):
         # Create submit button
         self.applyButton = QPushButton("Apply Changes")
         self.applyButton.setMinimumHeight(self.FM.height() * 1.6)
-        self.applyButton.clicked.connect(self.cont.applyChanges)
+        self.applyButton.clicked.connect(self.mw.applyChanges)
 
         # Create Layout
-        self.controlLayout = QVBoxLayout()
-        self.controlLayout.addWidget(self.originGroupBox)
-        self.controlLayout.addWidget(self.optionsGroupBox)
-        self.controlLayout.addWidget(self.resGroupBox)
-        self.controlLayout.addWidget(self.applyButton)
-        self.controlLayout.addStretch()
+        self.mwrolLayout = QVBoxLayout()
+        self.mwrolLayout.addWidget(self.originGroupBox)
+        self.mwrolLayout.addWidget(self.optionsGroupBox)
+        self.mwrolLayout.addWidget(self.resGroupBox)
+        self.mwrolLayout.addWidget(self.applyButton)
+        self.mwrolLayout.addStretch()
 
         self.optionsWidget = QWidget()
-        self.optionsWidget.setLayout(self.controlLayout)
+        self.optionsWidget.setLayout(self.mwrolLayout)
 
         self.setWidget(self.optionsWidget)
 
@@ -255,21 +256,21 @@ class OptionsDock(QDockWidget):
         self.xOrBox.setDecimals(9)
         self.xOrBox.setRange(-99999, 99999)
         self.xOrBox.valueChanged.connect(lambda value:
-            self.cont.editSingleOrigin(value, 0))
+            self.mw.editSingleOrigin(value, 0))
 
         # Y Origin
         self.yOrBox = QDoubleSpinBox()
         self.yOrBox.setDecimals(9)
         self.yOrBox.setRange(-99999, 99999)
         self.yOrBox.valueChanged.connect(lambda value:
-            self.cont.editSingleOrigin(value, 1))
+            self.mw.editSingleOrigin(value, 1))
 
         # Z Origin
         self.zOrBox = QDoubleSpinBox()
         self.zOrBox.setDecimals(9)
         self.zOrBox.setRange(-99999, 99999)
         self.zOrBox.valueChanged.connect(lambda value:
-            self.cont.editSingleOrigin(value, 2))
+            self.mw.editSingleOrigin(value, 2))
 
         # Origin Form Layout
         self.orLayout = QFormLayout()
@@ -289,30 +290,30 @@ class OptionsDock(QDockWidget):
         # Width
         self.widthBox = QDoubleSpinBox(self)
         self.widthBox.setRange(.1, 99999)
-        self.widthBox.valueChanged.connect(self.cont.editWidth)
+        self.widthBox.valueChanged.connect(self.mw.editWidth)
 
         # Height
         self.heightBox = QDoubleSpinBox(self)
         self.heightBox.setRange(.1, 99999)
-        self.heightBox.valueChanged.connect(self.cont.editHeight)
+        self.heightBox.valueChanged.connect(self.mw.editHeight)
 
         # ColorBy
         self.colorbyBox = QComboBox(self)
         self.colorbyBox.addItem("material")
         self.colorbyBox.addItem("cell")
-        self.colorbyBox.currentTextChanged[str].connect(self.cont.editColorBy)
+        self.colorbyBox.currentTextChanged[str].connect(self.mw.editColorBy)
 
         # Basis
         self.basisBox = QComboBox(self)
         self.basisBox.addItem("xy")
         self.basisBox.addItem("xz")
         self.basisBox.addItem("yz")
-        self.basisBox.currentTextChanged.connect(self.cont.editBasis)
+        self.basisBox.currentTextChanged.connect(self.mw.editBasis)
 
         # Advanced Color Options
         self.colorOptionsButton = QPushButton('Color Options...')
         self.colorOptionsButton.setMinimumHeight(self.FM.height() * 1.6)
-        self.colorOptionsButton.clicked.connect(self.cont.showColorDialog)
+        self.colorOptionsButton.clicked.connect(self.mw.showColorDialog)
 
         # Options Form Layout
         self.opLayout = QFormLayout()
@@ -335,18 +336,18 @@ class OptionsDock(QDockWidget):
         self.hResBox = QSpinBox(self)
         self.hResBox.setRange(1, 99999)
         self.hResBox.setSingleStep(25)
-        self.hResBox.valueChanged.connect(self.cont.editHRes)
+        self.hResBox.valueChanged.connect(self.mw.editHRes)
 
         # Vertical Resolution
         self.vResLabel = QLabel('Pixel Height:')
         self.vResBox = QSpinBox(self)
         self.vResBox.setRange(1, 99999)
         self.vResBox.setSingleStep(25)
-        self.vResBox.valueChanged.connect(self.cont.editVRes)
+        self.vResBox.valueChanged.connect(self.mw.editVRes)
 
         # Ratio checkbox
         self.ratioCheck = QCheckBox("Fixed Aspect Ratio", self)
-        self.ratioCheck.stateChanged.connect(self.cont.toggleAspectLock)
+        self.ratioCheck.stateChanged.connect(self.mw.toggleAspectLock)
 
         # Resolution Form Layout
         self.resLayout = QFormLayout()
@@ -415,33 +416,16 @@ class OptionsDock(QDockWidget):
 
 
 class ColorDialog(QDialog):
-    def __init__(self, model, controller, FM, parent=None):
+    def __init__(self, model, mainwindow, FM, parent=None):
         super(ColorDialog, self).__init__(parent)
 
-        self.setWindowTitle('Advanced Color Options')
-        #self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
+        self.setWindowTitle('Color Options')
         self.FM = FM
 
         self.model = model
-        self.cont = controller
-
-        self.matColorButtons = {}
-        self.matColorLabels = {}
-        self.matMaskedChecks = {}
-        self.matHighlightChecks = {}
-
-        self.cellColorButtons = {}
-        self.cellColorLabels = {}
-        self.cellMaskedChecks = {}
-        self.cellHighlightChecks = {}
-
-        self.colorHeaders = []
-        self.maskHeaders = []
-        self.highlightHeaders = []
+        self.mw = mainwindow
 
         self.createDialogLayout()
-
 
     def createDialogLayout(self):
 
@@ -452,7 +436,6 @@ class ColorDialog(QDialog):
         self.createDomainTabs()
 
         self.tabs = QTabWidget()
-        self.tabs.setMinimumWidth(500)
         self.tabs.setMaximumHeight(800)
         self.tabs.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.tabs.addTab(self.generalTab, 'General')
@@ -470,44 +453,44 @@ class ColorDialog(QDialog):
 
         # Masking options
         self.maskingCheck = QCheckBox('')
-        self.maskingCheck.stateChanged.connect(self.cont.toggleMasking)
+        self.maskingCheck.stateChanged.connect(self.mw.toggleMasking)
 
         self.maskColorButton = QPushButton()
         self.maskColorButton.setCursor(QtCore.Qt.PointingHandCursor)
         self.maskColorButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
         self.maskColorButton.setFixedHeight(self.FM.height() * 1.5)
-        self.maskColorButton.clicked.connect(self.cont.editMaskingColor)
+        self.maskColorButton.clicked.connect(self.mw.editMaskingColor)
 
         # Highlighting options
         self.hlCheck = QCheckBox('')
-        self.hlCheck.stateChanged.connect(self.cont.toggleHighlighting)
+        self.hlCheck.stateChanged.connect(self.mw.toggleHighlighting)
 
         self.hlColorButton = QPushButton()
         self.hlColorButton.setCursor(QtCore.Qt.PointingHandCursor)
         self.hlColorButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
         self.hlColorButton.setFixedHeight(self.FM.height() * 1.5)
-        self.hlColorButton.clicked.connect(self.cont.editHighlightColor)
+        self.hlColorButton.clicked.connect(self.mw.editHighlightColor)
 
         self.alphaBox = QDoubleSpinBox()
         self.alphaBox.setRange(0, 1)
         self.alphaBox.setSingleStep(.05)
-        self.alphaBox.valueChanged.connect(self.cont.editAlpha)
+        self.alphaBox.valueChanged.connect(self.mw.editAlpha)
 
         self.seedBox = QSpinBox()
         self.seedBox.setRange(1, 999)
-        self.seedBox.valueChanged.connect(self.cont.editSeed)
+        self.seedBox.valueChanged.connect(self.mw.editSeed)
 
         # General options
         self.bgButton = QPushButton()
         self.bgButton.setCursor(QtCore.Qt.PointingHandCursor)
         self.bgButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
         self.bgButton.setFixedHeight(self.FM.height() * 1.5)
-        self.bgButton.clicked.connect(self.cont.editBackgroundColor)
+        self.bgButton.clicked.connect(self.mw.editBackgroundColor)
 
         self.colorbyBox = QComboBox(self)
         self.colorbyBox.addItem("material")
         self.colorbyBox.addItem("cell")
-        self.colorbyBox.currentTextChanged[str].connect(self.cont.editColorBy)
+        self.colorbyBox.currentTextChanged[str].connect(self.mw.editColorBy)
 
         formLayout = QFormLayout()
         formLayout.setAlignment(QtCore.Qt.AlignHCenter)
@@ -539,7 +522,7 @@ class ColorDialog(QDialog):
 
     def createDomainTabs(self):
         self.cellTable = QTableView()
-        self.cellTable.setModel(self.cont.cellsModel)
+        self.cellTable.setModel(self.mw.cellsModel)
         self.cellTable.setItemDelegate(DomainDelegate(self.cellTable))
         self.cellTable.verticalHeader().setVisible(False)
         self.cellTable.resizeColumnsToContents()
@@ -554,7 +537,7 @@ class ColorDialog(QDialog):
         self.cellTab.setLayout(self.cellLayout)
 
         self.matTable = QTableView()
-        self.matTable.setModel(self.cont.materialsModel)
+        self.matTable.setModel(self.mw.materialsModel)
         self.matTable.setItemDelegate(DomainDelegate(self.matTable))
         self.matTable.verticalHeader().setVisible(False)
         self.matTable.resizeColumnsToContents()
@@ -571,7 +554,7 @@ class ColorDialog(QDialog):
     def createButtonBox(self):
 
         applyButton = QPushButton("Apply Changes")
-        applyButton.clicked.connect(self.cont.applyChanges)
+        applyButton.clicked.connect(self.mw.applyChanges)
         closeButton = QPushButton("Close")
         closeButton.clicked.connect(self.hide)
 
@@ -602,6 +585,13 @@ class ColorDialog(QDialog):
         self.maskingCheck.setChecked(masking)
         self.maskColorButton.setDisabled(not masking)
 
+        if masking:
+            self.cellTable.showColumn(4)
+            self.matTable.showColumn(4)
+        else:
+            self.cellTable.hideColumn(4)
+            self.matTable.hideColumn(4)
+
     def updateMaskingColor(self):
         color = self.model.activeView.maskBackground
         self.maskColorButton.setStyleSheet("border-radius: 8px;"
@@ -612,6 +602,23 @@ class ColorDialog(QDialog):
 
         self.hlCheck.setChecked(highlighting)
         self.hlColorButton.setDisabled(not highlighting)
+        self.alphaBox.setDisabled(not highlighting)
+        self.seedBox.setDisabled(not highlighting)
+
+        if highlighting:
+            self.cellTable.showColumn(5)
+            self.cellTable.hideColumn(2)
+            self.cellTable.hideColumn(3)
+            self.matTable.showColumn(5)
+            self.matTable.hideColumn(2)
+            self.matTable.hideColumn(3)
+        else:
+            self.cellTable.hideColumn(5)
+            self.cellTable.showColumn(2)
+            self.cellTable.showColumn(3)
+            self.matTable.hideColumn(5)
+            self.matTable.showColumn(2)
+            self.matTable.showColumn(3)
 
     def updateHighlightColor(self):
         color = self.model.activeView.highlightBackground
@@ -633,8 +640,8 @@ class ColorDialog(QDialog):
         self.colorbyBox.setCurrentText(self.model.activeView.colorby)
 
     def updateDomainTabs(self):
-        self.cellTable.setModel(self.cont.cellsModel)
-        self.matTable.setModel(self.cont.materialsModel)
+        self.cellTable.setModel(self.mw.cellsModel)
+        self.matTable.setModel(self.mw.materialsModel)
 
 
 class HorizontalLine(QFrame):

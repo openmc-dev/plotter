@@ -9,7 +9,6 @@ from PySide2.QtGui import QColor
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = (range(0,6))
 
-
 class PlotModel():
     def __init__(self):
 
