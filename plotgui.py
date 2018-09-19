@@ -250,15 +250,15 @@ class OptionsDock(QDockWidget):
         self.applyButton.clicked.connect(self.mw.applyChanges)
 
         # Create Layout
-        self.mwrolLayout = QVBoxLayout()
-        self.mwrolLayout.addWidget(self.originGroupBox)
-        self.mwrolLayout.addWidget(self.optionsGroupBox)
-        self.mwrolLayout.addWidget(self.resGroupBox)
-        self.mwrolLayout.addWidget(self.applyButton)
-        self.mwrolLayout.addStretch()
+        self.dockLayout = QVBoxLayout()
+        self.dockLayout.addWidget(self.originGroupBox)
+        self.dockLayout.addWidget(self.optionsGroupBox)
+        self.dockLayout.addWidget(self.resGroupBox)
+        self.dockLayout.addWidget(self.applyButton)
+        self.dockLayout.addStretch()
 
         self.optionsWidget = QWidget()
-        self.optionsWidget.setLayout(self.mwrolLayout)
+        self.optionsWidget.setLayout(self.dockLayout)
 
         self.setWidget(self.optionsWidget)
 
@@ -349,6 +349,7 @@ class OptionsDock(QDockWidget):
         self.hResBox = QSpinBox(self)
         self.hResBox.setRange(1, 99999)
         self.hResBox.setSingleStep(25)
+        self.hResBox.setSuffix(' px')
         self.hResBox.valueChanged.connect(self.mw.editHRes)
 
         # Vertical Resolution
@@ -356,6 +357,7 @@ class OptionsDock(QDockWidget):
         self.vResBox = QSpinBox(self)
         self.vResBox.setRange(1, 99999)
         self.vResBox.setSingleStep(25)
+        self.vResBox.setSuffix(' px')
         self.vResBox.valueChanged.connect(self.mw.editVRes)
 
         # Ratio checkbox
@@ -365,7 +367,8 @@ class OptionsDock(QDockWidget):
         # Zoom
         self.zoomBox = QSpinBox()
         self.zoomBox.setSuffix(' %')
-        self.zoomBox.setRange(100, 1000)
+        self.zoomBox.setRange(1, 5000)
+        self.zoomBox.setValue(100)
         self.zoomBox.setSingleStep(25)
         self.zoomBox.valueChanged.connect(self.mw.editZoom)
 

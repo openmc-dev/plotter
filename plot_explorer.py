@@ -14,12 +14,10 @@ class MainWindow(QMainWindow):
 
         # Set Window Title
         self.setWindowTitle('OpenMC Plot Explorer')
-        self.setContentsMargins(0,0,0,0)
-        self.zoom = 1
 
-        # Create model
-        self.model = PlotModel()
+        self.zoom = 100
         self.restored = False
+        self.model = PlotModel()
         self.restoreModelSettings()
 
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
@@ -28,7 +26,6 @@ class MainWindow(QMainWindow):
         # Create plot image
         self.plotIm = PlotImage(self.model, self, FM)
         self.frame = QScrollArea(self)
-        self.frame.setContentsMargins(0,0,0,0)
         self.frame.setAlignment(QtCore.Qt.AlignCenter)
         self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.frame.setWidget(self.plotIm)
@@ -59,7 +56,6 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage('Generating Plot...')
         self.dock.updateDock()
         self.colorDialog.updateDialogValues()
-
 
         if self.restored:
             self.model.getIDs()
@@ -411,12 +407,12 @@ class MainWindow(QMainWindow):
 
     def editZoomAct(self):
         percent, ok = QInputDialog.getInt(self, "Edit Zoom", "Zoom Percent:",
-                                          self.dock.zoomBox.value(), 100, 1000)
+                                          self.dock.zoomBox.value(), 1, 5000)
         if ok:
             self.dock.zoomBox.setValue(percent)
 
     def editZoom(self, value):
-        self.zoom = value/100
+        self.zoom = value
         self.resizePixmap()
 
     def showMainWindow(self):
@@ -584,6 +580,8 @@ class MainWindow(QMainWindow):
                 self.model.activeView = copy.deepcopy(model.currentView)
                 self.model.previousViews = model.previousViews
                 self.model.subsequentViews = model.subsequentViews
+            if os.path.isfile('plot_ids.binary') \
+                and os.path.isfile('plot.ppm'):
                 self.restored = True
 
     def resetModels(self):
@@ -663,16 +661,17 @@ class MainWindow(QMainWindow):
         self.coordLabel.setText(f'{coords}')
 
     def resizePixmap(self):
+        z = self.zoom/100
         self.plotIm.setPixmap(
-            self.pixmap.scaled(self.frame.width() * self.zoom,
-                              self.frame.height() * self.zoom,
-                              QtCore.Qt.KeepAspectRatio,
-                              QtCore.Qt.SmoothTransformation))
+            self.pixmap.scaled(self.frame.width() * z, self.frame.height() * z,
+                               QtCore.Qt.KeepAspectRatio,
+                               QtCore.Qt.SmoothTransformation))
         self.plotIm.adjustSize()
 
     def resizeEvent(self, event):
-        self.resizePixmap()
-        self.updateScale()
+        if self.pixmap:
+            self.resizePixmap()
+            self.updateScale()
 
     def closeEvent(self, event):
         settings = QtCore.QSettings()
