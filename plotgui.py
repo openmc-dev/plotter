@@ -7,18 +7,18 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QSpinBox, QDoubleSpinBox, QSizePolicy, QSpacerItem, QMainWindow,
     QCheckBox, QRubberBand, QMenu, QAction, QMenuBar, QFileDialog, QDialog,
     QTabWidget, QGridLayout, QToolButton, QColorDialog, QFrame, QDockWidget,
-    QTableView, QItemDelegate, QHeaderView)
+    QTableView, QItemDelegate, QHeaderView, QSlider)
 from plotmodel import DomainDelegate
 
 class PlotImage(QLabel):
     def __init__(self, model, mainwindow, FM):
         super(PlotImage, self).__init__()
 
-        self.FM = FM
-
         self.model = model
         self.mw = mainwindow
+        self.FM = FM
 
+        #self.setContentsMargins(0,0,0,0)
         self.setAlignment(QtCore.Qt.AlignCenter)
         self.setMouseTracking(True)
 
@@ -59,7 +59,6 @@ class PlotImage(QLabel):
 
         # Show Cursor position relative to plot in status bar
         xPlotPos, yPlotPos = self.getPlotCoords(event.pos())
-        self.mw.showCoords(xPlotPos, yPlotPos)
 
         # Show Cell/Material ID, Name in status bar
         id, domain, domain_kind = self.getIDinfo(event)
@@ -114,6 +113,10 @@ class PlotImage(QLabel):
     def contextMenuEvent(self, event):
 
         self.menu.clear()
+
+        self.mw.undoAction.setText(f'&Undo ({len(self.model.previousViews)})')
+        self.mw.redoAction.setText(f'&Redo ({len(self.model.subsequentViews)})')
+
 
         id, domain, domain_kind = self.getIDinfo(event)
 
@@ -185,21 +188,31 @@ class PlotImage(QLabel):
 
         cv = self.model.currentView
 
+        scale = (self.width()/cv.hRes, self.height()/cv.vRes)
+
         # Cursor position in pixels relative to center of plot image
-        xPos = pos.x() - (cv.hRes / 2)
-        yPos = -pos.y() + (cv.vRes / 2)
+        xPos = (pos.x() + 0.5) / scale[0] - cv.hRes/2
+        yPos = (-pos.y() -0.5) / scale[1] + cv.vRes/2
 
         # Curson position in plot coordinates
         xPlotCoord = (xPos / self.mw.scale[0]) + cv.origin[self.mw.xBasis]
         yPlotCoord = (yPos / self.mw.scale[1]) + cv.origin[self.mw.yBasis]
 
+        self.mw.showCoords(xPlotCoord, yPlotCoord)
+
         return (xPlotCoord, yPlotCoord)
 
     def getIDinfo(self, event):
 
-        if event.pos().y() < self.model.currentView.vRes \
-            and event.pos().x() < self.model.currentView.hRes:
-            id = f"{self.model.ids[event.pos().y()][event.pos().x()]}"
+        cv = self.model.currentView
+        scale = (self.width()/cv.hRes, self.height()/cv.vRes)
+        xPos = int((event.pos().x() + .05)  / scale[0])
+        yPos = int((event.pos().y() + .05) / scale[1])
+
+        if yPos < self.model.currentView.vRes \
+            and xPos < self.model.currentView.hRes:
+
+            id = f"{self.model.ids[yPos][xPos]}"
         else:
             id = '-1'
 
@@ -349,11 +362,20 @@ class OptionsDock(QDockWidget):
         self.ratioCheck = QCheckBox("Fixed Aspect Ratio", self)
         self.ratioCheck.stateChanged.connect(self.mw.toggleAspectLock)
 
+        # Zoom
+        self.zoomBox = QSpinBox()
+        self.zoomBox.setSuffix(' %')
+        self.zoomBox.setRange(100, 1000)
+        self.zoomBox.setSingleStep(25)
+        self.zoomBox.valueChanged.connect(self.mw.editZoom)
+
         # Resolution Form Layout
         self.resLayout = QFormLayout()
         self.resLayout.addRow(self.ratioCheck)
         self.resLayout.addRow('Pixel Width:', self.hResBox)
         self.resLayout.addRow(self.vResLabel, self.vResBox)
+        self.resLayout.addRow(HorizontalLine())
+        self.resLayout.addRow('Zoom:', self.zoomBox)
         self.resLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
         self.resLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
@@ -429,11 +451,12 @@ class ColorDialog(QDialog):
 
     def createDialogLayout(self):
 
-        self.colorDialogLayout = QVBoxLayout()
-
-        # Tabs
         self.createGeneralTab()
-        self.createDomainTabs()
+
+        self.cellTable = self.createDomainTable(self.mw.cellsModel)
+        self.matTable = self.createDomainTable(self.mw.materialsModel)
+        self.cellTab = self.createDomainTab(self.cellTable)
+        self.matTab = self.createDomainTab(self.matTable)
 
         self.tabs = QTabWidget()
         self.tabs.setMaximumHeight(800)
@@ -444,8 +467,8 @@ class ColorDialog(QDialog):
 
         self.createButtonBox()
 
+        self.colorDialogLayout = QVBoxLayout()
         self.colorDialogLayout.addWidget(self.tabs)
-        #self.colorDialogLayout.addStretch(1)
         self.colorDialogLayout.addWidget(self.buttonBox)
         self.setLayout(self.colorDialogLayout)
 
@@ -520,36 +543,31 @@ class ColorDialog(QDialog):
         self.generalTab = QWidget()
         self.generalTab.setLayout(generalLayout)
 
-    def createDomainTabs(self):
-        self.cellTable = QTableView()
-        self.cellTable.setModel(self.mw.cellsModel)
-        self.cellTable.setItemDelegate(DomainDelegate(self.cellTable))
-        self.cellTable.verticalHeader().setVisible(False)
-        self.cellTable.resizeColumnsToContents()
-        self.cellTable.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.cellTable.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+    def createDomainTable(self, domainmodel):
 
-        self.cellTab = QWidget()
-        self.cellTab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.cellLayout = QVBoxLayout()
-        self.cellLayout.addWidget(self.cellTable)
-        self.cellLayout.addWidget(QLabel("Double-click '+' to edit color. Right-click to clear."))
-        self.cellTab.setLayout(self.cellLayout)
+        domainTable = QTableView()
+        domainTable.setModel(domainmodel)
+        domainTable.setItemDelegate(DomainDelegate(domainTable))
+        domainTable.verticalHeader().setVisible(False)
+        domainTable.resizeColumnsToContents()
+        domainTable.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        domainTable.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
 
-        self.matTable = QTableView()
-        self.matTable.setModel(self.mw.materialsModel)
-        self.matTable.setItemDelegate(DomainDelegate(self.matTable))
-        self.matTable.verticalHeader().setVisible(False)
-        self.matTable.resizeColumnsToContents()
-        self.matTable.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.matTable.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        return domainTable
 
-        self.matTab = QWidget()
-        self.matTab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.matLayout = QVBoxLayout()
-        self.matLayout.addWidget(self.matTable)
-        self.matLayout.addWidget(QLabel("Double-click '+' to edit color. Right-click to clear."))
-        self.matTab.setLayout(self.matLayout)
+    def createDomainTab(self, domaintable):
+
+        text = QLabel("Double-click '+' to edit color. Right-click to clear.")
+        text.setStyleSheet("font: 11px")
+
+        domainTab = QWidget()
+        domainTab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        domainLayout = QVBoxLayout()
+        domainLayout.addWidget(domaintable)
+        domainLayout.addWidget(text)
+        domainTab.setLayout(domainLayout)
+
+        return domainTab
 
     def createButtonBox(self):
 

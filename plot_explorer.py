@@ -4,7 +4,7 @@
 import os, sys, copy, pickle, openmc
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
-    QScrollArea, QMenu, QAction, QFileDialog, QColorDialog)
+    QScrollArea, QMenu, QAction, QFileDialog, QColorDialog, QInputDialog)
 from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, ColorDialog, OptionsDock
 
@@ -14,6 +14,8 @@ class MainWindow(QMainWindow):
 
         # Set Window Title
         self.setWindowTitle('OpenMC Plot Explorer')
+        self.setContentsMargins(0,0,0,0)
+        self.zoom = 1
 
         # Create model
         self.model = PlotModel()
@@ -26,7 +28,7 @@ class MainWindow(QMainWindow):
         # Create plot image
         self.plotIm = PlotImage(self.model, self, FM)
         self.frame = QScrollArea(self)
-        self.frame.setMinimumSize(600,600)
+        self.frame.setContentsMargins(0,0,0,0)
         self.frame.setAlignment(QtCore.Qt.AlignCenter)
         self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.frame.setWidget(self.plotIm)
@@ -43,6 +45,7 @@ class MainWindow(QMainWindow):
 
         # Restore Settings
         self.restoreWindowSettings()
+        self.adjustWindow()
 
         # Create menubar
         self.createMenuBar()
@@ -192,7 +195,14 @@ class MainWindow(QMainWindow):
         self.dockAction = QAction('Hide Options &Dock', self)
         self.dockAction.setShortcut("Ctrl+D")
         self.dockAction.triggered.connect(self.toggleDockView)
+
+        self.zoomAction = QAction('Edit &Zoom', self)
+        self.zoomAction.setShortcut('Alt+Shift+Z')
+        self.zoomAction.triggered.connect(self.editZoomAct)
+
         self.viewMenu.addAction(self.dockAction)
+        self.viewMenu.addSeparator()
+        self.viewMenu.addAction(self.zoomAction)
         self.viewMenu.aboutToShow.connect(self.updateViewMenu)
 
         # Window Menu
@@ -216,6 +226,9 @@ class MainWindow(QMainWindow):
 
         self.maskingAction.setChecked(self.model.currentView.masking)
         self.highlightingAct.setChecked(self.model.currentView.highlighting)
+
+        self.undoAction.setText(f'&Undo ({len(self.model.previousViews)})')
+        self.redoAction.setText(f'&Redo ({len(self.model.subsequentViews)})')
 
     def updateBasisMenu(self):
 
@@ -286,11 +299,7 @@ class MainWindow(QMainWindow):
 
     def applyChanges(self):
 
-        #self.plotIm.setFocus
-
-        # Check that active plot is different from current plot
         if self.model.activeView != self.model.currentView:
-
             self.statusBar().showMessage('Generating Plot...')
             QApplication.processEvents()
 
@@ -299,6 +308,9 @@ class MainWindow(QMainWindow):
             self.model.generatePlot()
             self.resetModels()
             self.showCurrentView()
+
+        else:
+            self.statusBar().showMessage('No changes to apply.', 3000)
 
     def undo(self):
 
@@ -387,10 +399,25 @@ class MainWindow(QMainWindow):
         #self.optionsDock.setVisible(not self.optionsDock.isVisible())
         if self.dock.isVisible():
             self.dock.hide()
+            if not self.isMaximized() and not self.dock.isFloating():
+                self.resize(self.width() - self.dock.width(), self.height())
         else:
             self.dock.setVisible(True)
+            if not self.isMaximized() and not self.dock.isFloating():
+                self.resize(self.width() + self.dock.width(), self.height())
 
+        self.resizePixmap()
         self.showMainWindow()
+
+    def editZoomAct(self):
+        percent, ok = QInputDialog.getInt(self, "Edit Zoom", "Zoom Percent:",
+                                          self.dock.zoomBox.value(), 100, 1000)
+        if ok:
+            self.dock.zoomBox.setValue(percent)
+
+    def editZoom(self, value):
+        self.zoom = value/100
+        self.resizePixmap()
 
     def showMainWindow(self):
         self.raise_()
@@ -543,10 +570,7 @@ class MainWindow(QMainWindow):
 
         self.colorDialog.resize(settings.value("colorDialog/Size", QtCore.QSize(400, 500)))
         self.colorDialog.move(settings.value("colorDialog/Position", QtCore.QPoint(600, 200)))
-        self.colorDialog.setVisible(settings.value("colorDialog/Visible", False))
-        if settings.value("colorDialog/Active", False):
-            self.colorDialog.raise_()
-            self.colorDialog.activateWindow()
+        self.colorDialog.setVisible(bool(settings.value("colorDialog/Visible", 0)))
 
     def restoreModelSettings(self):
 
@@ -573,15 +597,10 @@ class MainWindow(QMainWindow):
 
     def showCurrentView(self):
 
+        self.pixmap = QtGui.QPixmap('plot.ppm')
+        self.resizePixmap()
         self.updateScale()
         self.updateRelativeBases()
-
-        # Update plot image
-        self.pixmap = QtGui.QPixmap('plot.ppm')
-        self.plotIm.setPixmap(self.pixmap)
-        self.plotIm.adjustSize()
-
-        self.adjustWindow()
 
         if self.model.previousViews:
             self.undoAction.setDisabled(False)
@@ -596,7 +615,8 @@ class MainWindow(QMainWindow):
     def updateScale(self):
 
         cv = self.model.currentView
-        self.scale = (cv.hRes / cv.width, cv.vRes / cv.height)
+        self.scale = (self.pixmap.width() / cv.width,
+                      self.pixmap.height()/ cv.height)
 
     def updateRelativeBases(self):
 
@@ -606,19 +626,9 @@ class MainWindow(QMainWindow):
         self.yBasis = 1 if cv.basis[1] == 'y' else 2
 
     def adjustWindow(self):
-        # Get screen dimensions
+
         self.screen = app.desktop().screenGeometry()
         self.setMaximumSize(self.screen.width(), self.screen.height())
-
-        # Adjust scroll area to fit plot if window will not exeed screen size
-        if self.model.activeView.hRes < .8 * self.screen.width():
-            self.frame.setMinimumWidth(self.plotIm.width() + 20)
-        else:
-            self.frame.setMinimumWidth(500)
-        if self.model.activeView.vRes < .85 * self.screen.height():
-            self.frame.setMinimumHeight(self.plotIm.height() + 20)
-        else:
-            self.frame.setMinimumHeight(500)
 
     def onRatioChange(self):
         av = self.model.activeView
@@ -652,6 +662,18 @@ class MainWindow(QMainWindow):
 
         self.coordLabel.setText(f'{coords}')
 
+    def resizePixmap(self):
+        self.plotIm.setPixmap(
+            self.pixmap.scaled(self.frame.width() * self.zoom,
+                              self.frame.height() * self.zoom,
+                              QtCore.Qt.KeepAspectRatio,
+                              QtCore.Qt.SmoothTransformation))
+        self.plotIm.adjustSize()
+
+    def resizeEvent(self, event):
+        self.resizePixmap()
+        self.updateScale()
+
     def closeEvent(self, event):
         settings = QtCore.QSettings()
         settings.setValue("mainWindow/Size", self.size())
@@ -660,8 +682,13 @@ class MainWindow(QMainWindow):
 
         settings.setValue("colorDialog/Size", self.colorDialog.size())
         settings.setValue("colorDialog/Position", self.colorDialog.pos())
-        settings.setValue("colorDialog/Visible", self.colorDialog.isVisible())
-        settings.setValue("colorDialog/Active", self.colorDialog.isActiveWindow())
+        visible = int(self.colorDialog.isVisible())
+        settings.setValue("colorDialog/Visible", visible)
+
+        if len(self.model.previousViews) > 10:
+            self.model.previousViews = self.model.previousViews[-10:]
+        if len(self.model.subsequentViews) > 10:
+            self.model.subsequentViews = self.model.subsequentViews[-10:]
 
         with open('plot_settings.pkl', 'wb') as file:
             pickle.dump(self.model, file)
@@ -673,7 +700,6 @@ if __name__ == '__main__':
     app.setOrganizationDomain("github.com/openmc-dev/")
     app.setApplicationName("OpenMC Plot Explorer")
     app.setWindowIcon(QtGui.QIcon('openmc_logo.png'))
-    app.setAttribute(QtCore.Qt.AA_UseHighDpiPixmaps)
 
     FM = QtGui.QFontMetricsF(app.font())
     mainWindow = MainWindow()

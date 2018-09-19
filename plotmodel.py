@@ -331,8 +331,8 @@ class DomainDelegate(QItemDelegate):
             return QSize(fm.width("XXXXXX"), fm.height())
         elif column == COLORLABEL:
             return QSize(fm.width("X(XXX, XXX, XXX)X"), fm.height())
-        elif column in (MASK, HIGHLIGHT):
-            return QSize(fm.width("XXXXXXX"), fm.height())
+        elif column == MASK:
+            return QSize(fm.width("XXXX"), fm.height())
         else:
             return QItemDelegate.sizeHint(self, option, index)
 
