@@ -17,6 +17,7 @@ class MainWindow(QMainWindow):
 
         self.zoom = 100
         self.restored = False
+        self.pixmap = None
         self.model = PlotModel()
         self.restoreModelSettings()
 
@@ -24,7 +25,7 @@ class MainWindow(QMainWindow):
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
 
         # Create plot image
-        self.plotIm = PlotImage(self.model, self, FM)
+        self.plotIm = PlotImage(self.model, FM, self)
         self.frame = QScrollArea(self)
         self.frame.setAlignment(QtCore.Qt.AlignCenter)
         self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -32,15 +33,15 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.frame)
 
         # Create Dock
-        self.dock = OptionsDock(self.model, self, FM)
+        self.dock = OptionsDock(self.model, FM, self)
         self.dock.setObjectName("OptionsDock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
 
         # Initiate color dialog
-        self.colorDialog = ColorDialog(self.model, self, FM, self)
+        self.colorDialog = ColorDialog(self.model, FM, self)
         self.colorDialog.hide()
 
-        # Restore Settings
+        # Restore Window Settings
         self.restoreWindowSettings()
         self.adjustWindow()
 
@@ -58,17 +59,15 @@ class MainWindow(QMainWindow):
         self.colorDialog.updateDialogValues()
 
         if self.restored:
-            self.model.getIDs()
+            self.model.updateIDs()
             self.showCurrentView()
         else:
             QtCore.QTimer.singleShot(0, self.model.generatePlot)
             QtCore.QTimer.singleShot(0, self.showCurrentView)
 
-    ''' Create / Update Menus '''
+    # Create and update menus:
 
     def createMenuBar(self):
-
-        # Menus
         self.mainMenu = self.menuBar()
 
         # File Menu
@@ -156,6 +155,7 @@ class MainWindow(QMainWindow):
         self.cellAction = QAction('&Cell', self)
         self.cellAction.setCheckable(True)
         self.cellAction.setShortcut('Alt+C')
+        self.cellAction.setIcon(QtGui.QIcon('cell.png'))
         self.cellAction.triggered.connect(lambda :
             self.editColorBy('cell', apply=True))
 
@@ -188,11 +188,11 @@ class MainWindow(QMainWindow):
 
         # View Menu
         self.viewMenu = self.mainMenu.addMenu('&View')
-        self.dockAction = QAction('Hide Options &Dock', self)
+        self.dockAction = QAction('Hide &Dock', self)
         self.dockAction.setShortcut("Ctrl+D")
         self.dockAction.triggered.connect(self.toggleDockView)
 
-        self.zoomAction = QAction('Edit &Zoom', self)
+        self.zoomAction = QAction('&Zoom...', self)
         self.zoomAction.setShortcut('Alt+Shift+Z')
         self.zoomAction.triggered.connect(self.editZoomAct)
 
@@ -203,20 +203,22 @@ class MainWindow(QMainWindow):
 
         # Window Menu
         self.windowMenu = self.mainMenu.addMenu('&Window')
+
         self.mainWindowAction = QAction('&Main Window', self)
         self.mainWindowAction.setShortcut('Alt+W')
         self.mainWindowAction.setCheckable(True)
         self.mainWindowAction.triggered.connect(self.showMainWindow)
-        self.colorDialogAction = QAction('Color &Dialog', self)
+
+        self.colorDialogAction = QAction('Color &Options', self)
         self.colorDialogAction.setShortcut('Alt+D')
         self.colorDialogAction.setCheckable(True)
         self.colorDialogAction.triggered.connect(self.showColorDialog)
+
         self.windowMenu.addAction(self.mainWindowAction)
         self.windowMenu.addAction(self.colorDialogAction)
         self.windowMenu.aboutToShow.connect(self.updateWindowMenu)
 
     def updateEditMenu(self):
-
         changed = self.model.currentView != self.model.defaultView
         self.restoreAction.setDisabled(not changed)
 
@@ -227,29 +229,25 @@ class MainWindow(QMainWindow):
         self.redoAction.setText(f'&Redo ({len(self.model.subsequentViews)})')
 
     def updateBasisMenu(self):
-
         self.xyAction.setChecked(self.model.currentView.basis == 'xy')
         self.xzAction.setChecked(self.model.currentView.basis == 'xz')
         self.yzAction.setChecked(self.model.currentView.basis == 'yz')
 
     def updateColorbyMenu(self):
-
         self.cellAction.setChecked(self.model.currentView.colorby == 'cell')
         self.materialAction.setChecked(self.model.currentView.colorby == 'material')
 
     def updateViewMenu(self):
-
         if self.dock.isVisible():
-            self.dockAction.setText('Hide Options &Dock')
+            self.dockAction.setText('Hide &Dock')
         else:
-            self.dockAction.setText('Show Options &Dock')
+            self.dockAction.setText('Show &Dock')
 
     def updateWindowMenu(self):
-
         self.colorDialogAction.setChecked(self.colorDialog.isActiveWindow())
         self.mainWindowAction.setChecked(self.isActiveWindow())
 
-    ''' Menu and Shared Methods '''
+    # Menu and shared methods:
 
     def saveImage(self):
         filename, ext = QFileDialog.getSaveFileName(self, "Save Plot Image",
@@ -294,7 +292,6 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(message, 5000)
 
     def applyChanges(self):
-
         if self.model.activeView != self.model.currentView:
             self.statusBar().showMessage('Generating Plot...')
             QApplication.processEvents()
@@ -309,7 +306,6 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage('No changes to apply.', 3000)
 
     def undo(self):
-
         self.statusBar().showMessage('Generating Plot...')
         QApplication.processEvents()
 
@@ -325,7 +321,6 @@ class MainWindow(QMainWindow):
         self.redoAction.setDisabled(False)
 
     def redo(self):
-
         self.statusBar().showMessage('Generating Plot...')
         QApplication.processEvents()
 
@@ -341,7 +336,6 @@ class MainWindow(QMainWindow):
         self.undoAction.setDisabled(False)
 
     def restoreDefault(self):
-
         if self.model.currentView != self.model.defaultView:
 
             self.statusBar().showMessage('Generating Plot...')
@@ -358,41 +352,31 @@ class MainWindow(QMainWindow):
             self.model.subsequentViews = []
 
     def editBasis(self, basis, apply=False):
-
         self.model.activeView.basis = basis
         self.dock.updateBasis()
-
         if apply:
             self.applyChanges()
 
     def editColorBy(self, domain_kind, apply=False):
-
         self.model.activeView.colorby = domain_kind
         self.dock.updateColorBy()
         self.colorDialog.updateColorBy()
-
         if apply:
             self.applyChanges()
 
     def toggleMasking(self, state, apply=False):
-
         self.model.activeView.masking = bool(state)
         self.colorDialog.updateMasking()
-
         if apply:
             self.applyChanges()
 
     def toggleHighlighting(self, state, apply=False):
-
         self.model.activeView.highlighting = bool(state)
         self.colorDialog.updateHighlighting()
-
         if apply:
             self.applyChanges()
 
     def toggleDockView(self):
-
-        #self.optionsDock.setVisible(not self.optionsDock.isVisible())
         if self.dock.isVisible():
             self.dock.hide()
             if not self.isMaximized() and not self.dock.isFloating():
@@ -401,19 +385,19 @@ class MainWindow(QMainWindow):
             self.dock.setVisible(True)
             if not self.isMaximized() and not self.dock.isFloating():
                 self.resize(self.width() + self.dock.width(), self.height())
-
         self.resizePixmap()
         self.showMainWindow()
 
     def editZoomAct(self):
         percent, ok = QInputDialog.getInt(self, "Edit Zoom", "Zoom Percent:",
-                                          self.dock.zoomBox.value(), 1, 5000)
+                                          self.dock.zoomBox.value(), 25, 1000)
         if ok:
             self.dock.zoomBox.setValue(percent)
 
     def editZoom(self, value):
         self.zoom = value
         self.resizePixmap()
+        self.dock.zoomBox.setValue(value)
 
     def showMainWindow(self):
         self.raise_()
@@ -424,7 +408,7 @@ class MainWindow(QMainWindow):
         self.colorDialog.raise_()
         self.colorDialog.activateWindow()
 
-    ''' Dock Methods '''
+    # Dock methods:
 
     def editSingleOrigin(self, value, dimension):
         self.model.activeView.origin[dimension] = value
@@ -453,10 +437,9 @@ class MainWindow(QMainWindow):
         self.onRatioChange()
         self.dock.updateHRes()
 
-    ''' Color Dialog Methods '''
+    # Color dialog methods:
 
     def editMaskingColor(self):
-
         current_color = self.model.activeView.maskBackground
         dlg = QColorDialog(self)
 
@@ -468,7 +451,6 @@ class MainWindow(QMainWindow):
         self.colorDialog.updateMaskingColor()
 
     def editHighlightColor(self):
-
         current_color = self.model.activeView.highlightBackground
         dlg = QColorDialog(self)
 
@@ -486,7 +468,6 @@ class MainWindow(QMainWindow):
         self.model.activeView.highlightSeed = value
 
     def editBackgroundColor(self, apply=False):
-
         current_color = self.model.activeView.plotBackground
         dlg = QColorDialog(self)
 
@@ -500,10 +481,9 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
-    ''' Plot Image Options '''
+    # Plot image methods
 
     def editPlotOrigin(self, xOr, yOr, zOr=None, apply=False):
-
         if zOr != None:
             self.model.activeView.origin = [xOr, yOr, zOr]
         else:
@@ -519,7 +499,6 @@ class MainWindow(QMainWindow):
         self.dock.revertToCurrent()
 
     def editDomainColor(self, kind, id):
-
         if kind == 'Cell':
             domain = self.model.activeView.cells
         else:
@@ -537,7 +516,6 @@ class MainWindow(QMainWindow):
         self.applyChanges()
 
     def toggleDomainMask(self, state, kind, id):
-
         if kind == 'Cell':
             domain = self.model.activeView.cells
         else:
@@ -547,7 +525,6 @@ class MainWindow(QMainWindow):
         self.applyChanges()
 
     def toggleDomainHighlight(self, state, kind, id):
-
         if kind == 'Cell':
             domain = self.model.activeView.cells
         else:
@@ -556,7 +533,7 @@ class MainWindow(QMainWindow):
         domain[id].highlighted = bool(state)
         self.applyChanges()
 
-    ''' Helper Methods '''
+    # Helper methods:
 
     def restoreWindowSettings(self):
         settings = QtCore.QSettings()
@@ -569,7 +546,6 @@ class MainWindow(QMainWindow):
         self.colorDialog.setVisible(bool(settings.value("colorDialog/Visible", 0)))
 
     def restoreModelSettings(self):
-
         if os.path.isfile("plot_settings.pkl"):
 
             with open('plot_settings.pkl', 'rb') as file:
@@ -580,9 +556,9 @@ class MainWindow(QMainWindow):
                 self.model.activeView = copy.deepcopy(model.currentView)
                 self.model.previousViews = model.previousViews
                 self.model.subsequentViews = model.subsequentViews
-            if os.path.isfile('plot_ids.binary') \
-                and os.path.isfile('plot.ppm'):
-                self.restored = True
+                if os.path.isfile('plot_ids.binary') \
+                    and os.path.isfile('plot.ppm'):
+                    self.restored = True
 
     def resetModels(self):
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
@@ -594,7 +570,6 @@ class MainWindow(QMainWindow):
         self.colorDialog.updateDomainTabs()
 
     def showCurrentView(self):
-
         self.pixmap = QtGui.QPixmap('plot.ppm')
         self.resizePixmap()
         self.updateScale()
@@ -609,22 +584,19 @@ class MainWindow(QMainWindow):
             self.redoAction.setDisabled(True)
 
         self.showStatusPlot()
+        self.adjustWindow()
 
     def updateScale(self):
-
         cv = self.model.currentView
         self.scale = (self.pixmap.width() / cv.width,
                       self.pixmap.height()/ cv.height)
 
     def updateRelativeBases(self):
-
-        # Determine image axes relative to plot bases
         cv = self.model.currentView
         self.xBasis = 0 if cv.basis[0] == 'x' else 1
         self.yBasis = 1 if cv.basis[1] == 'y' else 2
 
     def adjustWindow(self):
-
         self.screen = app.desktop().screenGeometry()
         self.setMaximumSize(self.screen.width(), self.screen.height())
 
@@ -645,7 +617,6 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(message, 3000)
 
     def showCoords(self, xPlotPos, yPlotPos):
-
         cv = self.model.currentView
 
         if cv.basis == 'xy':
@@ -670,6 +641,7 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event):
         if self.pixmap:
+            self.adjustWindow()
             self.resizePixmap()
             self.updateScale()
 
@@ -699,6 +671,7 @@ if __name__ == '__main__':
     app.setOrganizationDomain("github.com/openmc-dev/")
     app.setApplicationName("OpenMC Plot Explorer")
     app.setWindowIcon(QtGui.QIcon('openmc_logo.png'))
+    app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, True)
 
     FM = QtGui.QFontMetricsF(app.font())
     mainWindow = MainWindow()

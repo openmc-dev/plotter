@@ -8,17 +8,17 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QCheckBox, QRubberBand, QMenu, QAction, QMenuBar, QFileDialog, QDialog,
     QTabWidget, QGridLayout, QToolButton, QColorDialog, QFrame, QDockWidget,
     QTableView, QItemDelegate, QHeaderView, QSlider)
-from plotmodel import DomainDelegate
+from devmodel import DomainDelegate
 
 class PlotImage(QLabel):
-    def __init__(self, model, mainwindow, FM):
-        super(PlotImage, self).__init__()
+    def __init__(self, model, FM, parent=None):
+        super(PlotImage, self).__init__(parent)
 
         self.model = model
-        self.mw = mainwindow
         self.FM = FM
+        self.mw = parent
 
-        #self.setContentsMargins(0,0,0,0)
+
         self.setAlignment(QtCore.Qt.AlignCenter)
         self.setMouseTracking(True)
 
@@ -86,7 +86,7 @@ class PlotImage(QLabel):
             yCenter = (self.yPlotOrigin + yPlotPos) / 2
             self.mw.editPlotOrigin(xCenter, yCenter)
 
-            modifiers = QApplication.keyboardModifiers()
+            modifiers = event.modifiers()
 
             # Zoom out if Shift held
             if modifiers == QtCore.Qt.ShiftModifier:
@@ -110,13 +110,20 @@ class PlotImage(QLabel):
         else:
             self.mw.revertDockControls()
 
+    def wheelEvent(self, event):
+
+        if event.delta() and event.modifiers() == QtCore.Qt.ShiftModifier:
+            numDegrees = event.delta() / 8
+
+            if 24 < self.mw.zoom + numDegrees < 5001:
+                self.mw.editZoom(self.mw.zoom + numDegrees)
+
     def contextMenuEvent(self, event):
 
         self.menu.clear()
 
         self.mw.undoAction.setText(f'&Undo ({len(self.model.previousViews)})')
         self.mw.redoAction.setText(f'&Redo ({len(self.model.subsequentViews)})')
-
 
         id, domain, domain_kind = self.getIDinfo(event)
 
@@ -178,9 +185,9 @@ class PlotImage(QLabel):
         self.mw.highlightingAct.setChecked(self.model.currentView.highlighting)
 
         if self.mw.dock.isVisible():
-            self.mw.dockAction.setText('Hide Options &Dock')
+            self.mw.dockAction.setText('Hide &Dock')
         else:
-            self.mw.dockAction.setText('Show Options &Dock')
+            self.mw.dockAction.setText('Show &Dock')
 
         self.menu.exec_(event.globalPos())
 
@@ -188,11 +195,11 @@ class PlotImage(QLabel):
 
         cv = self.model.currentView
 
-        scale = (self.width()/cv.hRes, self.height()/cv.vRes)
+        factor = (self.width()/cv.hRes, self.height()/cv.vRes)
 
         # Cursor position in pixels relative to center of plot image
-        xPos = (pos.x() + 0.5) / scale[0] - cv.hRes/2
-        yPos = (-pos.y() -0.5) / scale[1] + cv.vRes/2
+        xPos = (pos.x() + 0.5) / factor[0] - cv.hRes/2
+        yPos = (-pos.y() -0.5) / factor[1] + cv.vRes/2
 
         # Curson position in plot coordinates
         xPlotCoord = (xPos / self.mw.scale[0]) + cv.origin[self.mw.xBasis]
@@ -205,9 +212,9 @@ class PlotImage(QLabel):
     def getIDinfo(self, event):
 
         cv = self.model.currentView
-        scale = (self.width()/cv.hRes, self.height()/cv.vRes)
-        xPos = int((event.pos().x() + .05)  / scale[0])
-        yPos = int((event.pos().y() + .05) / scale[1])
+        factor = (self.width()/cv.hRes, self.height()/cv.vRes)
+        xPos = int((event.pos().x() + .05)  / factor[0])
+        yPos = int((event.pos().y() + .05) / factor[1])
 
         if yPos < self.model.currentView.vRes \
             and xPos < self.model.currentView.hRes:
@@ -227,12 +234,12 @@ class PlotImage(QLabel):
 
 
 class OptionsDock(QDockWidget):
-    def __init__(self, model, mainwindow, FM):
-        super(OptionsDock, self).__init__()
+    def __init__(self, model, FM, parent=None):
+        super(OptionsDock, self).__init__(parent)
 
         self.model = model
-        self.mw = mainwindow
         self.FM = FM
+        self.mw = parent
 
         #self.setStyleSheet("font: 11px")
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
@@ -340,7 +347,7 @@ class OptionsDock(QDockWidget):
         self.opLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         # Options Group Box
-        self.optionsGroupBox = QGroupBox('Options')
+        self.optionsGroupBox = QGroupBox('Plot')
         self.optionsGroupBox.setLayout(self.opLayout)
 
     def createResolutionBox(self):
@@ -367,23 +374,23 @@ class OptionsDock(QDockWidget):
         # Zoom
         self.zoomBox = QSpinBox()
         self.zoomBox.setSuffix(' %')
-        self.zoomBox.setRange(1, 5000)
+        self.zoomBox.setRange(25, 5000)
         self.zoomBox.setValue(100)
         self.zoomBox.setSingleStep(25)
         self.zoomBox.valueChanged.connect(self.mw.editZoom)
 
         # Resolution Form Layout
         self.resLayout = QFormLayout()
+        self.resLayout.addRow('Zoom:', self.zoomBox)
+        self.resLayout.addRow(HorizontalLine())
         self.resLayout.addRow(self.ratioCheck)
         self.resLayout.addRow('Pixel Width:', self.hResBox)
         self.resLayout.addRow(self.vResLabel, self.vResBox)
-        self.resLayout.addRow(HorizontalLine())
-        self.resLayout.addRow('Zoom:', self.zoomBox)
         self.resLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
         self.resLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         # Resolution Group Box
-        self.resGroupBox = QGroupBox("Resolution")
+        self.resGroupBox = QGroupBox("Image")
         self.resGroupBox.setLayout(self.resLayout)
 
     def updateDock(self):
@@ -441,14 +448,14 @@ class OptionsDock(QDockWidget):
 
 
 class ColorDialog(QDialog):
-    def __init__(self, model, mainwindow, FM, parent=None):
+    def __init__(self, model, FM, parent=None):
         super(ColorDialog, self).__init__(parent)
 
         self.setWindowTitle('Color Options')
-        self.FM = FM
 
         self.model = model
-        self.mw = mainwindow
+        self.FM = FM
+        self.mw = parent
 
         self.createDialogLayout()
 

@@ -1,16 +1,42 @@
-import copy, struct, openmc
+import copy, struct, threading, openmc, ast
 import numpy as np
 import xml.etree.ElementTree as ET
-from threading import Thread
-from PySide2.QtWidgets import QTableView, QItemDelegate, QColorDialog
+from PySide2.QtWidgets import QTableView, QItemDelegate, QColorDialog, QLineEdit
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
 from PySide2.QtGui import QColor
-
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = (range(0,6))
 
 class PlotModel():
+    """ Geometry and plot settings for OpenMC Plot Explorer model
+
+        Attributes
+        ----------
+        geom : openmc.Geometry instance
+            OpenMC Geometry of the model
+        modelCells : collections.OrderedDict
+            Dictionary mapping cell IDs to openmc.Cell instances
+        modelMaterials : collections.OrderedDict
+            Dictionary mapping material IDs to openmc.Material instances
+        ids : Dictionary
+            Dictionary mapping plot coordinates to cell/material ID
+        previousViews : list of PlotView instances
+            List of previously created plot view settings used to undo
+            changes made in plot explorer
+        subsequentViews : list of PlotView instances
+            List of undone plot view settings used to redo changes made
+            in plot explorer
+        defaultView : PlotView instance
+            Default settings for given geometry
+        currentView : PlotView instance
+            Currently displayed plot settings in plot explorer
+        activeView : PlotView instance
+            Active state of settings in plot explorer, which may or may not
+            have unapplied changes
+    """
+
     def __init__(self):
+        """ Initialize PlotModel class attributes """
 
         # Read geometry.xml
         self.geom = openmc.Geometry.from_xml('geometry.xml')
@@ -29,16 +55,27 @@ class PlotModel():
         self.activeView = copy.deepcopy(self.defaultView)
 
     def getDefaultView(self):
+        """ Generates default PlotView instance for OpenMC geometry
 
-        # Get bounding box
+        Centers plot view origin in every dimension if possible. Defaults
+        to xy basis, with height and width to accomodate full size of
+        geometry. Defaults to (0, 0, 0) origin with width and heigth of
+        25 if geometry bounding box cannot be generated.
+
+        Returns
+        -------
+        default : PlotView instance
+            PlotView instance with default view settings
+        """
+
         lower_left, upper_right = self.geom.bounding_box
 
-        # Check for valid dimension
+        # Check for valid bounding_box dimensions
         if -np.inf not in lower_left[:2] and np.inf not in upper_right[:2]:
             xcenter = (upper_right[0] + lower_left[0])/2
-            width = abs(upper_right[0] - lower_left[0])
+            width = abs(upper_right[0] - lower_left[0]) * 1.005
             ycenter = (upper_right[1] + lower_left[1])/2
-            height = abs(upper_right[1] - lower_left[1])
+            height = abs(upper_right[1] - lower_left[1]) * 1.005
         else:
             xcenter, ycenter, width, height = (0.00, 0.00, 25, 25)
 
@@ -50,7 +87,9 @@ class PlotModel():
         default = PlotView([xcenter, ycenter, zcenter], width, height)
         return default
 
-    def getIDs(self):
+    def updateIDs(self):
+        """ Update ids attribute to reflect current plot view """
+
         with open('plot_ids.binary', 'rb') as f:
             px, py, wx, wy = struct.unpack('iidd', f.read(4*2 + 8*2))
             ids = np.zeros((py, px), dtype=int)
@@ -59,15 +98,21 @@ class PlotModel():
         self.ids = ids
 
     def generatePlot(self):
-        t = Thread(target=self.makePlot)
+        """ Spawn thread from which to generate new plot image """
+
+        t = threading.Thread(target=self.makePlot)
         t.start()
         t.join()
 
     def makePlot(self):
+        """ Generate new plot image from active view settings
+
+        Creates corresponding .xml files from user-chosen settings.
+        Runs OpenMC in plot mode to generate new plot image.
+        """
 
         cv = self.currentView = copy.deepcopy(self.activeView)
 
-        # Generate plot.xml
         plot = openmc.Plot()
         plot.filename = 'plot'
         plot.color_by = cv.colorby
@@ -97,7 +142,6 @@ class PlotModel():
             for id, dom in domain.items():
                 if not dom.masked:
                     plot.mask_components.append(source[int(id)])
-
             plot.mask_background = cv.maskBackground
 
         # Highlighting options
@@ -106,7 +150,6 @@ class PlotModel():
             for id, dom in domain.items():
                 if dom.highlighted:
                     domains.append(source[int(id)])
-
             background = cv.highlightBackground
             alpha = cv.highlightAlpha
             seed = cv.highlightSeed
@@ -118,30 +161,87 @@ class PlotModel():
         plots.export_to_xml()
         openmc.plot_geometry()
 
-        self.getIDs()
+        self.updateIDs()
 
     def undo(self):
+        """ Revert to previous PlotView instance. Re-generate plot image """
+
         if self.previousViews:
             self.subsequentViews.append(copy.deepcopy(self.currentView))
             self.activeView = self.previousViews.pop()
             self.generatePlot()
 
     def redo(self):
+        """ Revert to subsequent PlotView instance. Re-generate plot image """
+
         if self.subsequentViews:
             self.storeCurrent()
             self.activeView = self.subsequentViews.pop()
             self.generatePlot()
 
     def storeCurrent(self):
+        """ Add current view to previousViews list """
         self.previousViews.append(copy.deepcopy(self.currentView))
 
 
 class PlotView():
+    """ View settings for OpenMC plot.
+
+    Parameters
+    ----------
+    origin : Tuple of floats
+        Origin (center) of plot view
+    width: float
+        Width of plot view in model units
+    height : float
+        Height of plot view in model units
+
+    Attributes
+    ----------
+    origin : Tuple of floats
+        Origin (center) of plot view
+    width : float
+        Width of the plot view in model units
+    height : float
+        Height of the plot view in model units
+    hRes : int
+        Horizontal resolution of plot image
+    vRes : int
+        Vertical resolution of plot image
+    aspectLock : bool
+        Indication of whether aspect lock should be maintained to
+        prevent image stretching/warping
+    basis : {'xy', 'xz', 'yz'}
+        The basis directions for the plot
+    colorby : {'cell', 'material'}
+        Indication of whether the plot should be colored by cell or material
+    masking : bool
+        Indication of whether cell/material masking is active
+    maskBackground : Tuple of int
+        RGB color to apply to masked cells/materials
+    highlighting: bool
+        Indication of whether cell/material highlighting is active
+    highlightBackground : Tuple of int
+        RGB color to apply to non-highlighted cells/materials
+    highlightAlpha : float between 0 and 1
+        Alpha value for highlight background color
+    highlightSeed : int
+        Random number seed used to generate color scheme when highlighting
+        is active
+    plotBackground : Tuple of int
+        RGB color to apply to plot background
+    cells : Dict of DomainView instances
+        Dictionary of cell view settings by ID
+    materials : Dict of DomainView instances
+        Dictionary of material view settings by ID
+    """
+
     def __init__(self, origin, width, height):
+        """ Initialize PlotView attributes """
 
         self.origin = origin
-        self.width = width + (width * 0.005)
-        self.height = height + (height * 0.005)
+        self.width = width
+        self.height = height
 
         self.hRes = 600
         self.vRes = 600
@@ -150,9 +250,6 @@ class PlotView():
         self.basis = 'xy'
         self.colorby = 'material'
 
-        self.cells = self.getDomains('geometry.xml', 'cell')
-        self.materials = self.getDomains('materials.xml', 'material')
-
         self.masking = True
         self.maskBackground = (0,0,0)
         self.highlighting = False
@@ -160,6 +257,9 @@ class PlotView():
         self.highlightAlpha = 0.5
         self.highlightSeed = 1
         self.plotBackground = (50, 50, 50)
+
+        self.cells = self.getDomains('geometry.xml', 'cell')
+        self.materials = self.getDomains('materials.xml', 'material')
 
     def __eq__(self, other):
         if isinstance(other, PlotView):
@@ -170,6 +270,23 @@ class PlotView():
             return self.__dict__ != other.__dict__
 
     def getDomains(self, file, type_):
+        """ Return dictionary of domain settings.
+
+        Retrieve cell or material ID numbers and names from .xml files
+        and convert to DomainView instances with default view settings.
+
+        Parameters
+        ----------
+        file : {'geometry.xml', 'materials.xml'}
+            .xml file from which to retrieve values
+        type_ : {'cell', 'material'}
+            Type of domain to retrieve for dictionary
+
+        Returns
+        -------
+        domains : Dictionary of DomainView instances
+            Dictionary of cell/material DomainView instances keyed by ID
+        """
 
         doc = ET.parse(file)
         root = doc.getroot()
@@ -184,14 +301,33 @@ class PlotView():
             color = None
             masked = False
             highlighted = False
-            domain = Domain(id, name, color, masked, highlighted)
+            domain = DomainView(id, name, color, masked, highlighted)
             domains[id] = domain
 
         return domains
 
 
-class Domain():
+class DomainView():
+    """ Represents view settings for OpenMC cell or material.
+
+    Parameters
+    ----------
+    id : int
+        Unique identifier for cell/material
+    name : str
+        Name of cell/material
+    color : Tuple of int
+        RGB color of cell/material (defaults to None)
+    masked : bool
+        Indication of whether cell/material should be masked
+        (defaults to False)
+    highlighted : bool
+        Indication of whether cell/material should be highlighted
+        (defaults to False)
+    """
+
     def __init__(self, id, name, color=None, masked=False, highlighted=False):
+        """ Initialize DomainView instance """
 
         self.id = id
         self.name = name
@@ -204,11 +340,13 @@ class Domain():
                 \nmask: {self.masked} \nhighlight: {self.highlighted}\n\n")
 
     def __eq__(self, other):
-        if isinstance(other, Domain):
+        if isinstance(other, DomainView):
             return self.__dict__ == other.__dict__
 
 
 class DomainTableModel(QAbstractTableModel):
+    """ Abstract Table Model of cell/material view attributes """
+
     def __init__(self, domains):
         super(DomainTableModel, self).__init__()
         self.domains = [dom for dom in domains.values()]
@@ -249,8 +387,10 @@ class DomainTableModel(QAbstractTableModel):
 
         elif role == Qt.BackgroundColorRole:
             if column == COLOR:
-                if domain.color is not None:
-                    return QColor.fromRgb(*domain.color)
+                if isinstance(domain.color, tuple):
+                        return QColor.fromRgb(*domain.color)
+                elif isinstance(domain.color, str):
+                    return QColor.fromRgb(*openmc.plots._SVG_COLORS[domain.color])
 
         elif role == Qt.CheckStateRole:
             if column == MASK:
@@ -269,7 +409,7 @@ class DomainTableModel(QAbstractTableModel):
 
         elif role == Qt.DisplayRole:
             if orientation == Qt.Horizontal:
-                headers = ['ID', 'Name', 'Color', 'RGB', 'Mask', 'Highlight']
+                headers = ['ID', 'Name', 'Color', 'SVG/RGB', 'Mask', 'Highlight']
                 return headers[section]
             return int(section + 1)
 
@@ -283,7 +423,7 @@ class DomainTableModel(QAbstractTableModel):
         elif index.column() in (MASK, HIGHLIGHT):
             return Qt.ItemFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable |
                                 Qt.ItemIsSelectable)
-        elif index.column() == NAME:
+        elif index.column() in (NAME, COLORLABEL):
             return Qt.ItemFlags(Qt.ItemIsEnabled | Qt.ItemIsEditable |
                                 Qt.ItemIsSelectable)
         elif index.column() == COLOR:
@@ -341,6 +481,8 @@ class DomainDelegate(QItemDelegate):
         if index.column() == COLOR:
             dialog = QColorDialog(parent)
             return dialog
+        elif index.column() == COLORLABEL:
+            return QLineEdit(parent)
         else:
             return QItemDelegate.createEditor(self, parent, option, index)
 
@@ -349,7 +491,7 @@ class DomainDelegate(QItemDelegate):
         if index.column() == COLOR:
             color = index.data(Qt.BackgroundColorRole)
             editor.setCurrentColor(color)
-        elif index.column() == NAME:
+        elif index.column() in (NAME, COLORLABEL):
             text = index.data(Qt.DisplayRole)
             if text != '--':
                 editor.setText(text)
@@ -381,5 +523,23 @@ class DomainDelegate(QItemDelegate):
                 color = color.getRgb()[:3]
                 model.setData(index, color, Qt.BackgroundColorRole)
                 model.setData(model.index(row, column+1), color, Qt.DisplayRole)
+        elif column == COLORLABEL:
+            input = editor.text().lower()
+            if input in openmc.plots._SVG_COLORS:
+                color = openmc.plots._SVG_COLORS[input]
+                model.setData(model.index(row, column-1), color, Qt.BackgroundColorRole)
+                model.setData(index, input, Qt.DisplayRole)
+            else:
+                try:
+                    input = ast.literal_eval(editor.text())
+                except (ValueError, SyntaxError):
+                    return None
+                if not isinstance(input, tuple) or len(input) != 3:
+                    return None
+                for val in input:
+                    if not isinstance(val, int) or not 0 <= val <= 255:
+                        return None
+                model.setData(model.index(row, column-1), input, Qt.BackgroundColorRole)
+                model.setData(index, input, Qt.DisplayRole)
         else:
             QItemDelegate.setModelData(self, editor, model, index)
