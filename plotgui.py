@@ -8,7 +8,7 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QCheckBox, QRubberBand, QMenu, QAction, QMenuBar, QFileDialog, QDialog,
     QTabWidget, QGridLayout, QToolButton, QColorDialog, QFrame, QDockWidget,
     QTableView, QItemDelegate, QHeaderView, QSlider)
-from devmodel import DomainDelegate
+from plotmodel import DomainDelegate
 
 class PlotImage(QLabel):
     def __init__(self, model, FM, parent=None):
@@ -241,8 +241,7 @@ class OptionsDock(QDockWidget):
         self.FM = FM
         self.mw = parent
 
-        #self.setStyleSheet("font: 11px")
-        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding) # Doesn't work?
         self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea |
                              QtCore.Qt.RightDockWidgetArea)
 
@@ -253,8 +252,22 @@ class OptionsDock(QDockWidget):
 
         # Create submit button
         self.applyButton = QPushButton("Apply Changes")
-        self.applyButton.setMinimumHeight(self.FM.height() * 1.6)
+        self.applyButton.setMinimumHeight(self.FM.height() * 1.6) # Mac bug fix
         self.applyButton.clicked.connect(self.mw.applyChanges)
+
+        # Create Zoom box
+        self.zoomBox = QSpinBox()
+        self.zoomBox.setSuffix(' %')
+        self.zoomBox.setRange(25, 5000)
+        self.zoomBox.setValue(100)
+        self.zoomBox.setSingleStep(25)
+        self.zoomBox.valueChanged.connect(self.mw.editZoom)
+        self.zoomLayout = QHBoxLayout()
+        self.zoomLayout.addWidget(QLabel('Zoom:'))
+        self.zoomLayout.addWidget(self.zoomBox)
+        self.zoomLayout.setContentsMargins(0,0,0,0)
+        self.zoomWidget = QWidget()
+        self.zoomWidget.setLayout(self.zoomLayout)
 
         # Create Layout
         self.dockLayout = QVBoxLayout()
@@ -263,10 +276,11 @@ class OptionsDock(QDockWidget):
         self.dockLayout.addWidget(self.resGroupBox)
         self.dockLayout.addWidget(self.applyButton)
         self.dockLayout.addStretch()
+        self.dockLayout.addWidget(HorizontalLine())
+        self.dockLayout.addWidget(self.zoomWidget)
 
         self.optionsWidget = QWidget()
         self.optionsWidget.setLayout(self.dockLayout)
-
         self.setWidget(self.optionsWidget)
 
     def createOriginBox(self):
@@ -342,12 +356,11 @@ class OptionsDock(QDockWidget):
         self.opLayout.addRow('Basis:', self.basisBox)
         self.opLayout.addRow('Color By:', self.colorbyBox)
         self.opLayout.addRow(self.colorOptionsButton)
-        #self.opLayout.setVerticalSpacing(4)
         self.opLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
         self.opLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         # Options Group Box
-        self.optionsGroupBox = QGroupBox('Plot')
+        self.optionsGroupBox = QGroupBox('Options')
         self.optionsGroupBox.setLayout(self.opLayout)
 
     def createResolutionBox(self):
@@ -371,18 +384,8 @@ class OptionsDock(QDockWidget):
         self.ratioCheck = QCheckBox("Fixed Aspect Ratio", self)
         self.ratioCheck.stateChanged.connect(self.mw.toggleAspectLock)
 
-        # Zoom
-        self.zoomBox = QSpinBox()
-        self.zoomBox.setSuffix(' %')
-        self.zoomBox.setRange(25, 5000)
-        self.zoomBox.setValue(100)
-        self.zoomBox.setSingleStep(25)
-        self.zoomBox.valueChanged.connect(self.mw.editZoom)
-
         # Resolution Form Layout
         self.resLayout = QFormLayout()
-        self.resLayout.addRow('Zoom:', self.zoomBox)
-        self.resLayout.addRow(HorizontalLine())
         self.resLayout.addRow(self.ratioCheck)
         self.resLayout.addRow('Pixel Width:', self.hResBox)
         self.resLayout.addRow(self.vResLabel, self.vResBox)
@@ -390,7 +393,7 @@ class OptionsDock(QDockWidget):
         self.resLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         # Resolution Group Box
-        self.resGroupBox = QGroupBox("Image")
+        self.resGroupBox = QGroupBox("Resolution")
         self.resGroupBox.setLayout(self.resLayout)
 
     def updateDock(self):
@@ -446,6 +449,17 @@ class OptionsDock(QDockWidget):
         self.widthBox.setValue(cv.width)
         self.heightBox.setValue(cv.height)
 
+    def resizeEvent(self, event):
+        self.mw.resizeEvent(event)
+
+    def hideEvent(self, event):
+        self.mw.resizeEvent(event)
+
+    def showEvent(self, event):
+        self.mw.resizeEvent(event)
+
+    def moveEvent(self, event):
+        self.mw.resizeEvent(event)
 
 class ColorDialog(QDialog):
     def __init__(self, model, FM, parent=None):
@@ -567,7 +581,7 @@ class ColorDialog(QDialog):
 
     def createDomainTab(self, domaintable):
 
-        text = QLabel("Double-click '+' to edit color. Right-click to clear.")
+        text = QLabel("Right-click color to clear.")
         text.setStyleSheet("font: 11px")
 
         domainTab = QWidget()

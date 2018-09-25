@@ -498,7 +498,7 @@ class DomainDelegate(QItemDelegate):
 
     def editorEvent(self, event, model, option, index):
 
-        if index.column() == COLOR:
+        if index.column() in (COLOR, COLORLABEL):
             if not int(index.flags() & Qt.ItemIsEditable) > 0:
                 return False
             if event.type() == QEvent.MouseButtonRelease \
@@ -524,11 +524,14 @@ class DomainDelegate(QItemDelegate):
                 model.setData(index, color, Qt.BackgroundColorRole)
                 model.setData(model.index(row, column+1), color, Qt.DisplayRole)
         elif column == COLORLABEL:
-            input = editor.text().lower()
-            if input in openmc.plots._SVG_COLORS:
-                color = openmc.plots._SVG_COLORS[input]
+            if editor is None:
+                model.setData(model.index(row, column-1), None, Qt.BackgroundColorRole)
+                model.setData(index, None, Qt.DisplayRole)
+            elif editor.text().lower() in openmc.plots._SVG_COLORS:
+                svg = editor.text().lower()
+                color = openmc.plots._SVG_COLORS[svg]
                 model.setData(model.index(row, column-1), color, Qt.BackgroundColorRole)
-                model.setData(index, input, Qt.DisplayRole)
+                model.setData(index, svg, Qt.DisplayRole)
             else:
                 try:
                     input = ast.literal_eval(editor.text())

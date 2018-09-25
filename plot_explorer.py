@@ -507,7 +507,10 @@ class MainWindow(QMainWindow):
         current_color = domain[id].color
         dlg = QColorDialog(self)
 
-        if current_color is not None:
+        if isinstance(current_color, tuple):
+            dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
+        elif isinstance(current_color, str):
+            current_color = openmc.plots._SVG_COLORS[current_color]
             dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
         if dlg.exec_():
             new_color = dlg.currentColor().getRgb()[:3]
