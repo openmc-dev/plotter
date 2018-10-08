@@ -1,6 +1,7 @@
-import copy, struct, threading, openmc, ast
+import copy, struct, threading, openmc
 import numpy as np
 import xml.etree.ElementTree as ET
+from ast import literal_eval
 from PySide2.QtWidgets import QTableView, QItemDelegate, QColorDialog, QLineEdit
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
 from PySide2.QtGui import QColor
@@ -189,7 +190,7 @@ class PlotView():
 
     Parameters
     ----------
-    origin : Tuple of floats
+    origin : 3-tuple of floats
         Origin (center) of plot view
     width: float
         Width of plot view in model units
@@ -198,7 +199,7 @@ class PlotView():
 
     Attributes
     ----------
-    origin : Tuple of floats
+    origin : 3-tuple of floats
         Origin (center) of plot view
     width : float
         Width of the plot view in model units
@@ -217,18 +218,18 @@ class PlotView():
         Indication of whether the plot should be colored by cell or material
     masking : bool
         Indication of whether cell/material masking is active
-    maskBackground : Tuple of int
+    maskBackground : 3-tuple of int
         RGB color to apply to masked cells/materials
     highlighting: bool
         Indication of whether cell/material highlighting is active
-    highlightBackground : Tuple of int
+    highlightBackground : 3-tuple of int
         RGB color to apply to non-highlighted cells/materials
     highlightAlpha : float between 0 and 1
         Alpha value for highlight background color
     highlightSeed : int
         Random number seed used to generate color scheme when highlighting
         is active
-    plotBackground : Tuple of int
+    plotBackground : 3-tuple of int
         RGB color to apply to plot background
     cells : Dict of DomainView instances
         Dictionary of cell view settings by ID
@@ -316,8 +317,8 @@ class DomainView():
         Unique identifier for cell/material
     name : str
         Name of cell/material
-    color : Tuple of int
-        RGB color of cell/material (defaults to None)
+    color : 3-tuple of int or str
+        RGB or SVG color of cell/material (defaults to None)
     masked : bool
         Indication of whether cell/material should be masked
         (defaults to False)
@@ -378,6 +379,14 @@ class DomainTableModel(QAbstractTableModel):
                 return None
             elif column == HIGHLIGHT:
                 return None
+
+        elif role == Qt.ToolTipRole:
+            if column == NAME:
+                return 'Double-click to edit'
+            elif column in (COLOR, COLORLABEL):
+                return 'Double-click to edit \nRight-click to clear'
+            elif column in (MASK, HIGHLIGHT):
+                return 'Click to toggle'
 
         elif role == Qt.TextAlignmentRole:
             if column in (MASK, HIGHLIGHT, COLOR):
@@ -490,6 +499,7 @@ class DomainDelegate(QItemDelegate):
 
         if index.column() == COLOR:
             color = index.data(Qt.BackgroundColorRole)
+            color = 'white' if color is None else color
             editor.setCurrentColor(color)
         elif index.column() in (NAME, COLORLABEL):
             text = index.data(Qt.DisplayRole)
@@ -534,7 +544,7 @@ class DomainDelegate(QItemDelegate):
                 model.setData(index, svg, Qt.DisplayRole)
             else:
                 try:
-                    input = ast.literal_eval(editor.text())
+                    input = literal_eval(editor.text())
                 except (ValueError, SyntaxError):
                     return None
                 if not isinstance(input, tuple) or len(input) != 3:

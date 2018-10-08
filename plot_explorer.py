@@ -12,19 +12,19 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
 
-        # Set Window Title
         self.setWindowTitle('OpenMC Plot Explorer')
 
-        self.zoom = 100
         self.restored = False
         self.pixmap = None
+        self.zoom = 100
+
         self.model = PlotModel()
         self.restoreModelSettings()
 
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
 
-        # Create plot image
+        # Plot Image
         self.plotIm = PlotImage(self.model, FM, self)
         self.frame = QScrollArea(self)
         self.frame.setAlignment(QtCore.Qt.AlignCenter)
@@ -32,18 +32,17 @@ class MainWindow(QMainWindow):
         self.frame.setWidget(self.plotIm)
         self.setCentralWidget(self.frame)
 
-        # Create Dock
+        # Dock
         self.dock = OptionsDock(self.model, FM, self)
         self.dock.setObjectName("OptionsDock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
 
-        # Initiate color dialog
+        # Color Dialog
         self.colorDialog = ColorDialog(self.model, FM, self)
         self.colorDialog.hide()
 
         # Restore Window Settings
         self.restoreWindowSettings()
-        self.adjustWindow()
 
         # Create menubar
         self.createMenuBar()
@@ -62,6 +61,7 @@ class MainWindow(QMainWindow):
             self.model.updateIDs()
             self.showCurrentView()
         else:
+            # Timer allows GUI to render before plot finishes loading
             QtCore.QTimer.singleShot(0, self.model.generatePlot)
             QtCore.QTimer.singleShot(0, self.showCurrentView)
 
@@ -70,25 +70,32 @@ class MainWindow(QMainWindow):
     def createMenuBar(self):
         self.mainMenu = self.menuBar()
 
-        # File Menu
-        self.fileMenu = self.mainMenu.addMenu('&File')
 
+        # File Menu
         self.saveImageAction = QAction("&Save Image As...", self)
         self.saveImageAction.setShortcut("Ctrl+Shift+S")
+        self.saveImageAction.setToolTip('Save plot image')
+        self.saveImageAction.setStatusTip('Save plot image')
         self.saveImageAction.triggered.connect(self.saveImage)
 
         self.saveViewAction = QAction("Save &View Settings...", self)
         self.saveViewAction.setShortcut(QtGui.QKeySequence.Save)
+        self.saveViewAction.setStatusTip('Save current view settings')
         self.saveViewAction.triggered.connect(self.saveView)
 
         self.openAction = QAction("&Open View Settings...", self)
         self.openAction.setShortcut(QtGui.QKeySequence.Open)
+        self.openAction.setToolTip('Open saved view settings')
+        self.openAction.setStatusTip('Open saved view settings')
         self.openAction.triggered.connect(self.openView)
 
         self.quitAction = QAction("&Quit", self)
         self.quitAction.setShortcut(QtGui.QKeySequence.Quit)
+        self.quitAction.setToolTip('Quit OpenMC Plot Explorer')
+        self.quitAction.setStatusTip('Quit OpenMC Plot Explorer')
         self.quitAction.triggered.connect(self.close)
 
+        self.fileMenu = self.mainMenu.addMenu('&File')
         self.fileMenu.addAction(self.saveImageAction)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.saveViewAction)
@@ -97,26 +104,33 @@ class MainWindow(QMainWindow):
         self.fileMenu.addAction(self.quitAction)
 
         # Edit Menu
-        self.editMenu = self.mainMenu.addMenu('&Edit')
-
         self.applyAction = QAction("&Apply Changes", self)
         self.applyAction.setShortcut("Shift+Return")
+        self.applyAction.setToolTip('Generate new view with changes applied')
+        self.applyAction.setStatusTip('Generate new view with changes applied')
         self.applyAction.triggered.connect(self.applyChanges)
 
         self.undoAction = QAction('&Undo', self)
         self.undoAction.setShortcut(QtGui.QKeySequence.Undo)
+        self.undoAction.setToolTip('Undo')
+        self.undoAction.setStatusTip('Undo last plot view change')
         self.undoAction.setDisabled(True)
         self.undoAction.triggered.connect(self.undo)
 
         self.redoAction = QAction('&Redo', self)
         self.redoAction.setDisabled(True)
+        self.redoAction.setToolTip('Redo')
+        self.redoAction.setStatusTip('Redo last plot view change')
         self.redoAction.setShortcut(QtGui.QKeySequence.Redo)
         self.redoAction.triggered.connect(self.redo)
 
         self.restoreAction = QAction("&Restore Default Plot", self)
         self.restoreAction.setShortcut("Ctrl+R")
+        self.restoreAction.setToolTip('Restore to default plot view')
+        self.restoreAction.setStatusTip('Restore to default plot view')
         self.restoreAction.triggered.connect(self.restoreDefault)
 
+        self.editMenu = self.mainMenu.addMenu('&Edit')
         self.editMenu.addAction(self.applyAction)
         self.editMenu.addSeparator()
         self.editMenu.addAction(self.undoAction)
@@ -130,18 +144,24 @@ class MainWindow(QMainWindow):
         self.xyAction = QAction('&xy  ', self)
         self.xyAction.setCheckable(True)
         self.xyAction.setShortcut('Alt+X')
+        self.xyAction.setToolTip('Change to xy basis')
+        self.xyAction.setStatusTip('Change to xy basis')
         self.xyAction.triggered.connect(lambda :
             self.editBasis('xy', apply=True))
 
         self.xzAction = QAction('x&z  ', self)
         self.xzAction.setCheckable(True)
         self.xzAction.setShortcut('Alt+Z')
+        self.xzAction.setToolTip('Change to xz basis')
+        self.xzAction.setStatusTip('Change to xz basis')
         self.xzAction.triggered.connect(lambda :
             self.editBasis('xz', apply=True))
 
         self.yzAction = QAction('&yz  ', self)
         self.yzAction.setCheckable(True)
         self.yzAction.setShortcut('Alt+Y')
+        self.yzAction.setToolTip('Change to yz basis')
+        self.yzAction.setStatusTip('Change to yz basis')
         self.yzAction.triggered.connect(lambda :
             self.editBasis('yz', apply=True))
 
@@ -155,13 +175,16 @@ class MainWindow(QMainWindow):
         self.cellAction = QAction('&Cell', self)
         self.cellAction.setCheckable(True)
         self.cellAction.setShortcut('Alt+C')
-        self.cellAction.setIcon(QtGui.QIcon('cell.png'))
+        self.cellAction.setToolTip('Color by cell')
+        self.cellAction.setStatusTip('Color plot by cell')
         self.cellAction.triggered.connect(lambda :
             self.editColorBy('cell', apply=True))
 
         self.materialAction = QAction('&Material', self)
         self.materialAction.setCheckable(True)
         self.materialAction.setShortcut('Alt+M')
+        self.materialAction.setToolTip('Color by material')
+        self.materialAction.setStatusTip('Color plot by material')
         self.materialAction.triggered.connect(lambda :
             self.editColorBy('material', apply=True))
 
@@ -175,6 +198,8 @@ class MainWindow(QMainWindow):
         self.maskingAction = QAction('Enable &Masking', self)
         self.maskingAction.setShortcut('Ctrl+M')
         self.maskingAction.setCheckable(True)
+        self.maskingAction.setToolTip('Toggle masking')
+        self.maskingAction.setStatusTip('Toggle whether masking is enabled')
         self.maskingAction.triggered[bool].connect(lambda bool=bool:
             self.toggleMasking(bool, apply=True))
         self.editMenu.addAction(self.maskingAction)
@@ -182,38 +207,47 @@ class MainWindow(QMainWindow):
         self.highlightingAct = QAction('Enable High&lighting', self)
         self.highlightingAct.setShortcut('Ctrl+L')
         self.highlightingAct.setCheckable(True)
+        self.highlightingAct.setToolTip('Toggle highlighting')
+        self.highlightingAct.setStatusTip('Toggle whether highlighting is enabled')
         self.highlightingAct.triggered[bool].connect(lambda bool=bool:
             self.toggleHighlighting(bool, apply=True))
         self.editMenu.addAction(self.highlightingAct)
 
         # View Menu
-        self.viewMenu = self.mainMenu.addMenu('&View')
         self.dockAction = QAction('Hide &Dock', self)
         self.dockAction.setShortcut("Ctrl+D")
+        self.dockAction.setToolTip('Toggle dock visibility')
+        self.dockAction.setStatusTip('Toggle dock visibility')
         self.dockAction.triggered.connect(self.toggleDockView)
 
         self.zoomAction = QAction('&Zoom...', self)
         self.zoomAction.setShortcut('Alt+Shift+Z')
+        self.zoomAction.setToolTip('Edit zoom factor')
+        self.zoomAction.setStatusTip('Edit zoom factor')
         self.zoomAction.triggered.connect(self.editZoomAct)
 
+        self.viewMenu = self.mainMenu.addMenu('&View')
         self.viewMenu.addAction(self.dockAction)
         self.viewMenu.addSeparator()
         self.viewMenu.addAction(self.zoomAction)
         self.viewMenu.aboutToShow.connect(self.updateViewMenu)
 
         # Window Menu
-        self.windowMenu = self.mainMenu.addMenu('&Window')
-
         self.mainWindowAction = QAction('&Main Window', self)
         self.mainWindowAction.setShortcut('Alt+W')
         self.mainWindowAction.setCheckable(True)
+        self.mainWindowAction.setToolTip('Bring main window to front')
+        self.mainWindowAction.setStatusTip('Bring main window to front')
         self.mainWindowAction.triggered.connect(self.showMainWindow)
 
         self.colorDialogAction = QAction('Color &Options', self)
         self.colorDialogAction.setShortcut('Alt+D')
         self.colorDialogAction.setCheckable(True)
+        self.colorDialogAction.setToolTip('Bring Color Dialog to front')
+        self.colorDialogAction.setStatusTip('Bring Color Dialog to front')
         self.colorDialogAction.triggered.connect(self.showColorDialog)
 
+        self.windowMenu = self.mainMenu.addMenu('&Window')
         self.windowMenu.addAction(self.mainWindowAction)
         self.windowMenu.addAction(self.colorDialogAction)
         self.windowMenu.aboutToShow.connect(self.updateWindowMenu)
@@ -234,8 +268,9 @@ class MainWindow(QMainWindow):
         self.yzAction.setChecked(self.model.currentView.basis == 'yz')
 
     def updateColorbyMenu(self):
-        self.cellAction.setChecked(self.model.currentView.colorby == 'cell')
-        self.materialAction.setChecked(self.model.currentView.colorby == 'material')
+        cv = self.model.currentView
+        self.cellAction.setChecked(cv.colorby == 'cell')
+        self.materialAction.setChecked(cv.colorby == 'material')
 
     def updateViewMenu(self):
         if self.dock.isVisible():
@@ -251,7 +286,7 @@ class MainWindow(QMainWindow):
 
     def saveImage(self):
         filename, ext = QFileDialog.getSaveFileName(self, "Save Plot Image",
-                                            "untitled", "Images (*.png *.ppm)")
+                                         "untitled", "Images (*.png *.ppm)")
         if filename:
             if "." not in filename:
                 self.pixmap.save(filename + ".png")
@@ -317,7 +352,6 @@ class MainWindow(QMainWindow):
 
         if not self.model.previousViews:
             self.undoAction.setDisabled(True)
-
         self.redoAction.setDisabled(False)
 
     def redo(self):
@@ -332,7 +366,6 @@ class MainWindow(QMainWindow):
 
         if not self.model.subsequentViews:
             self.redoAction.setDisabled(True)
-
         self.undoAction.setDisabled(False)
 
     def restoreDefault(self):
@@ -390,7 +423,7 @@ class MainWindow(QMainWindow):
 
     def editZoomAct(self):
         percent, ok = QInputDialog.getInt(self, "Edit Zoom", "Zoom Percent:",
-                                          self.dock.zoomBox.value(), 25, 1000)
+                                          self.dock.zoomBox.value(), 25, 2000)
         if ok:
             self.dock.zoomBox.setValue(percent)
 
@@ -447,8 +480,7 @@ class MainWindow(QMainWindow):
         if dlg.exec_():
             new_color = dlg.currentColor().getRgb()[:3]
             self.model.activeView.maskBackground = new_color
-
-        self.colorDialog.updateMaskingColor()
+            self.colorDialog.updateMaskingColor()
 
     def editHighlightColor(self):
         current_color = self.model.activeView.highlightBackground
@@ -458,8 +490,7 @@ class MainWindow(QMainWindow):
         if dlg.exec_():
             new_color = dlg.currentColor().getRgb()[:3]
             self.model.activeView.highlightBackground = new_color
-
-        self.colorDialog.updateHighlightColor()
+            self.colorDialog.updateHighlightColor()
 
     def editAlpha(self, value):
         self.model.activeView.highlightAlpha = value
@@ -475,8 +506,7 @@ class MainWindow(QMainWindow):
         if dlg.exec_():
             new_color = dlg.currentColor().getRgb()[:3]
             self.model.activeView.plotBackground = new_color
-
-        self.colorDialog.updateBackgroundColor()
+            self.colorDialog.updateBackgroundColor()
 
         if apply:
             self.applyChanges()
@@ -540,6 +570,7 @@ class MainWindow(QMainWindow):
 
     def restoreWindowSettings(self):
         settings = QtCore.QSettings()
+
         self.resize(settings.value("mainWindow/Size", QtCore.QSize(800,600)))
         self.move(settings.value("mainWindow/Position", QtCore.QPoint(100,100)))
         self.restoreState(settings.value("mainWindow/State"))
@@ -580,13 +611,12 @@ class MainWindow(QMainWindow):
 
         if self.model.previousViews:
             self.undoAction.setDisabled(False)
-
         if self.model.subsequentViews:
             self.redoAction.setDisabled(False)
         else:
             self.redoAction.setDisabled(True)
 
-        self.showStatusPlot()
+        self.statusBar().showMessage('Done', 1000)
         self.adjustWindow()
 
     def updateScale(self):
@@ -605,23 +635,13 @@ class MainWindow(QMainWindow):
 
     def onRatioChange(self):
         av = self.model.activeView
-
         if av.aspectLock:
             ratio = av.width / max(av.height, .001)
             av.vRes = int(av.hRes / ratio)
             self.dock.updateVRes()
 
-    def showStatusPlot(self):
-        cv = self.model.currentView
-        origin = (round(dimension, 2) for dimension in cv.origin)
-        message = (f"Current Plot: {str(tuple(origin))}  |  "
-                   f"{round(cv.width, 2)} x {round(cv.height, 2)}  | "
-                   f"Basis: {cv.basis} | Color By: {cv.colorby}")
-        self.statusBar().showMessage(message, 3000)
-
     def showCoords(self, xPlotPos, yPlotPos):
         cv = self.model.currentView
-
         if cv.basis == 'xy':
             coords = (f"({round(xPlotPos, 2)}, {round(yPlotPos, 2)}, "
                       f"{round(cv.origin[2], 2)})")
@@ -631,7 +651,6 @@ class MainWindow(QMainWindow):
         else:
             coords = (f"({round(cv.origin[0], 2)}, {round(xPlotPos, 2)}, "
                       f"{round(yPlotPos, 2)})")
-
         self.coordLabel.setText(f'{coords}')
 
     def resizePixmap(self):
@@ -641,6 +660,9 @@ class MainWindow(QMainWindow):
                                QtCore.Qt.KeepAspectRatio,
                                QtCore.Qt.SmoothTransformation))
         self.plotIm.adjustSize()
+
+    def moveEvent(self, event):
+        self.adjustWindow()
 
     def resizeEvent(self, event):
         if self.pixmap:
@@ -671,8 +693,8 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     app.setOrganizationName("OpenMC")
-    app.setOrganizationDomain("github.com/openmc-dev/")
-    app.setApplicationName("OpenMC Plot Explorer")
+    app.setOrganizationDomain("xxxxxgithub.com/openmc-dev/")
+    app.setApplicationName("xxxxxOpenMC Plot Explorer")
     app.setWindowIcon(QtGui.QIcon('openmc_logo.png'))
     app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, True)
 

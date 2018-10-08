@@ -18,7 +18,6 @@ class PlotImage(QLabel):
         self.FM = FM
         self.mw = parent
 
-
         self.setAlignment(QtCore.Qt.AlignCenter)
         self.setMouseTracking(True)
 
@@ -34,8 +33,8 @@ class PlotImage(QLabel):
         self.mw.coordLabel.show()
 
     def leaveEvent(self, event):
-        self.mw.showStatusPlot()
         self.mw.coordLabel.hide()
+        self.mw.statusBar().showMessage('')
 
     def mousePressEvent(self, event):
 
@@ -145,6 +144,8 @@ class PlotImage(QLabel):
 
             colorAction = self.menu.addAction(f'Edit {domain_kind} Color...')
             colorAction.setDisabled(self.model.currentView.highlighting)
+            colorAction.setToolTip(f'Edit {domain_kind} color')
+            colorAction.setStatusTip(f'Edit {domain_kind} color')
             colorAction.triggered.connect(lambda :
                 self.mw.editDomainColor(domain_kind, id))
 
@@ -152,6 +153,8 @@ class PlotImage(QLabel):
             maskAction.setCheckable(True)
             maskAction.setChecked(domain[id].masked)
             maskAction.setDisabled(not self.model.currentView.masking)
+            maskAction.setToolTip(f'Toggle {domain_kind} mask')
+            maskAction.setStatusTip(f'Toggle {domain_kind} mask')
             maskAction.triggered[bool].connect(lambda bool=bool:
                 self.mw.toggleDomainMask(bool, domain_kind, id))
 
@@ -159,6 +162,8 @@ class PlotImage(QLabel):
             highlightAction.setCheckable(True)
             highlightAction.setChecked(domain[id].highlighted)
             highlightAction.setDisabled(not self.model.currentView.highlighting)
+            highlightAction.setToolTip(f'Toggle {domain_kind} highlight')
+            highlightAction.setStatusTip(f'Toggle {domain_kind} highlight')
             highlightAction.triggered[bool].connect(lambda bool=bool:
                 self.mw.toggleDomainHighlight(bool, domain_kind, id))
 
@@ -167,11 +172,15 @@ class PlotImage(QLabel):
             self.menu.addAction(self.mw.redoAction)
             self.menu.addSeparator()
             bgColorAction = self.menu.addAction('Edit Background Color...')
+            bgColorAction.setToolTip('Edit background color')
+            bgColorAction.setStatusTip('Edit plot background color')
             bgColorAction.triggered.connect(lambda :
                 self.mw.editBackgroundColor(apply=True))
 
         self.menu.addSeparator()
         self.menu.addAction(self.mw.saveImageAction)
+        self.menu.addAction(self.mw.saveViewAction)
+        self.menu.addAction(self.mw.openAction)
         self.menu.addSeparator()
         self.menu.addMenu(self.mw.basisMenu)
         self.menu.addMenu(self.mw.colorbyMenu)
@@ -258,7 +267,7 @@ class OptionsDock(QDockWidget):
         # Create Zoom box
         self.zoomBox = QSpinBox()
         self.zoomBox.setSuffix(' %')
-        self.zoomBox.setRange(25, 5000)
+        self.zoomBox.setRange(25, 2000)
         self.zoomBox.setValue(100)
         self.zoomBox.setSingleStep(25)
         self.zoomBox.valueChanged.connect(self.mw.editZoom)
@@ -492,6 +501,7 @@ class ColorDialog(QDialog):
         self.createButtonBox()
 
         self.colorDialogLayout = QVBoxLayout()
+        #self.colorDialogLayout.setContentsMargins(0, 0, 0, 0)
         self.colorDialogLayout.addWidget(self.tabs)
         self.colorDialogLayout.addWidget(self.buttonBox)
         self.setLayout(self.colorDialogLayout)
@@ -581,14 +591,10 @@ class ColorDialog(QDialog):
 
     def createDomainTab(self, domaintable):
 
-        text = QLabel("Right-click color to clear.")
-        text.setStyleSheet("font: 11px")
-
         domainTab = QWidget()
         domainTab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         domainLayout = QVBoxLayout()
         domainLayout.addWidget(domaintable)
-        domainLayout.addWidget(text)
         domainTab.setLayout(domainLayout)
 
         return domainTab
