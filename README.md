@@ -2,25 +2,25 @@ OpenMC Plot Explorer
 
 Description:
 
-  A graphical interface for visualizing and manipulating OpenMC plot slices.
+A graphical interface for visualizing and manipulating OpenMC plot slices.
 
 Dependencies:
 
-  os, sys, pickle, copy, struct, threading, numpy, ast, PySide2
-  openmc (plot-ids branch from Paul Romano)
+os, sys, pickle, copy, struct, threading, numpy, ast, PySide2
+openmc (plot-ids branch from Paul Romano)
 
 Structure:
 
-  plotmodel.py : contains the underlying data structure of the plot model and application state.
-  plotgui.py : contains the bulk of the graphical elements of the application.
-  plot_explorer.py : contains the major program logic used to interact with the application.
+plotmodel.py : contains the underlying data structure of the plot model and application state.
+plotgui.py : contains the bulk of the graphical elements of the application.
+plot_explorer.py : contains the major program logic used to interact with the application.
 
 Terminology:
 
-  Plot Image : The plot slice image in the central area of the application.
-  Active Plot : plot settings that are changed as dock and color dialog fields are changed.  Not necessarily reflected in the plot image.
-  Current Plot : plot settings currently displayed in the plot image.
-  Applying changes causes the active plot to become the current plot, and a new plot image to be generated.
+Plot Image : The plot slice image in the central area of the application.
+Active Plot : plot settings that are changed as dock and color dialog fields are changed.  Not necessarily reflected in the plot image.
+Current Plot : plot settings currently displayed in the plot image.
+Applying changes causes the active plot to become the current plot, and a new plot image to be generated.
 
 Functionality:
 
