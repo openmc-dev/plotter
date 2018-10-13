@@ -1,30 +1,30 @@
-#OpenMC Plot Explorer
+OpenMC Plot Explorer
 
-##Description:
+Description:
 
   A graphical interface for visualizing and manipulating OpenMC plot slices.
 
-##Dependencies:
+Dependencies:
 
   os, sys, pickle, copy, struct, threading, numpy, ast, PySide2
   openmc (plot-ids branch from Paul Romano)
 
-##Structure:
+Structure:
 
   plotmodel.py : contains the underlying data structure of the plot model and application state.
   plotgui.py : contains the bulk of the graphical elements of the application.
   plot_explorer.py : contains the major program logic used to interact with the application.
 
-##Terminology:
+Terminology:
 
   Plot Image : The plot slice image in the central area of the application.
   Active Plot : plot settings that are changed as dock and color dialog fields are changed.  Not necessarily reflected in the plot image.
   Current Plot : plot settings currently displayed in the plot image.
   Applying changes causes the active plot to become the current plot, and a new plot image to be generated.
 
-##Functionality:
+Functionality:
 
-  ###Menu Bar:
+  Menu Bar:
 
     File->Save Image As... : Save an image file of the current plot.
     File->Save View Settings... : Save a .pltvw pickle file containing the current plot settings.
@@ -52,7 +52,7 @@
     Window->Main Window : Activate, bring main window to front.
     Window->Color Options : [Open], activate, bring color options dialog to front.
 
-  ###Dock:
+  Dock:
 
     Origin:
       X, Y, Z : Set the active plot origin to the values entered for each dimension.
@@ -72,7 +72,7 @@
     Apply Changes : Apply changes made to active plot, reload plot image.
     Zoom : Set zoom level of plot image.
 
-  ###Plot Image:
+  Plot Image:
 
     Mouse Hover : Display plot coordinates in bottom-right of status bar.  Display cell/material ID and name (if any) in bottom-left of status bar.
 
@@ -94,7 +94,7 @@
       Highlight Cell/Material : Highlight/Unhighlight selected cell/material, apply changes, and reload plot image.
       See menu bar for other context menu options.
 
-  ###Color Options Dialog:
+  Color Options Dialog:
 
     General Tab:
       Masking : Enable/Disable masking on active plot.
@@ -127,8 +127,7 @@
     The current state of the plot model, including current plot and up to 10 previous/subsequent plots (i.e. for undo/redo) will be saved.
     Active plot changes that have not been applied will be lost.
 
-###Task List:
-
- [ ] Add labeled, ticked plot axes
- [ ] Better integrate OpenMC functionality into plot image generation, etc.
- [ ] Consider better storage format for saved plot views.
+Task List:
+  - Add labeled, ticked plot axes
+  - Better integrate OpenMC functionality into plot image generation, etc.
+  - Consider better storage format for saved plot views.
