@@ -1,4 +1,5 @@
 import copy, struct, threading, openmc
+import subprocess
 import numpy as np
 import xml.etree.ElementTree as ET
 from ast import literal_eval
@@ -161,6 +162,8 @@ class PlotModel():
         plots = openmc.Plots([plot])
         plots.export_to_xml()
         openmc.plot_geometry()
+        subprocess.run(["convert","plot.ppm","plot.png"])
+
 
         self.updateIDs()
 

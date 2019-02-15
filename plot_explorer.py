@@ -6,7 +6,11 @@ from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
     QScrollArea, QMenu, QAction, QFileDialog, QColorDialog, QInputDialog)
 from plotmodel import PlotModel, DomainTableModel
-from plotgui import PlotImage, ColorDialog, OptionsDock
+from plotgui import PlotImage, MPlotImage, ColorDialog, OptionsDock
+
+from matplotlib.backends.qt_compat import is_pyqt5
+from matplotlib.figure import Figure
+from matplotlib import image as mpimage
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -26,10 +30,11 @@ class MainWindow(QMainWindow):
 
         # Plot Image
         self.plotIm = PlotImage(self.model, FM, self)
+        self.mPlotIm = MPlotImage(self.model, self)
         self.frame = QScrollArea(self)
         self.frame.setAlignment(QtCore.Qt.AlignCenter)
         self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.frame.setWidget(self.plotIm)
+        self.frame.setWidget(self.mPlotIm)
         self.setCentralWidget(self.frame)
 
         # Dock
@@ -655,11 +660,13 @@ class MainWindow(QMainWindow):
 
     def resizePixmap(self):
         z = self.zoom/100
-        self.plotIm.setPixmap(
-            self.pixmap.scaled(self.frame.width() * z, self.frame.height() * z,
-                               QtCore.Qt.KeepAspectRatio,
-                               QtCore.Qt.SmoothTransformation))
-        self.plotIm.adjustSize()
+        self.mPlotIm.setPixmap(self.frame.width() * z,
+                               self.frame.height() * z)
+        # self.mPlotIm.setPixmap(
+        #     self.pixmap.scaled(self.frame.width() * z, self.frame.height() * z,
+        #                        QtCore.Qt.KeepAspectRatio,
+        #                        QtCore.Qt.SmoothTransformation))
+        self.mPlotIm.adjustSize()
 
     def moveEvent(self, event):
         self.adjustWindow()

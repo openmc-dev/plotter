@@ -10,6 +10,249 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QTableView, QItemDelegate, QHeaderView, QSlider)
 from plotmodel import DomainDelegate
 
+from matplotlib.backends.qt_compat import is_pyqt5
+from matplotlib.figure import Figure
+from matplotlib import image as mpimage
+
+from time import sleep
+
+if is_pyqt5():
+    from matplotlib.backends.backend_qt5agg import (
+        FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
+else:
+    from matplotlib.backends.backend_qt5agg import (
+        FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
+
+class MPlotImage(FigureCanvas):
+
+    def __init__(self, model, parent=None):
+        super(FigureCanvas, self).__init__(Figure(figsize=(5,3), tight_layout=True))
+
+        self.img = mpimage.imread("plot.png")
+        self.figure.subplots().imshow(self.img)
+        self.figure.subplots().axis('off')
+        self.figure.set_frameon(False)
+        self.figure.subplots_adjust(hspace=0.0, wspace=0.0)
+        self.figure.set_tight_layout({'w_pad' : 0.0,
+                                      'h_pad' : 0.0})
+
+        self.model = model
+        self.mw = parent
+
+        self.rubberBand = QRubberBand(QRubberBand.Rectangle, self)
+        self.bandOrigin = QtCore.QPoint()
+        self.xPlotOrigin = None
+        self.yPlotOrigin = None
+
+        self.menu = QMenu(self)
+
+    def enterEvent(self, event):
+        self.setCursor(QtCore.Qt.CrossCursor)
+        self.mw.coordLabel.show()
+
+    def leaveEvent(self, event):
+        self.mw.coordLabel.hide()
+        self.mw.statusBar().showMessage("")
+
+    def mousePressEvent(self, event):
+        self.mw.coordLabel.hide()
+
+        # Set rubber band absolute and relative position
+        self.bandOrigin = event.pos()
+
+        self.xPlotOrigin, self.yPlotOrigin = self.getPlotCoords(event.pos())
+
+        # Create rubber band
+        self.rubberBand.setGeometry(QtCore.QRect(self.bandOrigin, QtCore.QSize()))
+
+        FigureCanvas.mousePressEvent(self, event)
+
+    def getPlotCoords(self, pos):
+
+        cv = self.model.currentView
+
+        factor = (self.width()/cv.hRes, self.height()/cv.vRes)
+
+        # Cursor position in pixels relative to center of plot image
+        xPos = (pos.x() + 0.5) / factor[0] - cv.hRes/2
+        yPos = (-pos.y() -0.5) / factor[1] + cv.vRes/2
+
+        # Curson position in plot coordinates
+        xPlotCoord = (xPos / self.mw.scale[0]) + cv.origin[self.mw.xBasis]
+        yPlotCoord = (yPos / self.mw.scale[1]) + cv.origin[self.mw.yBasis]
+
+        self.mw.showCoords(xPlotCoord, yPlotCoord)
+
+        return (xPlotCoord, yPlotCoord)
+
+    def getIDinfo(self, event):
+
+        cv = self.model.currentView
+        factor = (self.width()/cv.hRes, self.height()/cv.vRes)
+        xPos = int((event.pos().x() + .05)  / factor[0])
+        yPos = int((event.pos().y() + .05) / factor[1])
+
+        if yPos < self.model.currentView.vRes \
+            and xPos < self.model.currentView.hRes:
+
+            id = f"{self.model.ids[yPos][xPos]}"
+        else:
+            id = '-1'
+
+        if self.model.currentView.colorby == 'cell':
+            domain = self.model.activeView.cells
+            domain_kind = 'Cell'
+        else:
+            domain = self.model.activeView.materials
+            domain_kind = 'Material'
+
+        return id, domain, domain_kind
+
+    def mouseDoubleClickEvent(self, event):
+
+        xCenter, yCenter = self.getPlotCoords(event.pos())
+        self.mw.editPlotOrigin(xCenter, yCenter, apply=True)
+
+        QLabel.mouseDoubleClickEvent(self, event)
+
+    def mouseMoveEvent(self, event):
+
+        # Show Cursor position relative to plot in status bar
+        xPlotPos, yPlotPos = self.getPlotCoords(event.pos())
+
+        # Show Cell/Material ID, Name in status bar
+        id, domain, domain_kind = self.getIDinfo(event)
+        if id != '-1' and domain[id].name:
+            domainInfo = f"{domain_kind} {id}: {domain[id].name}"
+        elif id != '-1':
+            domainInfo = f"{domain_kind} {id}"
+        else:
+            domainInfo = ""
+        self.mw.statusBar().showMessage(f" {domainInfo}")
+
+        # Update rubber band and values if mouse button held down
+        if event.buttons() == QtCore.Qt.LeftButton:
+            self.rubberBand.setGeometry(
+                QtCore.QRect(self.bandOrigin, event.pos()).normalized())
+
+            # Show rubber band if both dimensions > 10 pixels
+            if self.rubberBand.width() > 10 and self.rubberBand.height() > 10:
+                self.rubberBand.show()
+            else:
+                self.rubberBand.hide()
+
+            # Update plot X Origin
+            xCenter = (self.xPlotOrigin + xPlotPos) / 2
+            yCenter = (self.yPlotOrigin + yPlotPos) / 2
+            self.mw.editPlotOrigin(xCenter, yCenter)
+
+            modifiers = event.modifiers()
+
+            # Zoom out if Shift held
+            if modifiers == QtCore.Qt.ShiftModifier:
+                cv = self.model.currentView
+                bandwidth = abs(self.bandOrigin.x() - event.pos().x())
+                width = cv.width * (cv.hRes / max(bandwidth, .001))
+                bandheight = abs(self.bandOrigin.y() - event.pos().y())
+                height = cv.height * (cv.vRes / max(bandheight, .001))
+            else: # Zoom in
+                width = max(abs(self.xPlotOrigin - xPlotPos), 0.1)
+                height = max(abs(self.yPlotOrigin - yPlotPos), 0.1)
+
+            self.mw.editWidth(width)
+            self.mw.editHeight(height)
+
+    def contextMenuEvent(self, event):
+
+        self.menu.clear()
+
+        self.mw.undoAction.setText(f'&Undo ({len(self.model.previousViews)})')
+        self.mw.redoAction.setText(f'&Redo ({len(self.model.subsequentViews)})')
+
+        id, domain, domain_kind = self.getIDinfo(event)
+
+        if id != '-1':
+
+            # Domain ID
+            domainID = self.menu.addAction(f"{domain_kind} {id}")
+            domainID.setDisabled(True)
+
+            # Domain Name (if any)
+            if domain[id].name:
+                domainName = self.menu.addAction(domain[id].name)
+                domainName.setDisabled(True)
+
+            self.menu.addSeparator()
+            self.menu.addAction(self.mw.undoAction)
+            self.menu.addAction(self.mw.redoAction)
+            self.menu.addSeparator()
+
+            colorAction = self.menu.addAction(f'Edit {domain_kind} Color...')
+            colorAction.setDisabled(self.model.currentView.highlighting)
+            colorAction.setToolTip(f'Edit {domain_kind} color')
+            colorAction.setStatusTip(f'Edit {domain_kind} color')
+            colorAction.triggered.connect(lambda :
+                self.mw.editDomainColor(domain_kind, id))
+
+            maskAction = self.menu.addAction(f'Mask {domain_kind}')
+            maskAction.setCheckable(True)
+            maskAction.setChecked(domain[id].masked)
+            maskAction.setDisabled(not self.model.currentView.masking)
+            maskAction.setToolTip(f'Toggle {domain_kind} mask')
+            maskAction.setStatusTip(f'Toggle {domain_kind} mask')
+            maskAction.triggered[bool].connect(lambda bool=bool:
+                self.mw.toggleDomainMask(bool, domain_kind, id))
+
+            highlightAction = self.menu.addAction(f'Highlight {domain_kind}')
+            highlightAction.setCheckable(True)
+            highlightAction.setChecked(domain[id].highlighted)
+            highlightAction.setDisabled(not self.model.currentView.highlighting)
+            highlightAction.setToolTip(f'Toggle {domain_kind} highlight')
+            highlightAction.setStatusTip(f'Toggle {domain_kind} highlight')
+            highlightAction.triggered[bool].connect(lambda bool=bool:
+                self.mw.toggleDomainHighlight(bool, domain_kind, id))
+
+        else:
+            self.menu.addAction(self.mw.undoAction)
+            self.menu.addAction(self.mw.redoAction)
+            self.menu.addSeparator()
+            bgColorAction = self.menu.addAction('Edit Background Color...')
+            bgColorAction.setToolTip('Edit background color')
+            bgColorAction.setStatusTip('Edit plot background color')
+            bgColorAction.triggered.connect(lambda :
+                self.mw.editBackgroundColor(apply=True))
+
+        self.menu.addSeparator()
+        self.menu.addAction(self.mw.saveImageAction)
+        self.menu.addAction(self.mw.saveViewAction)
+        self.menu.addAction(self.mw.openAction)
+        self.menu.addSeparator()
+        self.menu.addMenu(self.mw.basisMenu)
+        self.menu.addMenu(self.mw.colorbyMenu)
+        self.menu.addSeparator()
+        self.menu.addAction(self.mw.maskingAction)
+        self.menu.addAction(self.mw.highlightingAct)
+        self.menu.addSeparator()
+        self.menu.addAction(self.mw.dockAction)
+
+        self.mw.maskingAction.setChecked(self.model.currentView.masking)
+        self.mw.highlightingAct.setChecked(self.model.currentView.highlighting)
+
+        if self.mw.dock.isVisible():
+            self.mw.dockAction.setText('Hide &Dock')
+        else:
+            self.mw.dockAction.setText('Show &Dock')
+
+        self.menu.exec_(event.globalPos())
+
+    def setPixmap(self, w, h):
+        self.figure.set_figwidth(w / self.figure.get_dpi())
+        self.figure.set_figheight(h / self.figure.get_dpi())
+        self.img = mpimage.imread("plot.png")
+        self.figure.clear()
+        self.figure.subplots().imshow(self.img)
+        self.draw()
+
 class PlotImage(QLabel):
     def __init__(self, model, FM, parent=None):
         super(PlotImage, self).__init__(parent)
@@ -100,6 +343,22 @@ class PlotImage(QLabel):
 
             self.mw.editWidth(width)
             self.mw.editHeight(height)
+
+    def mouseReleaseEvent(self, event):
+
+        if self.rubberBand.isVisible():
+            self.rubberBand.hide()
+            self.mw.applyChanges()
+        else:
+            self.mw.revertDockControls()
+
+    def wheelEvent(self, event):
+
+        if event.delta() and event.modifiers() == QtCore.Qt.ShiftModifier:
+            numDegrees = event.delta() / 8
+
+            if 24 < self.mw.zoom + numDegrees < 5001:
+                self.mw.editZoom(self.mw.zoom + numDegrees)
 
     def mouseReleaseEvent(self, event):
 
@@ -240,7 +499,6 @@ class PlotImage(QLabel):
             domain_kind = 'Material'
 
         return id, domain, domain_kind
-
 
 class OptionsDock(QDockWidget):
     def __init__(self, model, FM, parent=None):
