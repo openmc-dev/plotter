@@ -29,18 +29,14 @@ class MainWindow(QMainWindow):
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
 
-        # main widget
-        self.main_widget = QWidget(self)
 
-        # Plot Image
-        self.plotIm = PlotImage(self.model, FM, self)
-        self.mPlotIm = MPlotImage(self.model, self, self.main_widget)
-        self.frame = QVBoxLayout(self.main_widget)
+           # Create plot image
+        self.mPlotIm = MPlotImage(self.model, self, self)
+        self.frame = QScrollArea(self)
         self.frame.setAlignment(QtCore.Qt.AlignCenter)
-#        self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.frame.addWidget(self.mPlotIm)
-        self.main_widget.setFocus()
-        self.setCentralWidget(self.main_widget)
+        self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.frame.setWidget(self.mPlotIm)
+        self.setCentralWidget(self.frame)
 
         # Dock
         self.dock = OptionsDock(self.model, FM, self)
@@ -668,8 +664,8 @@ class MainWindow(QMainWindow):
 
     def resizePixmap(self):
         z = self.zoom/100
-        self.mPlotIm.setPixmap(self.main_widget.width() * z,
-                               self.main_widget.height() * z)
+        self.mPlotIm.setPixmap(self.frame.width() * z,
+                               self.frame.height() * z)
         self.mPlotIm.adjustSize()
 
     def moveEvent(self, event):
