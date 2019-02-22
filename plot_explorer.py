@@ -455,6 +455,10 @@ class MainWindow(QMainWindow):
     def editSingleOrigin(self, value, dimension):
         self.model.activeView.origin[dimension] = value
 
+    def editPlotAlpha(self, value):
+        self.model.activeView.plotAlpha = value
+        self.dock.updatePlotAlpha()
+
     def editWidth(self, value):
         self.model.activeView.width = value
         self.onRatioChange()

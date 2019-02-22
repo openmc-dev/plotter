@@ -276,9 +276,7 @@ class MPlotImage(FigureCanvas):
 
     def setPixmap(self, w, h):
         cv = self.model.currentView
-
         axis_label_str = "{} (cm)"
-
         self.figure.clear()
         self.figure.set_alpha(0.0)
         self.figure.patch.set_facecolor('black')
@@ -291,8 +289,8 @@ class MPlotImage(FigureCanvas):
                    cv.origin[self.mw.xBasis] + cv.width/2.,
                    cv.origin[self.mw.yBasis] - cv.height/2.,
                    cv.origin[self.mw.yBasis] + cv.height/2.]
-        c = self.figure.subplots().imshow(self.img, extent=dataBnds)
-        self.setStyleSheet('background-color:grey;')
+        c = self.figure.subplots().imshow(self.img, extent=dataBnds, alpha=cv.plotAlpha)
+        self.setStyleSheet('background-color:lightgrey;')
         self.ax = self.figure.axes[0]
         self.ax.set_xlabel(axis_label_str.format(cv.basis[0]))
         self.ax.set_ylabel(axis_label_str.format(cv.basis[1]))
@@ -633,6 +631,14 @@ class OptionsDock(QDockWidget):
         self.colorbyBox.addItem("cell")
         self.colorbyBox.currentTextChanged[str].connect(self.mw.editColorBy)
 
+        # Alpha
+        self.plotAlphaBox = QDoubleSpinBox(self)
+        self.plotAlphaBox.setValue(self.model.activeView.plotAlpha)
+        self.plotAlphaBox.setSingleStep(0.05)
+        self.plotAlphaBox.setDecimals(2)
+        self.plotAlphaBox.setRange(0.0, 1.0)
+        self.plotAlphaBox.valueChanged.connect(self.mw.editPlotAlpha)
+
         # Basis
         self.basisBox = QComboBox(self)
         self.basisBox.addItem("xy")
@@ -651,6 +657,7 @@ class OptionsDock(QDockWidget):
         self.opLayout.addRow('Height:', self.heightBox)
         self.opLayout.addRow('Basis:', self.basisBox)
         self.opLayout.addRow('Color By:', self.colorbyBox)
+        self.opLayout.addRow('Plot alpha:', self.plotAlphaBox)
         self.opLayout.addRow(self.colorOptionsButton)
         self.opLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
         self.opLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
@@ -697,6 +704,7 @@ class OptionsDock(QDockWidget):
         self.updateWidth()
         self.updateHeight()
         self.updateColorBy()
+        self.updatePlotAlpha()
         self.updateBasis()
         self.updateAspectLock()
         self.updateHRes()
@@ -715,6 +723,9 @@ class OptionsDock(QDockWidget):
 
     def updateColorBy(self):
         self.colorbyBox.setCurrentText(self.model.activeView.colorby)
+
+    def updatePlotAlpha(self):
+        self.plotAlphaBox.setValue(self.model.activeView.plotAlpha)
 
     def updateBasis(self):
         self.basisBox.setCurrentText(self.model.activeView.basis)

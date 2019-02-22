@@ -238,6 +238,8 @@ class PlotView():
         Dictionary of cell view settings by ID
     materials : Dict of DomainView instances
         Dictionary of material view settings by ID
+    plotAlpha: float between 0 and 1
+        Alpha value of the geometry plot
     """
 
     def __init__(self, origin, width, height):
@@ -261,6 +263,8 @@ class PlotView():
         self.highlightAlpha = 0.5
         self.highlightSeed = 1
         self.plotBackground = (50, 50, 50)
+
+        self.plotAlpha = 1.0
 
         self.cells = self.getDomains('geometry.xml', 'cell')
         self.materials = self.getDomains('materials.xml', 'material')
