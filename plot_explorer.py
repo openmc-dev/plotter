@@ -4,7 +4,7 @@
 import os, sys, copy, pickle, openmc
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
-    QScrollArea, QMenu, QAction, QFileDialog, QColorDialog, QInputDialog)
+                               QScrollArea, QVBoxLayout, QMenu, QAction, QFileDialog, QColorDialog, QInputDialog, QWidget)
 from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, MPlotImage, ColorDialog, OptionsDock
 
@@ -23,19 +23,24 @@ class MainWindow(QMainWindow):
         self.zoom = 100
 
         self.model = PlotModel()
+        self.updateRelativeBases()
         self.restoreModelSettings()
 
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
 
+        # main widget
+        self.main_widget = QWidget(self)
+
         # Plot Image
         self.plotIm = PlotImage(self.model, FM, self)
-        self.mPlotIm = MPlotImage(self.model, self)
-        self.frame = QScrollArea(self)
+        self.mPlotIm = MPlotImage(self.model, self, self.main_widget)
+        self.frame = QVBoxLayout(self.main_widget)
         self.frame.setAlignment(QtCore.Qt.AlignCenter)
-        self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.frame.setWidget(self.mPlotIm)
-        self.setCentralWidget(self.frame)
+#        self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.frame.addWidget(self.mPlotIm)
+        self.main_widget.setFocus()
+        self.setCentralWidget(self.main_widget)
 
         # Dock
         self.dock = OptionsDock(self.model, FM, self)
@@ -660,12 +665,8 @@ class MainWindow(QMainWindow):
 
     def resizePixmap(self):
         z = self.zoom/100
-        self.mPlotIm.setPixmap(self.frame.width() * z,
-                               self.frame.height() * z)
-        # self.mPlotIm.setPixmap(
-        #     self.pixmap.scaled(self.frame.width() * z, self.frame.height() * z,
-        #                        QtCore.Qt.KeepAspectRatio,
-        #                        QtCore.Qt.SmoothTransformation))
+        self.mPlotIm.setPixmap(self.main_widget.width() * z,
+                               self.main_widget.height() * z)
         self.mPlotIm.adjustSize()
 
     def moveEvent(self, event):
@@ -674,7 +675,6 @@ class MainWindow(QMainWindow):
     def resizeEvent(self, event):
         if self.pixmap:
             self.adjustWindow()
-            self.resizePixmap()
             self.updateScale()
 
     def closeEvent(self, event):
