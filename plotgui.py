@@ -70,8 +70,15 @@ class MPlotImage(FigureCanvas):
 
         cv = self.model.currentView
 
-        xPlotCoord, yPlotCoord = self.ax.transData.inverted().transform((pos.x(), pos.y()))
-        yPlotCoord *= -1
+        # get the normalized axis coordinates from the event display units
+        xPlotCoord, yPlotCoord = self.ax.transAxes.inverted().transform((pos.x(), pos.y()))
+
+        # flip the y-axis (its zero is in the upper left)
+        yPlotCoord = 1 - yPlotCoord
+
+        # scale axes using the plot extents
+        xPlotCoord = self.ax.dataLim.x0 + xPlotCoord * self.ax.dataLim.width
+        yPlotCoord = self.ax.dataLim.y0 + yPlotCoord * self.ax.dataLim.height
 
         if self.ax.contains_point((pos.x(), pos.y())):
             self.mw.coordLabel.show()
@@ -264,11 +271,11 @@ class MPlotImage(FigureCanvas):
         self.img = mpimage.imread("plot.png")
         self.figure.set_frameon(False)
         # set data extents
-        extent = [cv.origin[self.mw.xBasis] - cv.width/2.,
-                  cv.origin[self.mw.xBasis] + cv.width/2.,
-                  cv.origin[self.mw.yBasis] - cv.height/2.,
-                  cv.origin[self.mw.yBasis] + cv.height/2.]
-        c = self.figure.subplots().imshow(self.img, extent=extent)
+        dataBnds = [cv.origin[self.mw.xBasis] - cv.width/2.,
+                   cv.origin[self.mw.xBasis] + cv.width/2.,
+                   cv.origin[self.mw.yBasis] - cv.height/2.,
+                   cv.origin[self.mw.yBasis] + cv.height/2.]
+        c = self.figure.subplots().imshow(self.img, extent=dataBnds)
         self.setStyleSheet('background-color:grey;')
         self.ax = self.figure.axes[0]
         self.ax.set_xlabel(axis_label_str.format(cv.basis[0]))
