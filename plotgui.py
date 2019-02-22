@@ -25,19 +25,18 @@ else:
 
 class MPlotImage(FigureCanvas):
 
-    def __init__(self, model, parent=None):
-        super(FigureCanvas, self).__init__(Figure(figsize=(5,3), tight_layout=True))
+    def __init__(self, model, main, parent=None):
 
-        self.img = mpimage.imread("plot.png")
-        self.figure.subplots().imshow(self.img)
-        self.figure.subplots().axis('off')
-        self.figure.set_frameon(False)
-        self.figure.subplots_adjust(hspace=0.0, wspace=0.0)
-        self.figure.set_tight_layout({'w_pad' : 0.0,
-                                      'h_pad' : 0.0})
+        super(FigureCanvas, self).__init__(Figure())
+
+        FigureCanvas.setSizePolicy(self,
+                                   QSizePolicy.Expanding,
+                                   QSizePolicy.Expanding)
+
+        FigureCanvas.updateGeometry(self)
 
         self.model = model
-        self.mw = parent
+        self.mw = main
 
         self.rubberBand = QRubberBand(QRubberBand.Rectangle, self)
         self.bandOrigin = QtCore.QPoint()
@@ -71,26 +70,33 @@ class MPlotImage(FigureCanvas):
 
         cv = self.model.currentView
 
-        factor = (self.width()/cv.hRes, self.height()/cv.vRes)
+        xPlotCoord, yPlotCoord = self.ax.transData.inverted().transform((pos.x(), pos.y()))
+        yPlotCoord *= -1
 
-        # Cursor position in pixels relative to center of plot image
-        xPos = (pos.x() + 0.5) / factor[0] - cv.hRes/2
-        yPos = (-pos.y() -0.5) / factor[1] + cv.vRes/2
-
-        # Curson position in plot coordinates
-        xPlotCoord = (xPos / self.mw.scale[0]) + cv.origin[self.mw.xBasis]
-        yPlotCoord = (yPos / self.mw.scale[1]) + cv.origin[self.mw.yBasis]
-
-        self.mw.showCoords(xPlotCoord, yPlotCoord)
+        if self.ax.contains_point((pos.x(), pos.y())):
+            self.mw.coordLabel.show()
+            self.mw.showCoords(xPlotCoord, yPlotCoord)
+        else:
+            self.mw.coordLabel.hide()
 
         return (xPlotCoord, yPlotCoord)
 
     def getIDinfo(self, event):
 
         cv = self.model.currentView
-        factor = (self.width()/cv.hRes, self.height()/cv.vRes)
-        xPos = int((event.pos().x() + .05)  / factor[0])
-        yPos = int((event.pos().y() + .05) / factor[1])
+
+        x0, y0 = self.ax.transAxes.transform((0.,0.))
+
+        bbox = self.ax.get_window_extent().transformed(
+            self.figure.dpi_scale_trans.inverted())
+        width, height = bbox.width, bbox.height
+        width *= self.figure.dpi
+        height *= self.figure.dpi
+
+        factor = (width/cv.hRes, height/cv.vRes)
+
+        xPos = int((event.pos().x()-x0 + 0.05) / factor[0])
+        yPos = int((event.pos().y()-y0 + 0.05) / factor[1])
 
         if yPos < self.model.currentView.vRes \
             and xPos < self.model.currentView.hRes:
@@ -246,11 +252,30 @@ class MPlotImage(FigureCanvas):
         self.menu.exec_(event.globalPos())
 
     def setPixmap(self, w, h):
+        cv = self.model.currentView
+
+        axis_label_str = "{} (cm)"
+
+        self.figure.clear()
+        self.figure.set_alpha(0.0)
+        self.figure.patch.set_facecolor('black')
         self.figure.set_figwidth(w / self.figure.get_dpi())
         self.figure.set_figheight(h / self.figure.get_dpi())
         self.img = mpimage.imread("plot.png")
-        self.figure.clear()
-        self.figure.subplots().imshow(self.img)
+        self.figure.set_frameon(False)
+        # set data extents
+        extent = [cv.origin[self.mw.xBasis] - cv.width/2.,
+                  cv.origin[self.mw.xBasis] + cv.width/2.,
+                  cv.origin[self.mw.yBasis] - cv.height/2.,
+                  cv.origin[self.mw.yBasis] + cv.height/2.]
+        c = self.figure.subplots().imshow(self.img, extent=extent)
+        self.setStyleSheet('background-color:grey;')
+        self.ax = self.figure.axes[0]
+        self.ax.set_xlabel(axis_label_str.format(cv.basis[0]))
+        self.ax.set_ylabel(axis_label_str.format(cv.basis[1]))
+        self.ax.rect=[0,0,1,1]
+        self.ax.set_facecolor('black')
+        self.ax.figure.patch.set_facecolor('black')
         self.draw()
 
 class PlotImage(QLabel):
