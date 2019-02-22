@@ -29,14 +29,16 @@ class MainWindow(QMainWindow):
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
 
-
-           # Create plot image
-        self.mPlotIm = MPlotImage(self.model, self, self)
+        # Create plot image
         self.frame = QScrollArea(self)
-        self.frame.setAlignment(QtCore.Qt.AlignCenter)
-        self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.mPlotIm = MPlotImage(self.model, self, self)
         self.frame.setWidget(self.mPlotIm)
         self.setCentralWidget(self.frame)
+
+        self.frame.setAlignment(QtCore.Qt.AlignCenter)
+        self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.frame.resize(self.width(), self.height())
 
         # Dock
         self.dock = OptionsDock(self.model, FM, self)

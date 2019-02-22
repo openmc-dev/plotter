@@ -39,6 +39,7 @@ class MPlotImage(FigureCanvas):
 
         self.model = model
         self.mw = main
+        self.parent = parent
 
         self.rubberBand = QRubberBand(QRubberBand.Rectangle, self)
         self.bandOrigin = QtCore.QPoint()
