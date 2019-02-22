@@ -17,9 +17,11 @@ from matplotlib import image as mpimage
 from time import sleep
 
 if is_pyqt5():
+    print("Using PyQt5")
     from matplotlib.backends.backend_qt5agg import (
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 else:
+    print("Using PyQt4")
     from matplotlib.backends.backend_qt5agg import (
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
@@ -126,7 +128,7 @@ class MPlotImage(FigureCanvas):
         xCenter, yCenter = self.getPlotCoords(event.pos())
         self.mw.editPlotOrigin(xCenter, yCenter, apply=True)
 
-        QLabel.mouseDoubleClickEvent(self, event)
+        FigureCanvas.mouseDoubleClickEvent(self, event)
 
     def mouseMoveEvent(self, event):
 
@@ -174,6 +176,20 @@ class MPlotImage(FigureCanvas):
 
             self.mw.editWidth(width)
             self.mw.editHeight(height)
+
+    def mouseReleaseEvent(self, event):
+        if self.rubberBand.isVisible():
+            self.rubberBand.hide()
+            self.mw.applyChanges()
+        else:
+            self.mw.revertDockControls()
+
+    def wheelEvent(self, event):
+        if event.delta() and event.modifiers() == QtCore.Qt.ShiftModifier:
+            numDegrees = event.delta() / 8
+
+            if 24 < self.mw.zoom + numDegrees < 5001:
+                self.mw.editZoom(self.mw.zoom + numDegrees)
 
     def contextMenuEvent(self, event):
 
@@ -281,8 +297,6 @@ class MPlotImage(FigureCanvas):
         self.ax.set_xlabel(axis_label_str.format(cv.basis[0]))
         self.ax.set_ylabel(axis_label_str.format(cv.basis[1]))
         self.ax.rect=[0,0,1,1]
-        self.ax.set_facecolor('black')
-        self.ax.figure.patch.set_facecolor('black')
         self.draw()
 
 class PlotImage(QLabel):
@@ -377,23 +391,6 @@ class PlotImage(QLabel):
             self.mw.editHeight(height)
 
     def mouseReleaseEvent(self, event):
-
-        if self.rubberBand.isVisible():
-            self.rubberBand.hide()
-            self.mw.applyChanges()
-        else:
-            self.mw.revertDockControls()
-
-    def wheelEvent(self, event):
-
-        if event.delta() and event.modifiers() == QtCore.Qt.ShiftModifier:
-            numDegrees = event.delta() / 8
-
-            if 24 < self.mw.zoom + numDegrees < 5001:
-                self.mw.editZoom(self.mw.zoom + numDegrees)
-
-    def mouseReleaseEvent(self, event):
-
         if self.rubberBand.isVisible():
             self.rubberBand.hide()
             self.mw.applyChanges()

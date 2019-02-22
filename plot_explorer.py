@@ -76,7 +76,6 @@ class MainWindow(QMainWindow):
             QtCore.QTimer.singleShot(0, self.showCurrentView)
 
     # Create and update menus:
-
     def createMenuBar(self):
         self.mainMenu = self.menuBar()
 
