@@ -4,7 +4,7 @@
 import os, sys, copy, pickle, openmc
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
-                               QScrollArea, QVBoxLayout, QMenu, QAction, QFileDialog, QColorDialog, QInputDialog, QWidget)
+     QScrollArea, QMenu, QAction, QFileDialog, QColorDialog, QInputDialog)
 from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, MPlotImage, ColorDialog, OptionsDock
 
