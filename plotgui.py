@@ -25,6 +25,9 @@ else:
     from matplotlib.backends.backend_qt5agg import (
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
+def rgb_normalize(rgb):
+    return tuple([c/255. for c in rgb])
+
 class PlotImage(FigureCanvas):
 
     def __init__(self, model, main, parent=None):
@@ -276,25 +279,35 @@ class PlotImage(FigureCanvas):
         self.menu.exec_(event.globalPos())
 
     def setPixmap(self, w, h):
-        cv = self.model.currentView
-        axis_label_str = "{} (cm)"
+        # clear out figure
         self.figure.clear()
-        self.figure.set_alpha(0.0)
-        self.figure.patch.set_facecolor('lightgrey')
+
+        cv = self.model.currentView
+        # set figure bg color to match window
+        window_background = self.parent.palette().color(QtGui.QPalette.Background)
+        self.figure.patch.set_facecolor(rgb_normalize(window_background.getRgb()))
+        # set figure width
         self.figure.set_figwidth(w / self.figure.get_dpi())
         self.figure.set_figheight(h / self.figure.get_dpi())
+        # load new plot image data (will be replaced soon)
         self.img = mpimage.imread("plot.png")
 
-        # set data extents
+        # set data extents for automatic reporting of pointer location
         dataBnds = [cv.origin[self.mw.xBasis] - cv.width/2.,
-                   cv.origin[self.mw.xBasis] + cv.width/2.,
-                   cv.origin[self.mw.yBasis] - cv.height/2.,
-                   cv.origin[self.mw.yBasis] + cv.height/2.]
-        c = self.figure.subplots().imshow(self.img, extent=dataBnds, alpha=cv.plotAlpha)
+                    cv.origin[self.mw.xBasis] + cv.width/2.,
+                    cv.origin[self.mw.yBasis] - cv.height/2.,
+                    cv.origin[self.mw.yBasis] + cv.height/2.]
+
+        c = self.figure.subplots().imshow(self.img,
+                                          extent=dataBnds,
+                                          alpha=cv.plotAlpha)
         self.ax = self.figure.axes[0]
+
+        # set axis labels
+        axis_label_str = "{} (cm)"
         self.ax.set_xlabel(axis_label_str.format(cv.basis[0]))
         self.ax.set_ylabel(axis_label_str.format(cv.basis[1]))
-        self.ax.rect=[0,0,1,1]
+        self.ax.rect= [0,0,1,1]
         self.draw()
 
 class OptionsDock(QDockWidget):
