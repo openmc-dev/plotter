@@ -7,6 +7,8 @@ from PySide2.QtWidgets import QTableView, QItemDelegate, QColorDialog, QLineEdit
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
 from PySide2.QtGui import QColor
 
+from gen_plot import gen_plot
+
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = (range(0,6))
 
 class PlotModel():
@@ -165,7 +167,12 @@ class PlotModel():
         subprocess.run(["convert","plot.ppm","plot.png"])
 
 
+
         self.updateIDs()
+
+
+        gen_plot(cv)
+
 
     def undo(self):
         """ Revert to previous PlotView instance. Re-generate plot image """

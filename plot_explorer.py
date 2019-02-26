@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import os, sys, copy, pickle, openmc
+import openmc.capi
+
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
      QScrollArea, QMenu, QAction, QFileDialog, QColorDialog, QInputDialog)
@@ -11,6 +13,8 @@ from plotgui import PlotImage, ColorDialog, OptionsDock
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
+
+        openmc.capi.init()
 
         self.setWindowTitle('OpenMC Plot Explorer')
 
