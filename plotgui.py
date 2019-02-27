@@ -291,19 +291,17 @@ class PlotImage(FigureCanvas):
         # set figure width
         self.figure.set_figwidth(w / self.figure.get_dpi())
         self.figure.set_figheight(h / self.figure.get_dpi())
-        # load new plot image data (will be replaced soon)
-        try:
-            self.img = self.model.image
-        except:
-            self.model.makePlot()
-            self.img = self.model.image
+
         # set data extents for automatic reporting of pointer location
         dataBnds = [cv.origin[self.mw.xBasis] - cv.width/2.,
                     cv.origin[self.mw.xBasis] + cv.width/2.,
                     cv.origin[self.mw.yBasis] - cv.height/2.,
                     cv.origin[self.mw.yBasis] + cv.height/2.]
 
-        c = self.figure.subplots().imshow(self.img,
+        # make sure we have an image to load
+        if not hasattr(self.model,'image'):
+            self.model.makePlot()
+        c = self.figure.subplots().imshow(self.model.image,
                                           extent=dataBnds,
                                           alpha=cv.plotAlpha)
         self.ax = self.figure.axes[0]
