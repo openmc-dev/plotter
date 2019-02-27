@@ -614,7 +614,6 @@ class MainWindow(QMainWindow):
         self.colorDialog.updateDomainTabs()
 
     def showCurrentView(self):
-        self.pixmap = QtGui.QPixmap('plot.ppm')
         self.resizePixmap()
         self.updateScale()
         self.updateRelativeBases()
@@ -631,8 +630,8 @@ class MainWindow(QMainWindow):
 
     def updateScale(self):
         cv = self.model.currentView
-        self.scale = (self.pixmap.width() / cv.width,
-                      self.pixmap.height()/ cv.height)
+        self.scale = (cv.hRes / cv.width,
+                      cv.vRes / cv.height)
 
     def updateRelativeBases(self):
         cv = self.model.currentView
@@ -664,9 +663,9 @@ class MainWindow(QMainWindow):
         self.coordLabel.setText(f'{coords}')
 
     def resizePixmap(self):
-        z = self.zoom/100
+        z = self.zoom / 100.
         self.plotIm.setPixmap(self.width() * z,
-                               self.height() * z)
+                              self.height() * z)
         self.plotIm.adjustSize()
 
     def moveEvent(self, event):

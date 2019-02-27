@@ -16,6 +16,8 @@ from matplotlib import image as mpimage
 
 from time import sleep
 
+from gen_plot import gen_plot
+
 if is_pyqt5():
     print("Using PyQt5")
     from matplotlib.backends.backend_qt5agg import (
@@ -290,8 +292,11 @@ class PlotImage(FigureCanvas):
         self.figure.set_figwidth(w / self.figure.get_dpi())
         self.figure.set_figheight(h / self.figure.get_dpi())
         # load new plot image data (will be replaced soon)
-        self.img = mpimage.imread("plot.png")
-
+        try:
+            self.img = self.model.image
+        except:
+            self.model.makePlot()
+            self.img = self.model.image
         # set data extents for automatic reporting of pointer location
         dataBnds = [cv.origin[self.mw.xBasis] - cv.width/2.,
                     cv.origin[self.mw.xBasis] + cv.width/2.,

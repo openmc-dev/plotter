@@ -7,7 +7,9 @@ from PySide2.QtWidgets import QTableView, QItemDelegate, QColorDialog, QLineEdit
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
 from PySide2.QtGui import QColor
 
-from gen_plot import gen_plot
+from openmc.capi.plot import _Plot, image_data_for_plot
+
+from gen_plot import gen_plot, gen_ids
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = (range(0,6))
 
@@ -99,7 +101,9 @@ class PlotModel():
             ids = np.zeros((py, px), dtype=int)
             for i in range(py):
                 ids[i] = struct.unpack('{}i'.format(px), f.read(4*px))
-        self.ids = ids
+
+
+        self.ids = gen_ids(self.currentView)[:,:,0]
 
     def generatePlot(self):
         """ Spawn thread from which to generate new plot image """
@@ -160,19 +164,8 @@ class PlotModel():
 
             plot.highlight_domains(self.geom, domains, seed, alpha, background)
 
-        # Generate plot.xml
-        plots = openmc.Plots([plot])
-        plots.export_to_xml()
-        openmc.plot_geometry()
-        subprocess.run(["convert","plot.ppm","plot.png"])
-
-
-
-        self.updateIDs()
-
-
-        gen_plot(cv)
-
+        self.image, self.ids = gen_plot(cv)
+        self.ids = self.ids[:,:,1]
 
     def undo(self):
         """ Revert to previous PlotView instance. Re-generate plot image """
@@ -321,6 +314,15 @@ class PlotView():
 
         return domains
 
+    def asPlot(self):
+        plot_out = _Plot()
+        plot_out.origin = self.origin
+        plot_out.width = self.width
+        plot_out.height = self.height
+        plot_out.basis = self.basis
+        plot_out.hRes = self.hRes
+        plot_out.vRes = self.vRes
+        return plot_out
 
 class DomainView():
     """ Represents view settings for OpenMC cell or material.
