@@ -14,7 +14,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
 
-        openmc.capi.init()
+        openmc.capi.init(['-c'])
 
         self.setWindowTitle('OpenMC Plot Explorer')
 
