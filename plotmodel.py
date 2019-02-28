@@ -7,7 +7,7 @@ from PySide2.QtWidgets import QTableView, QItemDelegate, QColorDialog, QLineEdit
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
 from PySide2.QtGui import QColor
 
-from openmc.capi.plot import _Plot, image_data_for_plot
+import openmc.capi.plot as capi_plot
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = (range(0,6))
 
@@ -115,7 +115,7 @@ class PlotModel():
         cv = self.currentView = copy.deepcopy(self.activeView)
 
         p = cv.as_capi_plot()
-        ids = np.swapaxes(image_data_for_plot(p), 0, 1)
+        ids = np.swapaxes(capi_plot.id_map(p), 0, 1)
         if cv.colorby == 'cell':
             self.ids = ids[:,:,0]
         else:
@@ -307,7 +307,7 @@ class PlotView():
         return domains
 
     def as_capi_plot(self):
-        plot_out = _Plot()
+        plot_out = capi_plot._Plot()
         plot_out.origin = self.origin
         plot_out.width = self.width
         plot_out.height = self.height

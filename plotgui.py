@@ -139,10 +139,14 @@ class PlotImage(FigureCanvas):
 
         # Show Cell/Material ID, Name in status bar
         id, domain, domain_kind = self.getIDinfo(event)
-        if id != '-1' and domain[id].name:
-            domainInfo = f"{domain_kind} {id}: {domain[id].name}"
-        elif id != '-1':
-            domainInfo = f"{domain_kind} {id}"
+        if self.ax.contains_point((event.pos().x(), event.pos().y())):
+            if id != '-1' and domain[id].name:
+                domainInfo = f"{domain_kind} {id}: {domain[id].name}"
+            elif id != '-1':
+                domainInfo = f"{domain_kind} {id}"
+            else:
+                domainInfo = ""
+
         else:
             domainInfo = ""
         self.mw.statusBar().showMessage(f" {domainInfo}")
