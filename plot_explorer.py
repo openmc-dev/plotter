@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import os, sys, copy, pickle, openmc
-import openmc.capi
 
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,

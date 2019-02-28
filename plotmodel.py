@@ -9,9 +9,13 @@ from PySide2.QtGui import QColor
 
 from openmc.capi.plot import _Plot, image_data_for_plot
 
-from gen_plot import gen_plot, gen_ids
-
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = (range(0,6))
+
+# for consistent, but random, colors
+np.random.seed(10)
+
+def random_rgb():
+    return tuple(np.random.choice(range(256), size=3))
 
 class PlotModel():
     """ Geometry and plot settings for OpenMC Plot Explorer model
@@ -26,6 +30,8 @@ class PlotModel():
             Dictionary mapping material IDs to openmc.Material instances
         ids : Dictionary
             Dictionary mapping plot coordinates to cell/material ID
+        image : NumPy int array (hRes, vRes, 3)
+            The current RGB image data
         previousViews : list of PlotView instances
             List of previously created plot view settings used to undo
             changes made in plot explorer
@@ -93,21 +99,8 @@ class PlotModel():
         default = PlotView([xcenter, ycenter, zcenter], width, height)
         return default
 
-    def updateIDs(self):
-        """ Update ids attribute to reflect current plot view """
-
-        with open('plot_ids.binary', 'rb') as f:
-            px, py, wx, wy = struct.unpack('iidd', f.read(4*2 + 8*2))
-            ids = np.zeros((py, px), dtype=int)
-            for i in range(py):
-                ids[i] = struct.unpack('{}i'.format(px), f.read(4*px))
-
-
-        self.ids = gen_ids(self.currentView)[:,:,0]
-
     def generatePlot(self):
         """ Spawn thread from which to generate new plot image """
-
         t = threading.Thread(target=self.makePlot)
         t.start()
         t.join()
@@ -121,51 +114,50 @@ class PlotModel():
 
         cv = self.currentView = copy.deepcopy(self.activeView)
 
-        plot = openmc.Plot()
-        plot.filename = 'plot'
-        plot.color_by = cv.colorby
-        plot.basis = cv.basis
-        plot.origin = cv.origin
-        plot.width = (cv.width, cv.height)
-        plot.pixels = (cv.hRes, cv.vRes)
-        plot.background = cv.plotBackground
-
-        # Determine domain type and source
+        p = cv.as_capi_plot()
+        ids = np.swapaxes(image_data_for_plot(p), 0, 1)
         if cv.colorby == 'cell':
-            domain = self.currentView.cells
+            self.ids = ids[:,:,0]
+        else:
+            self.ids = ids[:,:,1]
+
+        # generate colors if not present
+        for cell_id, cell in cv.cells.items():
+            if cell.color == None:
+                cell.color = random_rgb()
+
+        for mat_id, mat in cv.materials.items():
+            if mat.color == None:
+                mat.color = random_rgb()
+
+        image = np.ones((cv.vRes, cv.hRes, 3), dtype = int)
+
+        # set domain and source
+        if cv.colorby == 'cell':
+            domain = cv.cells
             source = self.modelCells
         else:
-            domain = self.currentView.materials
+            domain = cv.materials
             source = self.modelMaterials
 
-        # Custom Colors
-        plot.colors = {}
-        for id, dom in domain.items():
-            if dom.color:
-                plot.colors[source[int(id)]] = dom.color
+        unique_ids = np.unique(self.ids)
+        for id in unique_ids:
+            if id == -1:
+                image[self.ids == id] = cv.plotBackground
+            else:
+                image[self.ids == id] = domain[str(id)].color
 
-        # Masking options
         if cv.masking:
-            plot.mask_components = []
             for id, dom in domain.items():
-                if not dom.masked:
-                    plot.mask_components.append(source[int(id)])
-            plot.mask_background = cv.maskBackground
+                if dom.masked:
+                    image[self.ids == int(id)] = cv.maskBackground
 
-        # Highlighting options
         if cv.highlighting:
-            domains = []
             for id, dom in domain.items():
                 if dom.highlighted:
-                    domains.append(source[int(id)])
-            background = cv.highlightBackground
-            alpha = cv.highlightAlpha
-            seed = cv.highlightSeed
+                    image[self.ids == int(id)] = cv.highlightBackground
 
-            plot.highlight_domains(self.geom, domains, seed, alpha, background)
-
-        self.image, self.ids = gen_plot(cv)
-        self.ids = self.ids[:,:,1]
+        self.image = image
 
     def undo(self):
         """ Revert to previous PlotView instance. Re-generate plot image """
@@ -306,7 +298,7 @@ class PlotView():
                 name = dom.attrib['name']
             else:
                 name = None
-            color = None
+            color = random_rgb()
             masked = False
             highlighted = False
             domain = DomainView(id, name, color, masked, highlighted)
@@ -314,7 +306,7 @@ class PlotView():
 
         return domains
 
-    def asPlot(self):
+    def as_capi_plot(self):
         plot_out = _Plot()
         plot_out.origin = self.origin
         plot_out.width = self.width

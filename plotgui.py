@@ -14,10 +14,6 @@ from matplotlib.backends.qt_compat import is_pyqt5
 from matplotlib.figure import Figure
 from matplotlib import image as mpimage
 
-from time import sleep
-
-from gen_plot import gen_plot
-
 if is_pyqt5():
     print("Using PyQt5")
     from matplotlib.backends.backend_qt5agg import (
@@ -300,7 +296,7 @@ class PlotImage(FigureCanvas):
 
         # make sure we have an image to load
         if not hasattr(self.model,'image'):
-            self.model.makePlot()
+            self.model.generatePlot()
         c = self.figure.subplots().imshow(self.model.image,
                                           extent=dataBnds,
                                           alpha=cv.plotAlpha)
