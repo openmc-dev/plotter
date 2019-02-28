@@ -293,9 +293,8 @@ class MainWindow(QMainWindow):
                                          "untitled", "Images (*.png *.ppm)")
         if filename:
             if "." not in filename:
-                self.pixmap.save(filename + ".png")
-            else:
-                self.pixmap.save(filename)
+                filename += ".png"
+            self.plotIm.figure.savefig(filename, transparent=True)
             self.statusBar().showMessage('Plot Image Saved', 5000)
 
     def saveView(self):
