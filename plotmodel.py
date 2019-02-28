@@ -115,7 +115,7 @@ class PlotModel():
         cv = self.currentView = copy.deepcopy(self.activeView)
 
         p = cv.as_capi_plot()
-        ids = np.swapaxes(capi_plot.id_map(p), 0, 1)
+        ids = capi_plot.id_map(p)
         if cv.colorby == 'cell':
             self.ids = ids[:,:,0]
         else:

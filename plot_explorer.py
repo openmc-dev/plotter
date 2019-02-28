@@ -64,7 +64,6 @@ class MainWindow(QMainWindow):
         self.colorDialog.updateDialogValues()
 
         if self.restored:
-            self.model.updateIDs()
             self.showCurrentView()
         else:
             # Timer allows GUI to render before plot finishes loading
