@@ -2,10 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import os, sys, copy, pickle, openmc
-
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
-     QScrollArea, QMenu, QAction, QFileDialog, QColorDialog, QInputDialog)
+    QScrollArea, QMenu, QAction, QFileDialog, QColorDialog, QInputDialog)
 from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, ColorDialog, OptionsDock
 
@@ -29,13 +28,13 @@ class MainWindow(QMainWindow):
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
 
         # Create plot image
-        self.plotIm = PlotImage(self.model, self, self)
+        self.plotIm = PlotImage(self.model, self)
 
         # Create viewing area
         self.frame = QScrollArea(self)
-        self.frame.setWidget(self.plotIm)
         self.frame.setAlignment(QtCore.Qt.AlignCenter)
         self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.frame.setWidget(self.plotIm)
         self.setCentralWidget(self.frame)
 
         # Dock

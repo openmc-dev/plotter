@@ -15,20 +15,17 @@ from matplotlib.figure import Figure
 from matplotlib import image as mpimage
 
 if is_pyqt5():
-    print("Using PyQt5")
     from matplotlib.backends.backend_qt5agg import (
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 else:
-    print("Using PyQt4")
     from matplotlib.backends.backend_qt5agg import (
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
-def rgb_normalize(rgb):
-    return tuple([c/255. for c in rgb])
+from plot_colors import rgb_normalize
 
 class PlotImage(FigureCanvas):
 
-    def __init__(self, model, main, parent=None):
+    def __init__(self, model, main):
 
         super(FigureCanvas, self).__init__(Figure())
 
@@ -40,7 +37,7 @@ class PlotImage(FigureCanvas):
 
         self.model = model
         self.mw = main
-        self.parent = parent
+        self.parent = main
 
         self.rubberBand = QRubberBand(QRubberBand.Rectangle, self)
         self.bandOrigin = QtCore.QPoint()
@@ -62,7 +59,6 @@ class PlotImage(FigureCanvas):
 
         # Set rubber band absolute and relative position
         self.bandOrigin = event.pos()
-
         self.xPlotOrigin, self.yPlotOrigin = self.getPlotCoords(event.pos())
 
         # Create rubber band
@@ -76,7 +72,6 @@ class PlotImage(FigureCanvas):
 
         # get the normalized axis coordinates from the event display units
         xPlotCoord, yPlotCoord = self.ax.transAxes.inverted().transform((pos.x(), pos.y()))
-
         # flip the y-axis (its zero is in the upper left)
         yPlotCoord = 1 - yPlotCoord
 
@@ -84,6 +79,7 @@ class PlotImage(FigureCanvas):
         xPlotCoord = self.ax.dataLim.x0 + xPlotCoord * self.ax.dataLim.width
         yPlotCoord = self.ax.dataLim.y0 + yPlotCoord * self.ax.dataLim.height
 
+        # set coordinate label if pointer is in the axes
         if self.ax.contains_point((pos.x(), pos.y())):
             self.mw.coordLabel.show()
             self.mw.showCoords(xPlotCoord, yPlotCoord)
@@ -96,22 +92,25 @@ class PlotImage(FigureCanvas):
 
         cv = self.model.currentView
 
+        # get origin in axes coordinates
         x0, y0 = self.ax.transAxes.transform((0.,0.))
 
+        # get the extents of the axes box in axes coordinates
         bbox = self.ax.get_window_extent().transformed(
             self.figure.dpi_scale_trans.inverted())
+        # get dimensions and scale using dpi
         width, height = bbox.width, bbox.height
         width *= self.figure.dpi
         height *= self.figure.dpi
 
+        # use factor to get proper x,y position in pixels
         factor = (width/cv.hRes, height/cv.vRes)
-
         xPos = int((event.pos().x()-x0 + 0.05) / factor[0])
         yPos = int((event.pos().y()-y0 + 0.05) / factor[1])
 
+        # check that the position is in the axes view
         if yPos < self.model.currentView.vRes \
             and xPos < self.model.currentView.hRes:
-
             id = f"{self.model.ids[yPos][xPos]}"
         else:
             id = '-1'
@@ -146,9 +145,9 @@ class PlotImage(FigureCanvas):
                 domainInfo = f"{domain_kind} {id}"
             else:
                 domainInfo = ""
-
         else:
             domainInfo = ""
+
         self.mw.statusBar().showMessage(f" {domainInfo}")
 
         # Update rubber band and values if mouse button held down
@@ -184,6 +183,7 @@ class PlotImage(FigureCanvas):
             self.mw.editHeight(height)
 
     def mouseReleaseEvent(self, event):
+
         if self.rubberBand.isVisible():
             self.rubberBand.hide()
             self.mw.applyChanges()
@@ -191,6 +191,7 @@ class PlotImage(FigureCanvas):
             self.mw.revertDockControls()
 
     def wheelEvent(self, event):
+
         if event.delta() and event.modifiers() == QtCore.Qt.ShiftModifier:
             numDegrees = event.delta() / 8
 
@@ -281,6 +282,7 @@ class PlotImage(FigureCanvas):
         self.menu.exec_(event.globalPos())
 
     def setPixmap(self, w, h):
+
         # clear out figure
         self.figure.clear()
 
@@ -293,7 +295,7 @@ class PlotImage(FigureCanvas):
         self.figure.set_figheight(h / self.figure.get_dpi())
 
         # set data extents for automatic reporting of pointer location
-        dataBnds = [cv.origin[self.mw.xBasis] - cv.width/2.,
+        data_bounds = [cv.origin[self.mw.xBasis] - cv.width/2.,
                     cv.origin[self.mw.xBasis] + cv.width/2.,
                     cv.origin[self.mw.yBasis] - cv.height/2.,
                     cv.origin[self.mw.yBasis] + cv.height/2.]
@@ -302,7 +304,7 @@ class PlotImage(FigureCanvas):
         if not hasattr(self.model,'image'):
             self.model.generatePlot()
         c = self.figure.subplots().imshow(self.model.image,
-                                          extent=dataBnds,
+                                          extent=data_bounds,
                                           alpha=cv.plotAlpha)
         self.ax = self.figure.axes[0]
 
@@ -310,7 +312,6 @@ class PlotImage(FigureCanvas):
         axis_label_str = "{} (cm)"
         self.ax.set_xlabel(axis_label_str.format(cv.basis[0]))
         self.ax.set_ylabel(axis_label_str.format(cv.basis[1]))
-        self.ax.rect= [0,0,1,1]
         self.draw()
 
 class OptionsDock(QDockWidget):

@@ -1,21 +1,14 @@
 import copy, struct, threading, openmc
-import subprocess
+import openmc.capi.plot as capi_plot
 import numpy as np
 import xml.etree.ElementTree as ET
 from ast import literal_eval
 from PySide2.QtWidgets import QTableView, QItemDelegate, QColorDialog, QLineEdit
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
 from PySide2.QtGui import QColor
-
-import openmc.capi.plot as capi_plot
+from plot_colors import random_rgb
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = (range(0,6))
-
-# for consistent, but random, colors
-np.random.seed(10)
-
-def random_rgb():
-    return tuple(np.random.choice(range(256), size=3))
 
 class PlotModel():
     """ Geometry and plot settings for OpenMC Plot Explorer model
@@ -28,9 +21,9 @@ class PlotModel():
             Dictionary mapping cell IDs to openmc.Cell instances
         modelMaterials : collections.OrderedDict
             Dictionary mapping material IDs to openmc.Material instances
-        ids : Dictionary
-            Dictionary mapping plot coordinates to cell/material ID
-        image : NumPy int array (hRes, vRes, 3)
+        ids : NumPy int array (vRes, hRes, 1)
+            Mapping of plot coordinates to cell/material ID by pixel
+        image : NumPy int array (vRes, hRes, 3)
             The current RGB image data
         previousViews : list of PlotView instances
             List of previously created plot view settings used to undo
@@ -101,6 +94,7 @@ class PlotModel():
 
     def generatePlot(self):
         """ Spawn thread from which to generate new plot image """
+
         t = threading.Thread(target=self.makePlot)
         t.start()
         t.join()
@@ -116,10 +110,19 @@ class PlotModel():
 
         p = cv.as_capi_plot()
         ids = capi_plot.id_map(p)
+
+        # empty image data
+        image = np.ones((cv.vRes, cv.hRes, 3), dtype = int)
+
+        # set model ids based on domain
         if cv.colorby == 'cell':
             self.ids = ids[:,:,0]
+            domain = cv.cells
+            source = self.modelCells
         else:
             self.ids = ids[:,:,1]
+            domain = cv.materials
+            source = self.modelMaterials
 
         # generate colors if not present
         for cell_id, cell in cv.cells.items():
@@ -129,16 +132,6 @@ class PlotModel():
         for mat_id, mat in cv.materials.items():
             if mat.color == None:
                 mat.color = random_rgb()
-
-        image = np.ones((cv.vRes, cv.hRes, 3), dtype = int)
-
-        # set domain and source
-        if cv.colorby == 'cell':
-            domain = cv.cells
-            source = self.modelCells
-        else:
-            domain = cv.materials
-            source = self.modelMaterials
 
         unique_ids = np.unique(self.ids)
         for id in unique_ids:
@@ -157,6 +150,7 @@ class PlotModel():
                 if dom.highlighted:
                     image[self.ids == int(id)] = cv.highlightBackground
 
+        # set model image
         self.image = image
 
     def undo(self):
@@ -298,6 +292,7 @@ class PlotView():
                 name = dom.attrib['name']
             else:
                 name = None
+            # set a random color
             color = random_rgb()
             masked = False
             highlighted = False
