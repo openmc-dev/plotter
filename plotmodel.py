@@ -107,9 +107,7 @@ class PlotModel():
         """
 
         cv = self.currentView = copy.deepcopy(self.activeView)
-
-        p = cv.as_capi_plot()
-        ids = capi_plot.id_map(p)
+        ids = capi_plot.id_map(cv)
 
         # empty image data
         image = np.ones((cv.vRes, cv.hRes, 3), dtype = int)
@@ -174,7 +172,7 @@ class PlotModel():
         self.previousViews.append(copy.deepcopy(self.currentView))
 
 
-class PlotView():
+class PlotView(capi_plot._Plot):
     """ View settings for OpenMC plot.
 
     Parameters
@@ -231,6 +229,8 @@ class PlotView():
     def __init__(self, origin, width, height):
         """ Initialize PlotView attributes """
 
+        super(capi_plot._Plot, self).__init__()
+
         self.origin = origin
         self.width = width
         self.height = height
@@ -255,13 +255,8 @@ class PlotView():
         self.cells = self.getDomains('geometry.xml', 'cell')
         self.materials = self.getDomains('materials.xml', 'material')
 
-    def __eq__(self, other):
-        if isinstance(other, PlotView):
-            return self.__dict__ == other.__dict__
-
-    def __ne__(self, other):
-        if isinstance(other, PlotView):
-            return self.__dict__ != other.__dict__
+    def __hash__(self):
+        return hash(self.__dict__.__str__() + self.__str__())
 
     def getDomains(self, file, type_):
         """ Return dictionary of domain settings.
@@ -300,16 +295,6 @@ class PlotView():
             domains[id] = domain
 
         return domains
-
-    def as_capi_plot(self):
-        plot_out = capi_plot._Plot()
-        plot_out.origin = self.origin
-        plot_out.width = self.width
-        plot_out.height = self.height
-        plot_out.basis = self.basis
-        plot_out.hRes = self.hRes
-        plot_out.vRes = self.vRes
-        return plot_out
 
 class DomainView():
     """ Represents view settings for OpenMC cell or material.
