@@ -108,7 +108,6 @@ class PlotModel():
         """
 
         cv = self.currentView = copy.deepcopy(self.activeView)
-        print(cv)
         ids = capi_plot.id_map(cv)
 
         # empty image data
@@ -233,6 +232,7 @@ class PlotView(_PlotBase):
 
         super(capi_plot._PlotBase, self).__init__()
 
+        self.level = -1
         self.origin = origin
         self.width = width
         self.height = height
