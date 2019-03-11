@@ -1,5 +1,6 @@
 import copy, struct, threading, openmc
 import openmc.capi.plot as capi_plot
+from openmc.capi.plot import _PlotBase
 import numpy as np
 import xml.etree.ElementTree as ET
 from ast import literal_eval
@@ -99,6 +100,10 @@ class PlotModel():
         t.start()
         t.join()
 
+    def getTemps(self):
+        temps = capi_plot.property_map(self.currentView)[:,:,1]
+        return temps
+
     def makePlot(self):
         """ Generate new plot image from active view settings
 
@@ -172,7 +177,7 @@ class PlotModel():
         self.previousViews.append(copy.deepcopy(self.currentView))
 
 
-class PlotView(capi_plot._Plot):
+class PlotView(_PlotBase):
     """ View settings for OpenMC plot.
 
     Parameters
@@ -229,7 +234,7 @@ class PlotView(capi_plot._Plot):
     def __init__(self, origin, width, height):
         """ Initialize PlotView attributes """
 
-        super(capi_plot._Plot, self).__init__()
+        super(capi_plot._PlotBase, self).__init__()
 
         self.origin = origin
         self.width = width
@@ -287,6 +292,7 @@ class PlotView(capi_plot._Plot):
                 name = dom.attrib['name']
             else:
                 name = None
+
             # set a random color
             color = random_rgb()
             masked = False
