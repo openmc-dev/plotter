@@ -523,8 +523,11 @@ class MainWindow(QMainWindow):
         if zOr != None:
             self.model.activeView.origin = [xOr, yOr, zOr]
         else:
-            self.model.activeView.origin[self.xBasis] = xOr
-            self.model.activeView.origin[self.yBasis] = yOr
+            origin = [None, None, None]
+            origin[self.xBasis] = xOr
+            origin[self.yBasis] = yOr
+            origin[self.zBasis] = self.model.activeView.origin[self.zBasis]
+            self.model.activeView.origin = origin
 
         self.dock.updateOrigin()
 
@@ -633,7 +636,7 @@ class MainWindow(QMainWindow):
         cv = self.model.currentView
         self.xBasis = 0 if cv.basis[0] == 'x' else 1
         self.yBasis = 1 if cv.basis[1] == 'y' else 2
-
+        self.zBasis = 3 - (self.xBasis + self.yBasis)
     def adjustWindow(self):
         self.screen = app.desktop().screenGeometry()
         self.setMaximumSize(self.screen.width(), self.screen.height())

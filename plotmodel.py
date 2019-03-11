@@ -100,10 +100,6 @@ class PlotModel():
         t.start()
         t.join()
 
-    def getTemps(self):
-        temps = capi_plot.property_map(self.currentView)[:,:,1]
-        return temps
-
     def makePlot(self):
         """ Generate new plot image from active view settings
 
@@ -112,6 +108,7 @@ class PlotModel():
         """
 
         cv = self.currentView = copy.deepcopy(self.activeView)
+        print(cv)
         ids = capi_plot.id_map(cv)
 
         # empty image data
