@@ -109,17 +109,19 @@ class PlotModel():
 
         cv = self.currentView = copy.deepcopy(self.activeView)
         ids = capi_plot.id_map(cv)
-
+        properties = capi_plot.property_map(cv)
         # empty image data
         image = np.ones((cv.vRes, cv.hRes, 3), dtype = int)
 
         # set model ids based on domain
         if cv.colorby == 'cell':
             self.ids = ids[:,:,0]
+            self.props = properties[:,:,0]
             domain = cv.cells
             source = self.modelCells
         else:
             self.ids = ids[:,:,1]
+            self.props = properties[:,:,1]
             domain = cv.materials
             source = self.modelMaterials
 

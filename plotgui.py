@@ -112,8 +112,10 @@ class PlotImage(FigureCanvas):
         if yPos < self.model.currentView.vRes \
             and xPos < self.model.currentView.hRes:
             id = f"{self.model.ids[yPos][xPos]}"
+            property = f"{self.model.props[yPos][xPos]:g}"
         else:
             id = '-1'
+            property = '-1'
 
         if self.model.currentView.colorby == 'cell':
             domain = self.model.activeView.cells
@@ -122,7 +124,7 @@ class PlotImage(FigureCanvas):
             domain = self.model.activeView.materials
             domain_kind = 'Material'
 
-        return id, domain, domain_kind
+        return id, property, domain, domain_kind
 
     def mouseDoubleClickEvent(self, event):
 
@@ -137,12 +139,18 @@ class PlotImage(FigureCanvas):
         xPlotPos, yPlotPos = self.getPlotCoords(event.pos())
 
         # Show Cell/Material ID, Name in status bar
-        id, domain, domain_kind = self.getIDinfo(event)
+        id, property, domain, domain_kind = self.getIDinfo(event)
         if self.ax.contains_point((event.pos().x(), event.pos().y())):
+
+            if domain_kind == 'Cell':
+                units = 'K'
+            else:
+                units = 'g/cm3'
+
             if id != '-1' and domain[id].name:
-                domainInfo = f"{domain_kind} {id}: {domain[id].name}"
+                domainInfo = f"{domain_kind} {id}: \"{domain[id].name}\" {property} {units}"
             elif id != '-1':
-                domainInfo = f"{domain_kind} {id}"
+                domainInfo = f"{domain_kind} {id}: {property} {units}"
             else:
                 domainInfo = ""
         else:
@@ -205,7 +213,7 @@ class PlotImage(FigureCanvas):
         self.mw.undoAction.setText(f'&Undo ({len(self.model.previousViews)})')
         self.mw.redoAction.setText(f'&Redo ({len(self.model.subsequentViews)})')
 
-        id, domain, domain_kind = self.getIDinfo(event)
+        id, property, domain, domain_kind = self.getIDinfo(event)
 
         if id != '-1':
 
