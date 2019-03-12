@@ -291,8 +291,8 @@ class PlotImage(FigureCanvas):
         window_background = self.parent.palette().color(QtGui.QPalette.Background)
         self.figure.patch.set_facecolor(rgb_normalize(window_background.getRgb()))
         # set figure width
-        self.figure.set_figwidth(w / self.figure.get_dpi())
-        self.figure.set_figheight(h / self.figure.get_dpi())
+        self.figure.set_figwidth(0.99 * w / self.figure.get_dpi())
+        self.figure.set_figheight(0.99 * h / self.figure.get_dpi())
         # set data extents for automatic reporting of pointer location
         data_bounds = [cv.origin[self.mw.xBasis] - cv.width/2.,
                     cv.origin[self.mw.xBasis] + cv.width/2.,
