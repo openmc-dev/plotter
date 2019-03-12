@@ -25,7 +25,7 @@ from plot_colors import rgb_normalize
 
 class PlotImage(FigureCanvas):
 
-    def __init__(self, model, main):
+    def __init__(self, model, parent, main):
 
         super(FigureCanvas, self).__init__(Figure())
 
@@ -37,7 +37,7 @@ class PlotImage(FigureCanvas):
 
         self.model = model
         self.mw = main
-        self.parent = main
+        self.parent = parent
 
         self.rubberBand = QRubberBand(QRubberBand.Rectangle, self)
         self.bandOrigin = QtCore.QPoint()
@@ -293,7 +293,6 @@ class PlotImage(FigureCanvas):
         # set figure width
         self.figure.set_figwidth(w / self.figure.get_dpi())
         self.figure.set_figheight(h / self.figure.get_dpi())
-
         # set data extents for automatic reporting of pointer location
         data_bounds = [cv.origin[self.mw.xBasis] - cv.width/2.,
                     cv.origin[self.mw.xBasis] + cv.width/2.,
@@ -307,7 +306,8 @@ class PlotImage(FigureCanvas):
                                           extent=data_bounds,
                                           alpha=cv.plotAlpha)
         self.ax = self.figure.axes[0]
-
+        self.ax.margins(0.0, 0.0)
+        self.figure.set_tight_layout({'pad': 1.0})
         # set axis labels
         axis_label_str = "{} (cm)"
         self.ax.set_xlabel(axis_label_str.format(cv.basis[0]))
