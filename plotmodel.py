@@ -22,9 +22,9 @@ class PlotModel():
             Dictionary mapping cell IDs to openmc.Cell instances
         modelMaterials : collections.OrderedDict
             Dictionary mapping material IDs to openmc.Material instances
-        ids : NumPy int array (vRes, hRes, 1)
+        ids : NumPy int array (v_res, h_res, 1)
             Mapping of plot coordinates to cell/material ID by pixel
-        image : NumPy int array (vRes, hRes, 3)
+        image : NumPy int array (v_res, h_res, 3)
             The current RGB image data
         previousViews : list of PlotView instances
             List of previously created plot view settings used to undo
@@ -111,7 +111,7 @@ class PlotModel():
         ids = capi_plot.id_map(cv)
         properties = capi_plot.property_map(cv)
         # empty image data
-        image = np.ones((cv.vRes, cv.hRes, 3), dtype = int)
+        image = np.ones((cv.v_res, cv.h_res, 3), dtype = int)
 
         # set model ids based on domain
         if cv.colorby == 'cell':
@@ -195,9 +195,9 @@ class PlotView(_PlotBase):
         Width of the plot view in model units
     height : float
         Height of the plot view in model units
-    hRes : int
+    h_res : int
         Horizontal resolution of plot image
-    vRes : int
+    v_res : int
         Vertical resolution of plot image
     aspectLock : bool
         Indication of whether aspect lock should be maintained to
@@ -239,8 +239,8 @@ class PlotView(_PlotBase):
         self.width = width
         self.height = height
 
-        self.hRes = 600
-        self.vRes = 600
+        self.h_res = 600
+        self.v_res = 600
         self.aspectLock = True
 
         self.basis = 'xy'

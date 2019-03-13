@@ -104,13 +104,13 @@ class PlotImage(FigureCanvas):
         height *= self.figure.dpi
 
         # use factor to get proper x,y position in pixels
-        factor = (width/cv.hRes, height/cv.vRes)
+        factor = (width/cv.h_res, height/cv.v_res)
         xPos = int((event.pos().x()-x0 + 0.05) / factor[0])
         yPos = int((event.pos().y()-y0 + 0.05) / factor[1])
 
         # check that the position is in the axes view
-        if yPos < self.model.currentView.vRes \
-            and xPos < self.model.currentView.hRes:
+        if yPos < self.model.currentView.v_res \
+            and xPos < self.model.currentView.h_res:
             id = f"{self.model.ids[yPos][xPos]}"
             property = f"{self.model.props[yPos][xPos]:g}"
         else:
@@ -180,9 +180,9 @@ class PlotImage(FigureCanvas):
             if modifiers == QtCore.Qt.ShiftModifier:
                 cv = self.model.currentView
                 bandwidth = abs(self.bandOrigin.x() - event.pos().x())
-                width = cv.width * (cv.hRes / max(bandwidth, .001))
+                width = cv.width * (cv.h_res / max(bandwidth, .001))
                 bandheight = abs(self.bandOrigin.y() - event.pos().y())
-                height = cv.height * (cv.vRes / max(bandheight, .001))
+                height = cv.height * (cv.v_res / max(bandheight, .001))
             else: # Zoom in
                 width = max(abs(self.xPlotOrigin - xPlotPos), 0.1)
                 height = max(abs(self.yPlotOrigin - yPlotPos), 0.1)
@@ -536,10 +536,10 @@ class OptionsDock(QDockWidget):
             self.vResLabel.setDisabled(False)
 
     def updateHRes(self):
-        self.hResBox.setValue(self.model.activeView.hRes)
+        self.hResBox.setValue(self.model.activeView.h_res)
 
     def updateVRes(self):
-        self.vResBox.setValue(self.model.activeView.vRes)
+        self.vResBox.setValue(self.model.activeView.v_res)
 
     def revertToCurrent(self):
         cv = self.model.currentView

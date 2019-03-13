@@ -469,11 +469,11 @@ class MainWindow(QMainWindow):
         self.dock.updateAspectLock()
 
     def editVRes(self, value):
-        self.model.activeView.vRes = value
+        self.model.activeView.v_res = value
         self.dock.updateVRes()
 
     def editHRes(self, value):
-        self.model.activeView.hRes = value
+        self.model.activeView.h_res = value
         self.onRatioChange()
         self.dock.updateHRes()
 
@@ -630,8 +630,8 @@ class MainWindow(QMainWindow):
 
     def updateScale(self):
         cv = self.model.currentView
-        self.scale = (cv.hRes / cv.width,
-                      cv.vRes / cv.height)
+        self.scale = (cv.h_res / cv.width,
+                      cv.v_res / cv.height)
 
     def updateRelativeBases(self):
         cv = self.model.currentView
@@ -646,7 +646,7 @@ class MainWindow(QMainWindow):
         av = self.model.activeView
         if av.aspectLock:
             ratio = av.width / max(av.height, .001)
-            av.vRes = int(av.hRes / ratio)
+            av.v_res = int(av.h_res / ratio)
             self.dock.updateVRes()
 
     def showCoords(self, xPlotPos, yPlotPos):
