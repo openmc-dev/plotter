@@ -41,7 +41,7 @@ class PlotImage(FigureCanvas):
         self.parent = parent
 
         self.rubber_band = QRubberBand(QRubberBand.Rectangle, self)
-        self.bandOrigin = QtCore.QPoint()
+        self.band_origin = QtCore.QPoint()
         self.xPlotOrigin = None
         self.yPlotOrigin = None
 
@@ -59,11 +59,11 @@ class PlotImage(FigureCanvas):
         self.mw.coordLabel.hide()
 
         # Set rubber band absolute and relative position
-        self.bandOrigin = event.pos()
+        self.band_origin = event.pos()
         self.xPlotOrigin, self.yPlotOrigin = self.getPlotCoords(event.pos())
 
         # Create rubber band
-        self.rubber_band.setGeometry(QtCore.QRect(self.bandOrigin, QtCore.QSize()))
+        self.rubber_band.setGeometry(QtCore.QRect(self.band_origin, QtCore.QSize()))
 
         FigureCanvas.mousePressEvent(self, event)
 
@@ -167,7 +167,7 @@ class PlotImage(FigureCanvas):
         # Update rubber band and values if mouse button held down
         if event.buttons() == QtCore.Qt.LeftButton:
             self.rubber_band.setGeometry(
-                QtCore.QRect(self.bandOrigin, event.pos()).normalized())
+                QtCore.QRect(self.band_origin, event.pos()).normalized())
 
             # Show rubber band if both dimensions > 10 pixels
             if self.rubber_band.width() > 10 and self.rubber_band.height() > 10:
@@ -185,9 +185,9 @@ class PlotImage(FigureCanvas):
             # Zoom out if Shift held
             if modifiers == QtCore.Qt.ShiftModifier:
                 cv = self.model.currentView
-                bandwidth = abs(self.bandOrigin.x() - event.pos().x())
+                bandwidth = abs(self.band_origin.x() - event.pos().x())
                 width = cv.width * (cv.h_res / max(bandwidth, .001))
-                bandheight = abs(self.bandOrigin.y() - event.pos().y())
+                bandheight = abs(self.band_origin.y() - event.pos().y())
                 height = cv.height * (cv.v_res / max(bandheight, .001))
             else: # Zoom in
                 width = max(abs(self.xPlotOrigin - xPlotPos), 0.1)
