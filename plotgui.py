@@ -22,6 +22,7 @@ else:
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
 from plot_colors import rgb_normalize
+from plotmodel import _NOT_FOUND_
 
 class PlotImage(FigureCanvas):
 
@@ -112,10 +113,12 @@ class PlotImage(FigureCanvas):
         if yPos < self.model.currentView.v_res \
             and xPos < self.model.currentView.h_res:
             id = f"{self.model.ids[yPos][xPos]}"
-            property = f"{self.model.props[yPos][xPos]:g}"
+            temp = f"{self.model.props[yPos][xPos][0]:g}"
+            density = f"{self.model.props[yPos][xPos][1]:g}"
         else:
             id = '-1'
-            property = '-1'
+            density = '-1'
+            temp = '-1'
 
         if self.model.currentView.colorby == 'cell':
             domain = self.model.activeView.cells
@@ -124,7 +127,10 @@ class PlotImage(FigureCanvas):
             domain = self.model.activeView.materials
             domain_kind = 'Material'
 
-        return id, property, domain, domain_kind
+        properties = {'density' : density,
+                      'temperature' : temp}
+
+        return id, properties, domain, domain_kind
 
     def mouseDoubleClickEvent(self, event):
 
@@ -139,18 +145,18 @@ class PlotImage(FigureCanvas):
         xPlotPos, yPlotPos = self.getPlotCoords(event.pos())
 
         # Show Cell/Material ID, Name in status bar
-        id, property, domain, domain_kind = self.getIDinfo(event)
+        id, properties, domain, domain_kind = self.getIDinfo(event)
         if self.ax.contains_point((event.pos().x(), event.pos().y())):
 
-            if domain_kind == 'Cell':
-                units = 'K'
-            else:
-                units = 'g/cm3'
+            if id != str(_NOT_FOUND_) and domain[id].name:
+                domainInfo = (f"{domain_kind} {id}: \"{domain[id].name}\"\t "
+                             f"Density: {properties['density']} g/cm3\t"
+                             f"Temperature: {properties['temperature']} K")
+            elif id != str(_NOT_FOUND_):
+                domainInfo = (f"{domain_kind} {id}\t"
+                              f"Density: {properties['density']} g/cm3\t"
+                              f"Temperature: {properties['temperature']} K")
 
-            if id != '-1' and domain[id].name:
-                domainInfo = f"{domain_kind} {id}: \"{domain[id].name}\" {property} {units}"
-            elif id != '-1':
-                domainInfo = f"{domain_kind} {id}: {property} {units}"
             else:
                 domainInfo = ""
         else:
@@ -213,7 +219,7 @@ class PlotImage(FigureCanvas):
         self.mw.undoAction.setText(f'&Undo ({len(self.model.previousViews)})')
         self.mw.redoAction.setText(f'&Redo ({len(self.model.subsequentViews)})')
 
-        id, property, domain, domain_kind = self.getIDinfo(event)
+        id, properties, domain, domain_kind = self.getIDinfo(event)
 
         if id != '-1':
 

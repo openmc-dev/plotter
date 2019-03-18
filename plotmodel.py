@@ -11,6 +11,8 @@ from plot_colors import random_rgb
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = (range(0,6))
 
+_NOT_FOUND_ = -2
+
 class PlotModel():
     """ Geometry and plot settings for OpenMC Plot Explorer model
 
@@ -109,19 +111,17 @@ class PlotModel():
 
         cv = self.currentView = copy.deepcopy(self.activeView)
         ids = capi_plot.id_map(cv)
-        properties = capi_plot.property_map(cv)
+        self.props = capi_plot.property_map(cv)
         # empty image data
         image = np.ones((cv.v_res, cv.h_res, 3), dtype = int)
 
         # set model ids based on domain
         if cv.colorby == 'cell':
             self.ids = ids[:,:,0]
-            self.props = properties[:,:,0]
             domain = cv.cells
             source = self.modelCells
         else:
             self.ids = ids[:,:,1]
-            self.props = properties[:,:,1]
             domain = cv.materials
             source = self.modelMaterials
 
@@ -136,7 +136,7 @@ class PlotModel():
 
         unique_ids = np.unique(self.ids)
         for id in unique_ids:
-            if id == -1:
+            if id == _NOT_FOUND_:
                 image[self.ids == id] = cv.plotBackground
             else:
                 image[self.ids == id] = domain[str(id)].color
