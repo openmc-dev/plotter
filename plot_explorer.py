@@ -54,9 +54,9 @@ class MainWindow(QMainWindow):
         self.createMenuBar()
 
         # Status Bar
-        self.coordLabel = QLabel()
-        self.statusBar().addPermanentWidget(self.coordLabel)
-        self.coordLabel.hide()
+        self.coord_label = QLabel()
+        self.statusBar().addPermanentWidget(self.coord_label)
+        self.coord_label.hide()
 
         # Load Plot
         self.statusBar().showMessage('Generating Plot...')
@@ -660,7 +660,7 @@ class MainWindow(QMainWindow):
         else:
             coords = (f"({round(cv.origin[0], 2)}, {round(xPlotPos, 2)}, "
                       f"{round(yPlotPos, 2)})")
-        self.coordLabel.setText(f'{coords}')
+        self.coord_label.setText(f'{coords}')
 
     def resizePixmap(self):
         z = self.zoom / 100.

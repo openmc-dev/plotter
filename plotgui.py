@@ -49,14 +49,14 @@ class PlotImage(FigureCanvas):
 
     def enterEvent(self, event):
         self.setCursor(QtCore.Qt.CrossCursor)
-        self.mw.coordLabel.show()
+        self.mw.coord_label.show()
 
     def leaveEvent(self, event):
-        self.mw.coordLabel.hide()
+        self.mw.coord_label.hide()
         self.mw.statusBar().showMessage("")
 
     def mousePressEvent(self, event):
-        self.mw.coordLabel.hide()
+        self.mw.coord_label.hide()
 
         # Set rubber band absolute and relative position
         self.band_origin = event.pos()
@@ -82,10 +82,10 @@ class PlotImage(FigureCanvas):
 
         # set coordinate label if pointer is in the axes
         if self.ax.contains_point((pos.x(), pos.y())):
-            self.mw.coordLabel.show()
+            self.mw.coord_label.show()
             self.mw.showCoords(xPlotCoord, yPlotCoord)
         else:
-            self.mw.coordLabel.hide()
+            self.mw.coord_label.hide()
 
         return (xPlotCoord, yPlotCoord)
 
