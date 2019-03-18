@@ -42,8 +42,8 @@ class PlotImage(FigureCanvas):
 
         self.rubber_band = QRubberBand(QRubberBand.Rectangle, self)
         self.band_origin = QtCore.QPoint()
-        self.xPlotOrigin = None
-        self.yPlotOrigin = None
+        self.x_plot_origin = None
+        self.y_plot_origin = None
 
         self.menu = QMenu(self)
 
@@ -60,7 +60,7 @@ class PlotImage(FigureCanvas):
 
         # Set rubber band absolute and relative position
         self.band_origin = event.pos()
-        self.xPlotOrigin, self.yPlotOrigin = self.getPlotCoords(event.pos())
+        self.x_plot_origin, self.y_plot_origin = self.getPlotCoords(event.pos())
 
         # Create rubber band
         self.rubber_band.setGeometry(QtCore.QRect(self.band_origin, QtCore.QSize()))
@@ -176,8 +176,8 @@ class PlotImage(FigureCanvas):
                 self.rubber_band.hide()
 
             # Update plot X Origin
-            xCenter = (self.xPlotOrigin + xPlotPos) / 2
-            yCenter = (self.yPlotOrigin + yPlotPos) / 2
+            xCenter = (self.x_plot_origin + xPlotPos) / 2
+            yCenter = (self.y_plot_origin + yPlotPos) / 2
             self.mw.editPlotOrigin(xCenter, yCenter)
 
             modifiers = event.modifiers()
@@ -190,8 +190,8 @@ class PlotImage(FigureCanvas):
                 bandheight = abs(self.band_origin.y() - event.pos().y())
                 height = cv.height * (cv.v_res / max(bandheight, .001))
             else: # Zoom in
-                width = max(abs(self.xPlotOrigin - xPlotPos), 0.1)
-                height = max(abs(self.yPlotOrigin - yPlotPos), 0.1)
+                width = max(abs(self.x_plot_origin - xPlotPos), 0.1)
+                height = max(abs(self.y_plot_origin - yPlotPos), 0.1)
 
             self.mw.editWidth(width)
             self.mw.editHeight(height)
