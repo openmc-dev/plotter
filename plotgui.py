@@ -40,7 +40,7 @@ class PlotImage(FigureCanvas):
         self.mw = main
         self.parent = parent
 
-        self.rubberBand = QRubberBand(QRubberBand.Rectangle, self)
+        self.rubber_band = QRubberBand(QRubberBand.Rectangle, self)
         self.bandOrigin = QtCore.QPoint()
         self.xPlotOrigin = None
         self.yPlotOrigin = None
@@ -63,7 +63,7 @@ class PlotImage(FigureCanvas):
         self.xPlotOrigin, self.yPlotOrigin = self.getPlotCoords(event.pos())
 
         # Create rubber band
-        self.rubberBand.setGeometry(QtCore.QRect(self.bandOrigin, QtCore.QSize()))
+        self.rubber_band.setGeometry(QtCore.QRect(self.bandOrigin, QtCore.QSize()))
 
         FigureCanvas.mousePressEvent(self, event)
 
@@ -166,14 +166,14 @@ class PlotImage(FigureCanvas):
 
         # Update rubber band and values if mouse button held down
         if event.buttons() == QtCore.Qt.LeftButton:
-            self.rubberBand.setGeometry(
+            self.rubber_band.setGeometry(
                 QtCore.QRect(self.bandOrigin, event.pos()).normalized())
 
             # Show rubber band if both dimensions > 10 pixels
-            if self.rubberBand.width() > 10 and self.rubberBand.height() > 10:
-                self.rubberBand.show()
+            if self.rubber_band.width() > 10 and self.rubber_band.height() > 10:
+                self.rubber_band.show()
             else:
-                self.rubberBand.hide()
+                self.rubber_band.hide()
 
             # Update plot X Origin
             xCenter = (self.xPlotOrigin + xPlotPos) / 2
@@ -198,8 +198,8 @@ class PlotImage(FigureCanvas):
 
     def mouseReleaseEvent(self, event):
 
-        if self.rubberBand.isVisible():
-            self.rubberBand.hide()
+        if self.rubber_band.isVisible():
+            self.rubber_band.hide()
             self.mw.applyChanges()
         else:
             self.mw.revertDockControls()
