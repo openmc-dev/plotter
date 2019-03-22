@@ -1,6 +1,7 @@
 import copy, struct, threading, openmc
 import openmc.capi.plot as capi_plot
 from openmc.capi.plot import _PlotBase
+import openmc
 import numpy as np
 import xml.etree.ElementTree as ET
 from ast import literal_eval
@@ -10,6 +11,8 @@ from PySide2.QtGui import QColor
 from plot_colors import random_rgb
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = (range(0,6))
+
+__VERSION__ = "0.1.0"
 
 _NOT_FOUND_ = -2
 
@@ -55,6 +58,8 @@ class PlotModel():
 
         # Cell/Material ID by coordinates
         self.ids = None
+
+        self.version = __VERSION__
 
         self.previousViews = []
         self.subsequentViews = []

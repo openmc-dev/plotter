@@ -111,8 +111,8 @@ class PlotImage(FigureCanvas):
         yPos = int((event.pos().y()-y0 + 0.01) / factor[1])
 
         # check that the position is in the axes view
-        if yPos < self.model.currentView.v_res \
-            and xPos < self.model.currentView.h_res:
+        if yPos >= 0 and yPos < self.model.currentView.v_res \
+            and xPos >= 0 and xPos < self.model.currentView.h_res:
             id = f"{self.model.ids[yPos][xPos]}"
             temp = f"{self.model.props[yPos][xPos][0]:g}"
             density = f"{self.model.props[yPos][xPos][1]:g}"

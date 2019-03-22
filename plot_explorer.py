@@ -312,7 +312,8 @@ class MainWindow(QMainWindow):
             if "." not in filename:
                 filename += ".pltvw"
 
-            saved = {'default': self.model.defaultView,
+            saved = {'version' : self.model.version,
+                     'default': self.model.defaultView,
                      'current': self.model.currentView}
 
             with open(filename, 'wb') as file:
@@ -327,8 +328,10 @@ class MainWindow(QMainWindow):
                     saved = pickle.load(file)
             except Exception:
                 message = 'Error loading plot settings'
-                saved = {'default': None, 'current': None}
-            if saved['default'] == self.model.defaultView:
+                saved = {'version': None,
+                         'default': None,
+                         'current': None}
+            if saved['version'] == self.model.version:
                 self.model.activeView = saved['current']
                 self.dock.updateDock()
                 self.applyChanges()
