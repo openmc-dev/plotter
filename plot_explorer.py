@@ -313,7 +313,6 @@ class MainWindow(QMainWindow):
                 filename += ".pltvw"
 
             saved = {'version' : self.model.version,
-                     'default': self.model.defaultView,
                      'current': self.model.currentView}
 
             with open(filename, 'wb') as file:
@@ -329,7 +328,6 @@ class MainWindow(QMainWindow):
             except Exception:
                 message = 'Error loading plot settings'
                 saved = {'version': None,
-                         'default': None,
                          'current': None}
             if saved['version'] == self.model.version:
                 self.model.activeView = saved['current']
