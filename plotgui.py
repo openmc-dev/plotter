@@ -13,6 +13,7 @@ from plotmodel import DomainDelegate
 from matplotlib.backends.qt_compat import is_pyqt5
 from matplotlib.figure import Figure
 from matplotlib import image as mpimage
+import matplotlib.pyplot as plt
 
 if is_pyqt5():
     from matplotlib.backends.backend_qt5agg import (
@@ -106,8 +107,8 @@ class PlotImage(FigureCanvas):
 
         # use factor to get proper x,y position in pixels
         factor = (width/cv.h_res, height/cv.v_res)
-        xPos = int((event.pos().x()-x0 + 0.05) / factor[0])
-        yPos = int((event.pos().y()-y0 + 0.05) / factor[1])
+        xPos = int((event.pos().x()-x0 + 0.01) / factor[0])
+        yPos = int((event.pos().y()-y0 + 0.01) / factor[1])
 
         # check that the position is in the axes view
         if yPos < self.model.currentView.v_res \
@@ -309,9 +310,9 @@ class PlotImage(FigureCanvas):
         self.figure.set_figheight(0.99 * h / self.figure.get_dpi())
         # set data extents for automatic reporting of pointer location
         data_bounds = [cv.origin[self.mw.xBasis] - cv.width/2.,
-                    cv.origin[self.mw.xBasis] + cv.width/2.,
-                    cv.origin[self.mw.yBasis] - cv.height/2.,
-                    cv.origin[self.mw.yBasis] + cv.height/2.]
+                       cv.origin[self.mw.xBasis] + cv.width/2.,
+                       cv.origin[self.mw.yBasis] - cv.height/2.,
+                       cv.origin[self.mw.yBasis] + cv.height/2.]
 
         # make sure we have an image to load
         if not hasattr(self.model,'image'):
@@ -320,13 +321,17 @@ class PlotImage(FigureCanvas):
                                           extent=data_bounds,
                                           alpha=cv.plotAlpha)
         self.ax = self.figure.axes[0]
+
         self.ax.margins(0.0, 0.0)
-        self.figure.set_tight_layout({'pad': 1.0})
+
         # set axis labels
         axis_label_str = "{} (cm)"
         self.ax.set_xlabel(axis_label_str.format(cv.basis[0]))
         self.ax.set_ylabel(axis_label_str.format(cv.basis[1]))
+
         self.draw()
+
+
 
 class OptionsDock(QDockWidget):
     def __init__(self, model, FM, parent=None):

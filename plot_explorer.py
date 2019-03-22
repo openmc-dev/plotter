@@ -595,7 +595,7 @@ class MainWindow(QMainWindow):
 
         self.colorDialog.resize(settings.value("colorDialog/Size", QtCore.QSize(400, 500)))
         self.colorDialog.move(settings.value("colorDialog/Position", QtCore.QPoint(600, 200)))
-        self.colorDialog.setVisible(bool(settings.value("colorDialog/Visible", 0)))
+        self.colorDialog.setVisible(bool(int(settings.value("colorDialog/Visible", 0))))
 
     def restoreModelSettings(self):
         if os.path.isfile("plot_settings.pkl"):
