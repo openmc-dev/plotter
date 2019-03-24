@@ -1,12 +1,20 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
-import os, sys, copy, pickle, openmc
+import copy
+import os
+from pathlib import Path
+import pickle
+import sys
+
+import openmc
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
     QScrollArea, QMenu, QAction, QFileDialog, QColorDialog, QInputDialog)
+
 from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, ColorDialog, OptionsDock
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -699,9 +707,10 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     app.setOrganizationName("OpenMC")
-    app.setOrganizationDomain("xxxxxgithub.com/openmc-dev/")
-    app.setApplicationName("xxxxxOpenMC Plot Explorer")
-    app.setWindowIcon(QtGui.QIcon('openmc_logo.png'))
+    app.setOrganizationDomain("openmc.org")
+    app.setApplicationName("OpenMC Plot Explorer")
+    path_logo = Path(__file__).parent / 'openmc_logo.png'
+    app.setWindowIcon(QtGui.QIcon(str(path_logo)))
     app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, True)
 
     FM = QtGui.QFontMetricsF(app.font())
