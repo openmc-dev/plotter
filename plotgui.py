@@ -8,8 +8,6 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QCheckBox, QRubberBand, QMenu, QAction, QMenuBar, QFileDialog, QDialog,
     QTabWidget, QGridLayout, QToolButton, QColorDialog, QFrame, QDockWidget,
     QTableView, QItemDelegate, QHeaderView, QSlider)
-from plotmodel import DomainDelegate
-
 from matplotlib.backends.qt_compat import is_pyqt5
 from matplotlib.figure import Figure
 from matplotlib import image as mpimage
@@ -23,7 +21,7 @@ else:
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
 from plot_colors import rgb_normalize
-from plotmodel import _NOT_FOUND_
+from plotmodel import DomainDelegate, _NOT_FOUND
 
 class PlotImage(FigureCanvas):
 
@@ -111,8 +109,8 @@ class PlotImage(FigureCanvas):
         yPos = int((event.pos().y()-y0 + 0.01) / factor[1])
 
         # check that the position is in the axes view
-        if yPos >= 0 and yPos < self.model.currentView.v_res \
-            and xPos >= 0 and xPos < self.model.currentView.h_res:
+        if  0 <= yPos < self.model.currentView.v_res \
+            and 0 <= xPos and xPos < self.model.currentView.h_res:
             id = f"{self.model.ids[yPos][xPos]}"
             temp = f"{self.model.props[yPos][xPos][0]:g}"
             density = f"{self.model.props[yPos][xPos][1]:g}"
@@ -149,11 +147,11 @@ class PlotImage(FigureCanvas):
         id, properties, domain, domain_kind = self.getIDinfo(event)
         if self.ax.contains_point((event.pos().x(), event.pos().y())):
 
-            if id != str(_NOT_FOUND_) and domain[id].name:
+            if id != str(_NOT_FOUND) and domain[id].name:
                 domainInfo = (f"{domain_kind} {id}: \"{domain[id].name}\"\t "
                              f"Density: {properties['density']} g/cm3\t"
                              f"Temperature: {properties['temperature']} K")
-            elif id != str(_NOT_FOUND_):
+            elif id != str(_NOT_FOUND):
                 domainInfo = (f"{domain_kind} {id}\t"
                               f"Density: {properties['density']} g/cm3\t"
                               f"Temperature: {properties['temperature']} K")

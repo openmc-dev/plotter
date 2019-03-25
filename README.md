@@ -9,7 +9,7 @@ A graphical interface for visualizing and manipulating OpenMC plot slices.
 Dependencies
 ------------
 
-os, sys, pickle, copy, struct, threading, numpy, ast, PySide2, openmc
+OpenMC, Matplotlib, NumPy, PySide2
 
 Controls/Functionality
 ======================
