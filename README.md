@@ -6,6 +6,9 @@ Description
 
 A graphical interface for visualizing and manipulating OpenMC plot slices.
 
+Originally created by @landonjmitchel at MIT ([original
+repository](https://github.com/landonjmitchell/openmc-plotgui)).
+
 Dependencies
 ------------
 
