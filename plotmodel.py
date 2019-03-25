@@ -1,4 +1,6 @@
-import copy, struct, threading
+import copy
+import struct
+import threading
 from ast import literal_eval
 
 import openmc
