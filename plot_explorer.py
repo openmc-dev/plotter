@@ -312,7 +312,7 @@ class MainWindow(QMainWindow):
             if "." not in filename:
                 filename += ".pltvw"
 
-            saved = {'default': self.model.defaultView,
+            saved = {'version' : self.model.version,
                      'current': self.model.currentView}
 
             with open(filename, 'wb') as file:
@@ -327,8 +327,9 @@ class MainWindow(QMainWindow):
                     saved = pickle.load(file)
             except Exception:
                 message = 'Error loading plot settings'
-                saved = {'default': None, 'current': None}
-            if saved['default'] == self.model.defaultView:
+                saved = {'version': None,
+                         'current': None}
+            if saved['version'] == self.model.version:
                 self.model.activeView = saved['current']
                 self.dock.updateDock()
                 self.applyChanges()
@@ -595,7 +596,7 @@ class MainWindow(QMainWindow):
 
         self.colorDialog.resize(settings.value("colorDialog/Size", QtCore.QSize(400, 500)))
         self.colorDialog.move(settings.value("colorDialog/Position", QtCore.QPoint(600, 200)))
-        self.colorDialog.setVisible(bool(settings.value("colorDialog/Visible", 0)))
+        self.colorDialog.setVisible(bool(int(settings.value("colorDialog/Visible", 0))))
 
     def restoreModelSettings(self):
         if os.path.isfile("plot_settings.pkl"):

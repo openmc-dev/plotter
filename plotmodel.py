@@ -1,17 +1,24 @@
-import copy, struct, threading, openmc
+import copy
+import struct
+import threading
+from ast import literal_eval
+
+import openmc
 import openmc.capi.plot as capi_plot
 from openmc.capi.plot import _PlotBase
 import numpy as np
 import xml.etree.ElementTree as ET
-from ast import literal_eval
 from PySide2.QtWidgets import QTableView, QItemDelegate, QColorDialog, QLineEdit
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
 from PySide2.QtGui import QColor
+
 from plot_colors import random_rgb
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = (range(0,6))
 
-_NOT_FOUND_ = -2
+__VERSION__ = "0.1.0"
+
+_NOT_FOUND = -2
 
 class PlotModel():
     """ Geometry and plot settings for OpenMC Plot Explorer model
@@ -55,6 +62,8 @@ class PlotModel():
 
         # Cell/Material ID by coordinates
         self.ids = None
+
+        self.version = __VERSION__
 
         self.previousViews = []
         self.subsequentViews = []
@@ -136,7 +145,7 @@ class PlotModel():
 
         unique_ids = np.unique(self.ids)
         for id in unique_ids:
-            if id == _NOT_FOUND_:
+            if id == _NOT_FOUND:
                 image[self.ids == id] = cv.plotBackground
             else:
                 image[self.ids == id] = domain[str(id)].color

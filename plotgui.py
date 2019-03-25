@@ -8,11 +8,10 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QCheckBox, QRubberBand, QMenu, QAction, QMenuBar, QFileDialog, QDialog,
     QTabWidget, QGridLayout, QToolButton, QColorDialog, QFrame, QDockWidget,
     QTableView, QItemDelegate, QHeaderView, QSlider)
-from plotmodel import DomainDelegate
-
 from matplotlib.backends.qt_compat import is_pyqt5
 from matplotlib.figure import Figure
 from matplotlib import image as mpimage
+import matplotlib.pyplot as plt
 
 if is_pyqt5():
     from matplotlib.backends.backend_qt5agg import (
@@ -22,7 +21,7 @@ else:
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
 from plot_colors import rgb_normalize
-from plotmodel import _NOT_FOUND_
+from plotmodel import DomainDelegate, _NOT_FOUND
 
 class PlotImage(FigureCanvas):
 
@@ -106,12 +105,12 @@ class PlotImage(FigureCanvas):
 
         # use factor to get proper x,y position in pixels
         factor = (width/cv.h_res, height/cv.v_res)
-        xPos = int((event.pos().x()-x0 + 0.05) / factor[0])
-        yPos = int((event.pos().y()-y0 + 0.05) / factor[1])
+        xPos = int((event.pos().x()-x0 + 0.01) / factor[0])
+        yPos = int((event.pos().y()-y0 + 0.01) / factor[1])
 
         # check that the position is in the axes view
-        if yPos < self.model.currentView.v_res \
-            and xPos < self.model.currentView.h_res:
+        if  0 <= yPos < self.model.currentView.v_res \
+            and 0 <= xPos and xPos < self.model.currentView.h_res:
             id = f"{self.model.ids[yPos][xPos]}"
             temp = f"{self.model.props[yPos][xPos][0]:g}"
             density = f"{self.model.props[yPos][xPos][1]:g}"
@@ -148,11 +147,11 @@ class PlotImage(FigureCanvas):
         id, properties, domain, domain_kind = self.getIDinfo(event)
         if self.ax.contains_point((event.pos().x(), event.pos().y())):
 
-            if id != str(_NOT_FOUND_) and domain[id].name:
+            if id != str(_NOT_FOUND) and domain[id].name:
                 domainInfo = (f"{domain_kind} {id}: \"{domain[id].name}\"\t "
                              f"Density: {properties['density']} g/cm3\t"
                              f"Temperature: {properties['temperature']} K")
-            elif id != str(_NOT_FOUND_):
+            elif id != str(_NOT_FOUND):
                 domainInfo = (f"{domain_kind} {id}\t"
                               f"Density: {properties['density']} g/cm3\t"
                               f"Temperature: {properties['temperature']} K")
@@ -309,9 +308,9 @@ class PlotImage(FigureCanvas):
         self.figure.set_figheight(0.99 * h / self.figure.get_dpi())
         # set data extents for automatic reporting of pointer location
         data_bounds = [cv.origin[self.mw.xBasis] - cv.width/2.,
-                    cv.origin[self.mw.xBasis] + cv.width/2.,
-                    cv.origin[self.mw.yBasis] - cv.height/2.,
-                    cv.origin[self.mw.yBasis] + cv.height/2.]
+                       cv.origin[self.mw.xBasis] + cv.width/2.,
+                       cv.origin[self.mw.yBasis] - cv.height/2.,
+                       cv.origin[self.mw.yBasis] + cv.height/2.]
 
         # make sure we have an image to load
         if not hasattr(self.model,'image'):
@@ -320,13 +319,17 @@ class PlotImage(FigureCanvas):
                                           extent=data_bounds,
                                           alpha=cv.plotAlpha)
         self.ax = self.figure.axes[0]
+
         self.ax.margins(0.0, 0.0)
-        self.figure.set_tight_layout({'pad': 1.0})
+
         # set axis labels
         axis_label_str = "{} (cm)"
         self.ax.set_xlabel(axis_label_str.format(cv.basis[0]))
         self.ax.set_ylabel(axis_label_str.format(cv.basis[1]))
+
         self.draw()
+
+
 
 class OptionsDock(QDockWidget):
     def __init__(self, model, FM, parent=None):
