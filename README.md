@@ -1,24 +1,19 @@
-OpenMC Plot Explorer
-====================
+# OpenMC Plot Explorer
 
-Description
------------
+## Description
 
 A graphical interface for visualizing and manipulating OpenMC plot slices.
 
-Originally created by @landonjmitchel at MIT ([original
+Originally created by @landonjmitchell at the University of Chicago ([original
 repository](https://github.com/landonjmitchell/openmc-plotgui)).
 
-Dependencies
-------------
+## Dependencies
 
 OpenMC, Matplotlib, NumPy, PySide2
 
-Controls/Functionality
-======================
+# Controls/Functionality
 
-Menu Bar:
----------
+## Menu Bar:
 
   - File->Save Image As... : Save an image file of the current plot.
   - File->Save View Settings... : Save a .pltvw pickle file containing the current plot settings.
@@ -44,8 +39,7 @@ Menu Bar:
   - Window->Main Window : Activate, bring main window to front.
   - Window->Color Options : [Open], activate, bring color options dialog to front.
 
-Dock:
------
+## Dock:
 
 ### Origin:
   - X, Y, Z : Set the active plot origin to the values entered for each dimension.
@@ -69,8 +63,7 @@ Dock:
   - Apply Changes : Apply changes made to active plot, reload plot image.
   - Zoom : Set zoom level of plot image.
 
-Plot Image
-----------
+## Plot Image
 
 ### Actions:
 
@@ -98,8 +91,7 @@ Plot Image
 
     See menu bar for other context menu options.
 
-Color Options Dialog
---------------------
+## Color Options Dialog
 
 ### General Tab:
 
@@ -139,11 +131,9 @@ Color Options Dialog
   previous/subsequent plots (i.e. for undo/redo) will be saved.  Active plot
   changes that have not been applied will be lost.
 
-Developer Notes
-===============
+## Developer Notes
 
 ### Structure
-
 
   - plotmodel.py: contains the underlying data structure of the plot model and application state.
   - plotgui.py: contains the bulk of the graphical elements of the application.
