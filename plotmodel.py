@@ -18,8 +18,9 @@ ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = (range(0,6))
 
 __VERSION__ = "0.1.0"
 
+_VOID_REGION = -1
 _NOT_FOUND = -2
-_VOID = -1
+
 
 class PlotModel():
     """ Geometry and plot settings for OpenMC Plot Explorer model
@@ -148,8 +149,6 @@ class PlotModel():
         for id in unique_ids:
             if id == _NOT_FOUND:
                 image[self.ids == id] = cv.plotBackground
-            elif id == _VOID:
-                image[self.ids == id] = (255., 255., 255.)
             else:
                 image[self.ids == id] = domain[str(id)].color
 
@@ -297,6 +296,15 @@ class PlotView(_PlotBase):
         root = doc.getroot()
 
         domains = {}
+
+        # always add a VOID material
+        if 'material' in file:
+            void_id = str(_VOID_REGION)
+            domains[void_id] = DomainView(void_id, "VOID",
+                                          (255, 255, 255),
+                                          False,
+                                          False)
+
         for dom in root.findall(type_):
             id = dom.attrib['id']
             if 'name' in dom.attrib:

@@ -21,7 +21,7 @@ else:
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
 from plot_colors import rgb_normalize
-from plotmodel import DomainDelegate, _NOT_FOUND, _VOID
+from plotmodel import DomainDelegate, _NOT_FOUND, _VOID_REGION
 
 class PlotImage(FigureCanvas):
 
@@ -115,9 +115,9 @@ class PlotImage(FigureCanvas):
             temp = f"{self.model.props[yPos][xPos][0]:g}"
             density = f"{self.model.props[yPos][xPos][1]:g}"
         else:
-            id = '-1'
-            density = '-1'
-            temp = '-1'
+            id = str(_NOT_FOUND)
+            density = str(_NOT_FOUND)
+            temp = str(_NOT_FOUND)
 
         if self.model.currentView.colorby == 'cell':
             domain = self.model.activeView.cells
@@ -147,7 +147,7 @@ class PlotImage(FigureCanvas):
         id, properties, domain, domain_kind = self.getIDinfo(event)
         if self.ax.contains_point((event.pos().x(), event.pos().y())):
 
-            if id == str(_VOID):
+            if id == str(_VOID_REGION):
                 domainInfo = ("VOID")
             elif id != str(_NOT_FOUND) and domain[id].name:
                 domainInfo = (f"{domain_kind} {id}: \"{domain[id].name}\"\t "
@@ -221,7 +221,7 @@ class PlotImage(FigureCanvas):
 
         id, properties, domain, domain_kind = self.getIDinfo(event)
 
-        if id != '-1':
+        if id != str(_NOT_FOUND):
 
             # Domain ID
             domainID = self.menu.addAction(f"{domain_kind} {id}")
