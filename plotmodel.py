@@ -19,6 +19,7 @@ ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = (range(0,6))
 __VERSION__ = "0.1.0"
 
 _NOT_FOUND = -2
+_VOID = -1
 
 class PlotModel():
     """ Geometry and plot settings for OpenMC Plot Explorer model
@@ -147,6 +148,8 @@ class PlotModel():
         for id in unique_ids:
             if id == _NOT_FOUND:
                 image[self.ids == id] = cv.plotBackground
+            elif id == _VOID:
+                image[self.ids == id] = (255., 255., 255.)
             else:
                 image[self.ids == id] = domain[str(id)].color
 
