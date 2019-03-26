@@ -296,15 +296,6 @@ class PlotView(_PlotBase):
         root = doc.getroot()
 
         domains = {}
-
-        # always add a VOID material
-        if 'material' in file:
-            void_id = str(_VOID_REGION)
-            domains[void_id] = DomainView(void_id, "VOID",
-                                          (255, 255, 255),
-                                          False,
-                                          False)
-
         for dom in root.findall(type_):
             id = dom.attrib['id']
             if 'name' in dom.attrib:
@@ -318,6 +309,14 @@ class PlotView(_PlotBase):
             highlighted = False
             domain = DomainView(id, name, color, masked, highlighted)
             domains[id] = domain
+
+        # always add void to a material domain at the end
+        if 'material' in file:
+            void_id = str(_VOID_REGION)
+            domains[void_id] = DomainView(void_id, "VOID",
+                                          (255, 255, 255),
+                                          False,
+                                          False)
 
         return domains
 
