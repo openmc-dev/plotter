@@ -21,7 +21,7 @@ else:
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
 from plot_colors import rgb_normalize
-from plotmodel import DomainDelegate, _NOT_FOUND
+from plotmodel import DomainDelegate, _NOT_FOUND, _VOID
 
 class PlotImage(FigureCanvas):
 
@@ -147,7 +147,9 @@ class PlotImage(FigureCanvas):
         id, properties, domain, domain_kind = self.getIDinfo(event)
         if self.ax.contains_point((event.pos().x(), event.pos().y())):
 
-            if id != str(_NOT_FOUND) and domain[id].name:
+            if id == str(_VOID):
+                domainInfo = ("VOID")
+            elif id != str(_NOT_FOUND) and domain[id].name:
                 domainInfo = (f"{domain_kind} {id}: \"{domain[id].name}\"\t "
                              f"Density: {properties['density']} g/cm3\t"
                              f"Temperature: {properties['temperature']} K")
@@ -155,7 +157,6 @@ class PlotImage(FigureCanvas):
                 domainInfo = (f"{domain_kind} {id}\t"
                               f"Density: {properties['density']} g/cm3\t"
                               f"Temperature: {properties['temperature']} K")
-
             else:
                 domainInfo = ""
         else:
