@@ -18,7 +18,9 @@ ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = (range(0,6))
 
 __VERSION__ = "0.1.0"
 
+_VOID_REGION = -1
 _NOT_FOUND = -2
+
 
 class PlotModel():
     """ Geometry and plot settings for OpenMC Plot Explorer model
@@ -307,6 +309,14 @@ class PlotView(_PlotBase):
             highlighted = False
             domain = DomainView(id, name, color, masked, highlighted)
             domains[id] = domain
+
+        # always add void to a material domain at the end
+        if 'material' in file:
+            void_id = str(_VOID_REGION)
+            domains[void_id] = DomainView(void_id, "VOID",
+                                          (255, 255, 255),
+                                          False,
+                                          False)
 
         return domains
 

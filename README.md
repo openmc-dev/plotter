@@ -11,6 +11,14 @@ repository](https://github.com/landonjmitchell/openmc-plotgui)).
 
 OpenMC, Matplotlib, NumPy, PySide2
 
+## Usage
+
+From a directory containing an OpenMC model run:
+
+```console
+python /path/to/plot_explorer.py
+```
+
 # Controls/Functionality
 
 ## Menu Bar:
