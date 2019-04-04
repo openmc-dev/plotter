@@ -669,6 +669,9 @@ class ColorDialog(QDialog):
         self.colorbyBox = QComboBox(self)
         self.colorbyBox.addItem("material")
         self.colorbyBox.addItem("cell")
+        self.colorbyBox.addItem("temperature")
+        self.colorbyBox.addItem("density")
+
         self.colorbyBox.currentTextChanged[str].connect(self.mw.editColorBy)
 
         formLayout = QFormLayout()
