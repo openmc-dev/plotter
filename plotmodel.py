@@ -122,7 +122,7 @@ class PlotModel():
 
         cv = self.currentView = copy.deepcopy(self.activeView)
         ids = capi_plot.id_map(cv)
-        self.props = capi_plot.property_map(cv)
+        props = capi_plot.property_map(cv)
         # empty image data
         image = np.ones((cv.v_res, cv.h_res, 3), dtype = int)
 
@@ -164,6 +164,8 @@ class PlotModel():
 
         # set model image
         self.image = image
+        # set model properties
+        self.properties = props
 
     def undo(self):
         """ Revert to previous PlotView instance. Re-generate plot image """
@@ -215,7 +217,7 @@ class PlotView(_PlotBase):
         prevent image stretching/warping
     basis : {'xy', 'xz', 'yz'}
         The basis directions for the plot
-    colorby : {'cell', 'material'}
+    colorby : {'cell', 'material', 'temperature', 'density'}
         Indication of whether the plot should be colored by cell or material
     masking : bool
         Indication of whether cell/material masking is active
