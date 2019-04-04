@@ -80,7 +80,7 @@ class PlotImage(FigureCanvas):
         yPlotCoord = self.ax.dataLim.y0 + yPlotCoord * self.ax.dataLim.height
 
         # set coordinate label if pointer is in the axes
-        if self.ax.contains_point((pos.x(), pos.y())):
+        if self.parent.underMouse():
             self.mw.coord_label.show()
             self.mw.showCoords(xPlotCoord, yPlotCoord)
         else:
