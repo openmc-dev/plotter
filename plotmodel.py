@@ -167,6 +167,9 @@ class PlotModel():
         # set model properties
         self.properties = props
 
+        self.properties[self.properties < 0.0] = 0.0
+
+
     def undo(self):
         """ Revert to previous PlotView instance. Re-generate plot image """
 

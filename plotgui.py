@@ -11,6 +11,8 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
 from matplotlib.backends.qt_compat import is_pyqt5
 from matplotlib.figure import Figure
 from matplotlib import image as mpimage
+from matplotlib import lines as mlines
+
 import matplotlib.pyplot as plt
 
 if is_pyqt5():
@@ -43,6 +45,7 @@ class PlotImage(FigureCanvas):
         self.band_origin = QtCore.QPoint()
         self.x_plot_origin = None
         self.y_plot_origin = None
+        self.data_line = None
 
         self.menu = QMenu(self)
 
@@ -122,6 +125,12 @@ class PlotImage(FigureCanvas):
         if self.model.currentView.colorby == 'cell':
             domain = self.model.activeView.cells
             domain_kind = 'Cell'
+        elif self.model.currentView.colorby == 'temperature':
+            domain = self.model.activeView.materials
+            domain_kind = 'Temperature'
+        elif self.model.currentView.colorby == 'density':
+            domain = self.model.activeView.materials
+            domain_kind = 'Density'
         else:
             domain = self.model.activeView.materials
             domain_kind = 'Material'
@@ -147,6 +156,11 @@ class PlotImage(FigureCanvas):
         id, properties, domain, domain_kind = self.getIDinfo(event)
         if self.ax.contains_point((event.pos().x(), event.pos().y())):
 
+            if domain_kind.lower() in ('temperature', 'density'):
+                line_val = float(properties[domain_kind.lower()])
+                self.updateDataLine(line_val if line_val >= 0.0 else 0.0,
+                                    True)
+
             if id == str(_VOID_REGION):
                 domainInfo = ("VOID")
             elif id != str(_NOT_FOUND) and domain[id].name:
@@ -161,6 +175,7 @@ class PlotImage(FigureCanvas):
                 domainInfo = ""
         else:
             domainInfo = ""
+            self.updateDataLine(0.0, False)
 
         self.mw.statusBar().showMessage(f" {domainInfo}")
 
@@ -322,22 +337,35 @@ class PlotImage(FigureCanvas):
                                               extent=data_bounds,
                                               alpha=cv.plotAlpha)
         else:
+            if cv.colorby == 'temperature':
+                idx = 0
+                cmap = 'Oranges'
+                cmap_label = "Temperature (K)"
+            else:
+                idx = 1
+                cmap = 'Oranges'
+                cmap_label = "Density (g/ccm)"
 
-            idx = 0 if cv.colorby == 'temperature' else 1
-            cmap = 'Oranges' if cv.colorby == 'temperature' else 'Greys'
-            cmap_label = "Temperature (K)" if cv.colorby == 'temperature' else "Density (g/ccm)"
             c = self.figure.subplots().imshow(self.model.properties[:,:,idx],
                                               cmap=cmap,
                                               extent=data_bounds,
                                               alpha=cv.plotAlpha)
             cmap_ax = self.figure.add_axes([0.95, 0.1, 0.03, 0.8])
-            cb = self.figure.colorbar(c, cax=cmap_ax, anchor=(1.0,0.0))
-            cb.ax.set_ylabel(cmap_label, rotation=-90, va='bottom', ha='right')
+            self.colorbar = self.figure.colorbar(c,
+                                                 cax=cmap_ax,
+                                                 anchor=(1.0,0.0))
+            self.colorbar.ax.set_ylabel(cmap_label, rotation=-90, va='bottom', ha='right')
+            dl = self.colorbar.ax.dataLim.get_points()
+            self.data_line = mlines.Line2D([dl[0][0], dl[1][0]],
+                                           [75, 75],
+                                           linewidth = 3.,
+                                           color = 'black',
+                                           clip_on = True)
 
+            self.colorbar.ax.add_line(self.data_line)
+            # draw line on colorbar
 
         self.ax = self.figure.axes[0]
-
-
         self.ax.margins(0.0, 0.0)
 
         # set axis labels
@@ -347,7 +375,12 @@ class PlotImage(FigureCanvas):
 
         self.draw()
 
-
+    def updateDataLine(self, y_val, visible):
+        if self.data_line:
+            self.data_line.set_visible(True)
+            data = self.data_line.get_data()
+            self.data_line.set_data([data[0], [y_val, y_val]])
+            self.draw()
 
 class OptionsDock(QDockWidget):
     def __init__(self, model, FM, parent=None):
