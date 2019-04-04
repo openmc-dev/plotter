@@ -117,7 +117,7 @@ class MainWindow(QMainWindow):
 
         # Edit Menu
         self.applyAction = QAction("&Apply Changes", self)
-        self.applyAction.setShortcut("Shift+Return")
+        self.applyAction.setShortcut("Ctrl+Return")
         self.applyAction.setToolTip('Generate new view with changes applied')
         self.applyAction.setStatusTip('Generate new view with changes applied')
         self.applyAction.triggered.connect(self.applyChanges)
@@ -200,9 +200,28 @@ class MainWindow(QMainWindow):
         self.materialAction.triggered.connect(lambda :
             self.editColorBy('material', apply=True))
 
+        self.temperatureAction = QAction('&Temperature', self)
+        self.temperatureAction.setCheckable(True)
+        self.temperatureAction.setShortcut('Alt+T')
+        self.temperatureAction.setToolTip('Color by temperature')
+        self.temperatureAction.setStatusTip('Color plot by temperature')
+        self.temperatureAction.triggered.connect(lambda :
+            self.editColorBy('temperature', apply=True))
+
+        self.densityAction = QAction('&Density', self)
+        self.densityAction.setCheckable(True)
+        self.densityAction.setShortcut('Alt+D')
+        self.densityAction.setToolTip('Color by density')
+        self.densityAction.setStatusTip('Color plot by density')
+        self.densityAction.triggered.connect(lambda :
+            self.editColorBy('density', apply=True))
+
         self.colorbyMenu = self.editMenu.addMenu('&Color By')
         self.colorbyMenu.addAction(self.cellAction)
         self.colorbyMenu.addAction(self.materialAction)
+        self.colorbyMenu.addAction(self.temperatureAction)
+        self.colorbyMenu.addAction(self.densityAction)
+
         self.colorbyMenu.aboutToShow.connect(self.updateColorbyMenu)
 
         self.editMenu.addSeparator()
@@ -283,6 +302,8 @@ class MainWindow(QMainWindow):
         cv = self.model.currentView
         self.cellAction.setChecked(cv.colorby == 'cell')
         self.materialAction.setChecked(cv.colorby == 'material')
+        self.temperatureAction.setChecked(cv.colorby == 'temperature')
+        self.densityAction.setChecked(cv.colorby == 'density')
 
     def updateViewMenu(self):
         if self.dock.isVisible():

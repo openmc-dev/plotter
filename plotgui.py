@@ -112,8 +112,8 @@ class PlotImage(FigureCanvas):
         if  0 <= yPos < self.model.currentView.v_res \
             and 0 <= xPos and xPos < self.model.currentView.h_res:
             id = f"{self.model.ids[yPos][xPos]}"
-            temp = f"{self.model.props[yPos][xPos][0]:g}"
-            density = f"{self.model.props[yPos][xPos][1]:g}"
+            temp = f"{self.model.properties[yPos][xPos][0]:g}"
+            density = f"{self.model.properties[yPos][xPos][1]:g}"
         else:
             id = str(_NOT_FOUND)
             density = str(_NOT_FOUND)
@@ -316,10 +316,27 @@ class PlotImage(FigureCanvas):
         # make sure we have an image to load
         if not hasattr(self.model,'image'):
             self.model.generatePlot()
-        c = self.figure.subplots().imshow(self.model.image,
-                                          extent=data_bounds,
-                                          alpha=cv.plotAlpha)
+
+        if cv.colorby in ('material', 'cell'):
+            c = self.figure.subplots().imshow(self.model.image,
+                                              extent=data_bounds,
+                                              alpha=cv.plotAlpha)
+        else:
+
+            idx = 0 if cv.colorby == 'temperature' else 1
+            cmap = 'Oranges' if cv.colorby == 'temperature' else 'Greys'
+            cmap_label = "Temperature (K)" if cv.colorby == 'temperature' else "Density (g/ccm)"
+            c = self.figure.subplots().imshow(self.model.properties[:,:,idx],
+                                              cmap=cmap,
+                                              extent=data_bounds,
+                                              alpha=cv.plotAlpha)
+            cmap_ax = self.figure.add_axes([0.95, 0.1, 0.03, 0.8])
+            cb = self.figure.colorbar(c, cax=cmap_ax, anchor=(1.0,0.0))
+            cb.ax.set_ylabel(cmap_label, rotation=-90, va='bottom', ha='right')
+
+
         self.ax = self.figure.axes[0]
+
 
         self.ax.margins(0.0, 0.0)
 
@@ -434,6 +451,8 @@ class OptionsDock(QDockWidget):
         self.colorbyBox = QComboBox(self)
         self.colorbyBox.addItem("material")
         self.colorbyBox.addItem("cell")
+        self.colorbyBox.addItem("temperature")
+        self.colorbyBox.addItem("density")
         self.colorbyBox.currentTextChanged[str].connect(self.mw.editColorBy)
 
         # Alpha
