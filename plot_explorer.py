@@ -436,6 +436,13 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
+    def editColorBarMinMax(self, min_val, max_val, property_type, apply=False):
+        self.model.activeView.colorbar_minmax[property_type] = (min_val, max_val)
+        self.plotIm.updateColorMinMax(min_val, max_val, property_type)
+        self.colorDialog.updateColorMinMax()
+        if apply:
+            self.applyChanges()
+
     def toggleMasking(self, state, apply=False):
         self.model.activeView.masking = bool(state)
         self.colorDialog.updateMasking()

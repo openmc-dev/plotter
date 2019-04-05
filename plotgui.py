@@ -347,8 +347,10 @@ class PlotImage(FigureCanvas):
             if cv.colorby == 'temperature':
                 idx = 0
                 cmap_label = "Temperature (K)"
+                clim = cv.colorbar_minmax[cv.colorby]
             else:
                 idx = 1
+                clim = cv.colorbar_minmax[cv.colorby]
                 cmap_label = "Density (g/ccm)"
 
             self.image = self.figure.subplots().imshow(self.model.properties[:,:,idx],
@@ -364,6 +366,7 @@ class PlotImage(FigureCanvas):
                                         rotation=-90,
                                         va='bottom',
                                         ha='right')
+            self.colorbar.set_clim(clim)
             # draw line on colorbar
             dl = self.colorbar.ax.dataLim.get_points()
             self.data_line = mlines.Line2D([dl[0][0], dl[1][0]],
@@ -394,6 +397,13 @@ class PlotImage(FigureCanvas):
         if self.colorbar and property_type == self.model.activeView.colorby:
             self.colorbar.set_cmap(colormap_name)
             self.image.set_cmap(colormap_name)
+            self.colorbar.draw_all()
+            self.draw()
+
+    def updateColorMinMax(self, min_val, max_val, property_type):
+        av = self.model.activeView
+        if self.colorbar and property_type == av.colorby:
+            self.colorbar.set_clim(*av.colorbar_minmax[property_type])
             self.colorbar.draw_all()
             self.draw()
 
@@ -786,12 +796,28 @@ class ColorDialog(QDialog):
         if index >= 0:
             self.temperatureTab.colormapBox.setCurrentIndex(index)
 
+    def updateColorMinMax(self):
+        minmax_dict = self.model.activeView.colorbar_minmax
+        self.densityTab.minBox.setValue(minmax_dict['density'][0])
+        self.densityTab.maxBox.setValue(minmax_dict['density'][1])
+        self.temperatureTab.minBox.setValue(minmax_dict['temperature'][0])
+        self.temperatureTab.maxBox.setValue(minmax_dict['temperature'][1])
+
+
     def createPropertyTab(self, property_kind):
 
         propertyTab = QWidget()
         propertyTab.property_kind = property_kind
         propertyTab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         propertyLayout = QVBoxLayout()
+
+        propertyTab.minBox = QDoubleSpinBox(self)
+        propertyTab.maxBox = QDoubleSpinBox(self)
+
+        connector = partial(self.mw.editColorBarMinMax, max_val=propertyTab.maxBox.value(), property_type=property_kind)
+        propertyTab.minBox.valueChanged.connect(connector)
+        connector = partial(self.mw.editColorBarMinMax, min_val=propertyTab.minBox.value(), property_type=property_kind)
+        propertyTab.maxBox.valueChanged.connect(connector)
 
         propertyTab.colormapBox = QComboBox(self)
         cmaps = sorted(m for m in mcolormaps.datad if not m.endswith("_r"))
@@ -808,6 +834,8 @@ class ColorDialog(QDialog):
         formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
 
         formLayout.addRow('Colormap:', propertyTab.colormapBox)
+        formLayout.addRow('Min: ', propertyTab.minBox)
+        formLayout.addRow('Max: ', propertyTab.maxBox)
 
         propertyTab.setLayout(formLayout)
 
@@ -833,6 +861,7 @@ class ColorDialog(QDialog):
         self.updateMasking()
         self.updateMaskingColor()
         self.updateColorMaps()
+        self.updateColorMinMax()
         self.updateHighlighting()
         self.updateHighlightColor()
         self.updateAlpha()
