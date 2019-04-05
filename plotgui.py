@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+from functools import partial
+
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
     QApplication, QGroupBox, QFormLayout, QLabel, QLineEdit, QComboBox,
@@ -12,6 +14,7 @@ from matplotlib.backends.qt_compat import is_pyqt5
 from matplotlib.figure import Figure
 from matplotlib import image as mpimage
 from matplotlib import lines as mlines
+from matplotlib import cm as mcolormaps
 
 import matplotlib.pyplot as plt
 
@@ -45,7 +48,12 @@ class PlotImage(FigureCanvas):
         self.band_origin = QtCore.QPoint()
         self.x_plot_origin = None
         self.y_plot_origin = None
+
+        self.colorbar = None
         self.data_line = None
+        self.image = None
+        self.colormap_temp = 'Oranges'
+        self.colormap_density = 'Greys'
 
         self.menu = QMenu(self)
 
@@ -333,37 +341,40 @@ class PlotImage(FigureCanvas):
             self.model.generatePlot()
 
         if cv.colorby in ('material', 'cell'):
-            c = self.figure.subplots().imshow(self.model.image,
+            self.image = self.figure.subplots().imshow(self.model.image,
                                               extent=data_bounds,
                                               alpha=cv.plotAlpha)
         else:
             if cv.colorby == 'temperature':
                 idx = 0
-                cmap = 'Oranges'
+                cmap = self.colormap_temp
                 cmap_label = "Temperature (K)"
             else:
                 idx = 1
-                cmap = 'Oranges'
+                cmap = self.colormap_density
                 cmap_label = "Density (g/ccm)"
 
-            c = self.figure.subplots().imshow(self.model.properties[:,:,idx],
+            self.image = self.figure.subplots().imshow(self.model.properties[:,:,idx],
                                               cmap=cmap,
                                               extent=data_bounds,
                                               alpha=cv.plotAlpha)
             cmap_ax = self.figure.add_axes([0.95, 0.1, 0.03, 0.8])
-            self.colorbar = self.figure.colorbar(c,
+            # add colorbar
+            self.colorbar = self.figure.colorbar(self.image,
                                                  cax=cmap_ax,
                                                  anchor=(1.0,0.0))
-            self.colorbar.ax.set_ylabel(cmap_label, rotation=-90, va='bottom', ha='right')
+            self.colorbar.ax.set_ylabel(cmap_label,
+                                        rotation=-90,
+                                        va='bottom',
+                                        ha='right')
+            # draw line on colorbar
             dl = self.colorbar.ax.dataLim.get_points()
             self.data_line = mlines.Line2D([dl[0][0], dl[1][0]],
-                                           [75, 75],
-                                           linewidth = 3.,
-                                           color = 'black',
-                                           clip_on = True)
-
+                                           [0.0, 0.0],
+                                           linewidth=3.,
+                                           color='blue',
+                                           clip_on=True)
             self.colorbar.ax.add_line(self.data_line)
-            # draw line on colorbar
 
         self.ax = self.figure.axes[0]
         self.ax.margins(0.0, 0.0)
@@ -380,6 +391,18 @@ class PlotImage(FigureCanvas):
             self.data_line.set_visible(True)
             data = self.data_line.get_data()
             self.data_line.set_data([data[0], [y_val, y_val]])
+            self.draw()
+
+    def updateColorMap(self, colormap_name, property_type):
+        if property_type == 'temperature':
+            self.colormap_temp = colormap_name
+        else:
+            self.colormap_density = colormap_name
+
+        if self.colorbar and property_type == self.model.activeView.colorby:
+            self.colorbar.set_cmap(colormap_name)
+            self.image.set_cmap(colormap_name)
+            self.colorbar.draw_all()
             self.draw()
 
 class OptionsDock(QDockWidget):
@@ -645,6 +668,9 @@ class ColorDialog(QDialog):
         self.matTable = self.createDomainTable(self.mw.materialsModel)
         self.cellTab = self.createDomainTab(self.cellTable)
         self.matTab = self.createDomainTab(self.matTable)
+        self.densityTab = self.createPropertyTab('density')
+        self.temperatureTab = self.createPropertyTab('temperature')
+
 
         self.tabs = QTabWidget()
         self.tabs.setMaximumHeight(800)
@@ -652,6 +678,8 @@ class ColorDialog(QDialog):
         self.tabs.addTab(self.generalTab, 'General')
         self.tabs.addTab(self.cellTab, 'Cells')
         self.tabs.addTab(self.matTab, 'Materials')
+        self.tabs.addTab(self.densityTab, 'Density')
+        self.tabs.addTab(self.temperatureTab, 'Temperature')
 
         self.createButtonBox()
 
@@ -756,6 +784,44 @@ class ColorDialog(QDialog):
         domainTab.setLayout(domainLayout)
 
         return domainTab
+
+    def editColorMap(self, colormap_name):
+        self.mw.editColorMap(colormap_name, self.property_kind)
+
+    def updateColorMap(self, colormap_name, property_type):
+        if property_type == 'temperature':
+            self.temperatureTab.colormapBox.setValue(colormap_name)
+        else:
+            self.densityTab.colormapBox.setValue(colormap_name)
+
+
+    def createPropertyTab(self, property_kind):
+
+        propertyTab = QWidget()
+        propertyTab.property_kind = property_kind
+        propertyTab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        propertyLayout = QVBoxLayout()
+
+        propertyTab.colormapBox = QComboBox(self)
+        cmaps = sorted(m for m in mcolormaps.datad if not m.endswith("_r"))
+        for cmap in cmaps:
+            propertyTab.colormapBox.addItem(cmap)
+
+        connector = partial(self.mw.editColorMap, property_type=property_kind)
+
+        propertyTab.colormapBox.currentTextChanged[str].connect(connector)
+
+        formLayout = QFormLayout()
+        formLayout.setAlignment(QtCore.Qt.AlignHCenter)
+        formLayout.setFormAlignment(QtCore.Qt.AlignHCenter)
+        formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
+
+        formLayout.addRow('Colormap:', propertyTab.colormapBox)
+
+
+        propertyTab.setLayout(formLayout)
+
+        return propertyTab
 
     def createButtonBox(self):
 

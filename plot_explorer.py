@@ -272,7 +272,6 @@ class MainWindow(QMainWindow):
         self.mainWindowAction.triggered.connect(self.showMainWindow)
 
         self.colorDialogAction = QAction('Color &Options', self)
-        self.colorDialogAction.setShortcut('Alt+D')
         self.colorDialogAction.setCheckable(True)
         self.colorDialogAction.setToolTip('Bring Color Dialog to front')
         self.colorDialogAction.setStatusTip('Bring Color Dialog to front')
@@ -427,6 +426,11 @@ class MainWindow(QMainWindow):
         self.model.activeView.colorby = domain_kind
         self.dock.updateColorBy()
         self.colorDialog.updateColorBy()
+        if apply:
+            self.applyChanges()
+
+    def editColorMap(self, colormap_name, property_type, apply=False):
+        self.plotIm.updateColorMap(colormap_name, property_type)
         if apply:
             self.applyChanges()
 
