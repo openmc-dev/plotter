@@ -272,6 +272,9 @@ class PlotView(_PlotBase):
 
         self.plotAlpha = 1.0
 
+        self.colormaps = { 'temperature' : 'Oranges',
+                           'density' : 'Greys' }
+
         self.cells = self.getDomains('geometry.xml', 'cell')
         self.materials = self.getDomains('materials.xml', 'material')
 

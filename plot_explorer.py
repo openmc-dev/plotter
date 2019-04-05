@@ -430,7 +430,9 @@ class MainWindow(QMainWindow):
             self.applyChanges()
 
     def editColorMap(self, colormap_name, property_type, apply=False):
+        self.model.activeView.colormaps[property_type] = colormap_name
         self.plotIm.updateColorMap(colormap_name, property_type)
+        self.colorDialog.updateColorMaps()
         if apply:
             self.applyChanges()
 

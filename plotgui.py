@@ -52,8 +52,6 @@ class PlotImage(FigureCanvas):
         self.colorbar = None
         self.data_line = None
         self.image = None
-        self.colormap_temp = 'Oranges'
-        self.colormap_density = 'Greys'
 
         self.menu = QMenu(self)
 
@@ -345,20 +343,19 @@ class PlotImage(FigureCanvas):
                                               extent=data_bounds,
                                               alpha=cv.plotAlpha)
         else:
+            cmap = cv.colormaps[cv.colorby]
             if cv.colorby == 'temperature':
                 idx = 0
-                cmap = self.colormap_temp
                 cmap_label = "Temperature (K)"
             else:
                 idx = 1
-                cmap = self.colormap_density
                 cmap_label = "Density (g/ccm)"
 
             self.image = self.figure.subplots().imshow(self.model.properties[:,:,idx],
                                               cmap=cmap,
                                               extent=data_bounds,
                                               alpha=cv.plotAlpha)
-            cmap_ax = self.figure.add_axes([0.95, 0.1, 0.03, 0.8])
+            cmap_ax = self.figure.add_axes([0.9, 0.1, 0.03, 0.8])
             # add colorbar
             self.colorbar = self.figure.colorbar(self.image,
                                                  cax=cmap_ax,
@@ -394,11 +391,6 @@ class PlotImage(FigureCanvas):
             self.draw()
 
     def updateColorMap(self, colormap_name, property_type):
-        if property_type == 'temperature':
-            self.colormap_temp = colormap_name
-        else:
-            self.colormap_density = colormap_name
-
         if self.colorbar and property_type == self.model.activeView.colorby:
             self.colorbar.set_cmap(colormap_name)
             self.image.set_cmap(colormap_name)
@@ -785,15 +777,14 @@ class ColorDialog(QDialog):
 
         return domainTab
 
-    def editColorMap(self, colormap_name):
-        self.mw.editColorMap(colormap_name, self.property_kind)
-
-    def updateColorMap(self, colormap_name, property_type):
-        if property_type == 'temperature':
-            self.temperatureTab.colormapBox.setValue(colormap_name)
-        else:
-            self.densityTab.colormapBox.setValue(colormap_name)
-
+    def updateColorMaps(self):
+        colormaps = self.model.activeView.colormaps
+        index = self.densityTab.colormapBox.findText(colormaps['density'], QtCore.Qt.MatchFixedString)
+        if index >= 0:
+            self.densityTab.colormapBox.setCurrentIndex(index)
+        index = self.densityTab.colormapBox.findText(colormaps['temperature'], QtCore.Qt.MatchFixedString)
+        if index >= 0:
+            self.temperatureTab.colormapBox.setCurrentIndex(index)
 
     def createPropertyTab(self, property_kind):
 
@@ -818,7 +809,6 @@ class ColorDialog(QDialog):
 
         formLayout.addRow('Colormap:', propertyTab.colormapBox)
 
-
         propertyTab.setLayout(formLayout)
 
         return propertyTab
@@ -842,6 +832,7 @@ class ColorDialog(QDialog):
 
         self.updateMasking()
         self.updateMaskingColor()
+        self.updateColorMaps()
         self.updateHighlighting()
         self.updateHighlightColor()
         self.updateAlpha()
