@@ -438,9 +438,18 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
-    def editColorBarMinMax(self, min_val, max_val, property_type, apply=False):
-        self.model.activeView.colorbar_minmax[property_type] = (min_val, max_val)
-        self.plotIm.updateColorMinMax(min_val, max_val, property_type)
+    def editColorBarMin(self, min_val, property_type, apply=False):
+        current = self.model.activeView.colorbar_minmax[property_type]
+        self.model.activeView.colorbar_minmax[property_type] = (min_val, current[1])
+        self.plotIm.updateColorMinMax(property_type)
+        self.colorDialog.updateColorMinMax()
+        if apply:
+            self.applyChanges()
+
+    def editColorBarMax(self, max_val, property_type, apply=False):
+        current = self.model.activeView.colorbar_minmax[property_type]
+        self.model.activeView.colorbar_minmax[property_type] = (current[0], max_val)
+        self.plotIm.updateColorMinMax(property_type)
         self.colorDialog.updateColorMinMax()
         if apply:
             self.applyChanges()

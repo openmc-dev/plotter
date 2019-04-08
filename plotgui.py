@@ -15,6 +15,7 @@ from matplotlib.figure import Figure
 from matplotlib import image as mpimage
 from matplotlib import lines as mlines
 from matplotlib import cm as mcolormaps
+from matplotlib.colors import LogNorm
 
 import matplotlib.pyplot as plt
 
@@ -353,7 +354,7 @@ class PlotImage(FigureCanvas):
                 clim = cv.colorbar_minmax[cv.colorby]
                 cmap_label = "Density (g/ccm)"
 
-            self.image = self.figure.subplots().imshow(self.model.properties[:,:,idx],
+            self.image = self.figure.subplots().matshow(self.model.properties[:,:,idx],
                                               cmap=cmap,
                                               extent=data_bounds,
                                               alpha=cv.plotAlpha)
@@ -375,6 +376,8 @@ class PlotImage(FigureCanvas):
                                            color='blue',
                                            clip_on=True)
             self.colorbar.ax.add_line(self.data_line)
+
+            self.updateColorMinMax(cv.colorby)
 
         self.ax = self.figure.axes[0]
         self.ax.margins(0.0, 0.0)
@@ -400,12 +403,13 @@ class PlotImage(FigureCanvas):
             self.colorbar.draw_all()
             self.draw()
 
-    def updateColorMinMax(self, min_val, max_val, property_type):
+    def updateColorMinMax(self, property_type):
         av = self.model.activeView
         if self.colorbar and property_type == av.colorby:
             self.colorbar.set_clim(*av.colorbar_minmax[property_type])
             self.colorbar.draw_all()
             self.draw()
+
 
 class OptionsDock(QDockWidget):
     def __init__(self, model, FM, parent=None):
@@ -814,9 +818,9 @@ class ColorDialog(QDialog):
         propertyTab.minBox = QDoubleSpinBox(self)
         propertyTab.maxBox = QDoubleSpinBox(self)
 
-        connector = partial(self.mw.editColorBarMinMax, max_val=propertyTab.maxBox.value(), property_type=property_kind)
+        connector = partial(self.mw.editColorBarMin, property_type=property_kind)
         propertyTab.minBox.valueChanged.connect(connector)
-        connector = partial(self.mw.editColorBarMinMax, min_val=propertyTab.minBox.value(), property_type=property_kind)
+        connector = partial(self.mw.editColorBarMax, property_type=property_kind)
         propertyTab.maxBox.valueChanged.connect(connector)
 
         propertyTab.colormapBox = QComboBox(self)

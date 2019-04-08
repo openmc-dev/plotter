@@ -169,11 +169,10 @@ class PlotModel():
 
         self.properties[self.properties < 0.0] = 0.0
 
-        cv.colorbar_minmax['temperature'] = (np.min(self.properties[:,:,0]),
-                                             np.max(self.properties[:,:,0]))
-        cv.colorbar_minmax['density'] = (np.min(self.properties[:,:,1]),
-                                         np.max(self.properties[:,:,1]))
-
+        self.activeView.colorbar_minmax['temperature'] = (np.min(self.properties[:,:,0]),
+                                                          np.max(self.properties[:,:,0]))
+        self.activeView.colorbar_minmax['density'] = (np.min(self.properties[:,:,1]),
+                                                      np.max(self.properties[:,:,1]))
 
     def undo(self):
         """ Revert to previous PlotView instance. Re-generate plot image """
@@ -282,6 +281,9 @@ class PlotView(_PlotBase):
 
         self.colorbar_minmax = { 'temperature' : (0.0, 0.0),
                                  'density'     : (0.0, 0.0) }
+
+        self.log_scale = { 'temperature' : False,
+                           'density' : False }
 
         self.cells = self.getDomains('geometry.xml', 'cell')
         self.materials = self.getDomains('materials.xml', 'material')
