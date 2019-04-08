@@ -348,10 +348,10 @@ class PlotImage(FigureCanvas):
             if cv.colorby == 'temperature':
                 idx = 0
                 cmap_label = "Temperature (K)"
-                clim = cv.colorbar_minmax[cv.colorby]
+                clim = cv.getDataLimits()[cv.colorby]
             else:
                 idx = 1
-                clim = cv.colorbar_minmax[cv.colorby]
+                clim = cv.getDataLimits()[cv.colorby]
                 cmap_label = "Density (g/ccm)"
 
             self.image = self.figure.subplots().matshow(self.model.properties[:,:,idx],
@@ -406,7 +406,7 @@ class PlotImage(FigureCanvas):
     def updateColorMinMax(self, property_type):
         av = self.model.activeView
         if self.colorbar and property_type == av.colorby:
-            self.colorbar.set_clim(*av.colorbar_minmax[property_type])
+            self.colorbar.set_clim(*av.getColorLimits(property_type))
             self.colorbar.draw_all()
             self.draw()
 
@@ -801,27 +801,38 @@ class ColorDialog(QDialog):
             self.temperatureTab.colormapBox.setCurrentIndex(index)
 
     def updateColorMinMax(self):
-        minmax_dict = self.model.activeView.colorbar_minmax
-        self.densityTab.minBox.setValue(minmax_dict['density'][0])
-        self.densityTab.maxBox.setValue(minmax_dict['density'][1])
-        self.temperatureTab.minBox.setValue(minmax_dict['temperature'][0])
-        self.temperatureTab.maxBox.setValue(minmax_dict['temperature'][1])
+        minmax = self.model.activeView.user_minmax['density']
+        self.densityTab.minBox.setValue(minmax[0])
+        self.densityTab.maxBox.setValue(minmax[1])
+        minmax = self.model.activeView.user_minmax['temperature']
+        self.temperatureTab.minBox.setValue(minmax[0])
+        self.temperatureTab.maxBox.setValue(minmax[1])
 
+        self.densityTab.minMaxCheckBox.setChecked(self.model.activeView.use_custom_minmax['density'])
+        self.temperatureTab.minMaxCheckBox.setChecked(self.model.activeView.use_custom_minmax['temperature'])
 
     def createPropertyTab(self, property_kind):
-
         propertyTab = QWidget()
         propertyTab.property_kind = property_kind
         propertyTab.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         propertyLayout = QVBoxLayout()
 
-        propertyTab.minBox = QDoubleSpinBox(self)
-        propertyTab.maxBox = QDoubleSpinBox(self)
+        propertyTab.minMaxCheckBox = QCheckBox()
+        propertyTab.minMaxCheckBox.setCheckable(True)
+        connector1 = partial(self.mw.toggleUserMinMax, property=property_kind)
+        propertyTab.minMaxCheckBox.stateChanged.connect(connector1)
 
-        connector = partial(self.mw.editColorBarMin, property_type=property_kind)
-        propertyTab.minBox.valueChanged.connect(connector)
-        connector = partial(self.mw.editColorBarMax, property_type=property_kind)
-        propertyTab.maxBox.valueChanged.connect(connector)
+        propertyTab.minBox = QDoubleSpinBox(self)
+        propertyTab.minBox.setMaximum(1E9)
+        propertyTab.minBox.setMinimum(0)
+        propertyTab.maxBox = QDoubleSpinBox(self)
+        propertyTab.maxBox.setMaximum(1E9)
+        propertyTab.maxBox.setMinimum(0)
+
+        connector2 = partial(self.mw.editColorBarMin, property_type=property_kind)
+        propertyTab.minBox.valueChanged.connect(connector2)
+        connector3 = partial(self.mw.editColorBarMax, property_type=property_kind)
+        propertyTab.maxBox.valueChanged.connect(connector3)
 
         propertyTab.colormapBox = QComboBox(self)
         cmaps = sorted(m for m in mcolormaps.datad if not m.endswith("_r"))
@@ -838,8 +849,11 @@ class ColorDialog(QDialog):
         formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
 
         formLayout.addRow('Colormap:', propertyTab.colormapBox)
-        formLayout.addRow('Min: ', propertyTab.minBox)
+
+        formLayout.addRow('Custom Min/Max', propertyTab.minMaxCheckBox)
+        formLayout.addRow(HorizontalLine())
         formLayout.addRow('Max: ', propertyTab.maxBox)
+        formLayout.addRow('Min: ', propertyTab.minBox)
 
         propertyTab.setLayout(formLayout)
 

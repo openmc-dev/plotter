@@ -439,20 +439,29 @@ class MainWindow(QMainWindow):
             self.applyChanges()
 
     def editColorBarMin(self, min_val, property_type, apply=False):
-        current = self.model.activeView.colorbar_minmax[property_type]
-        self.model.activeView.colorbar_minmax[property_type] = (min_val, current[1])
+        current = self.model.activeView.user_minmax[property_type]
+        self.model.activeView.user_minmax[property_type] = (min_val, current[1])
         self.plotIm.updateColorMinMax(property_type)
         self.colorDialog.updateColorMinMax()
         if apply:
             self.applyChanges()
 
     def editColorBarMax(self, max_val, property_type, apply=False):
-        current = self.model.activeView.colorbar_minmax[property_type]
-        self.model.activeView.colorbar_minmax[property_type] = (current[0], max_val)
+        current = self.model.activeView.user_minmax[property_type]
+        self.model.activeView.user_minmax[property_type] = (current[0], max_val)
         self.plotIm.updateColorMinMax(property_type)
         self.colorDialog.updateColorMinMax()
         if apply:
             self.applyChanges()
+
+    def toggleUserMinMax(self, state, property):
+        av = self.model.activeView
+        av.use_custom_minmax[property] = bool(state)
+        if av.user_minmax[property] == (0.0, 0.0):
+            self.model.activeView.user_minmax[property] = copy.copy(av.data_minmax[property])
+        self.plotIm.updateColorMinMax('temperature')
+        self.plotIm.updateColorMinMax('density')
+        self.colorDialog.updateColorMinMax()
 
     def toggleMasking(self, state, apply=False):
         self.model.activeView.masking = bool(state)

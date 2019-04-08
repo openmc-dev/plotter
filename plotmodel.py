@@ -169,9 +169,9 @@ class PlotModel():
 
         self.properties[self.properties < 0.0] = 0.0
 
-        self.activeView.colorbar_minmax['temperature'] = (np.min(self.properties[:,:,0]),
+        self.activeView.data_minmax['temperature'] = (np.min(self.properties[:,:,0]),
                                                           np.max(self.properties[:,:,0]))
-        self.activeView.colorbar_minmax['density'] = (np.min(self.properties[:,:,1]),
+        self.activeView.data_minmax['density'] = (np.min(self.properties[:,:,1]),
                                                       np.max(self.properties[:,:,1]))
 
     def undo(self):
@@ -279,8 +279,14 @@ class PlotView(_PlotBase):
         self.colormaps = { 'temperature' : 'Oranges',
                            'density' : 'Greys' }
 
-        self.colorbar_minmax = { 'temperature' : (0.0, 0.0),
-                                 'density'     : (0.0, 0.0) }
+        self.data_minmax = { 'temperature' : (0.0, 0.0),
+                             'density'     : (0.0, 0.0) }
+
+        self.user_minmax = { 'temperature' : (0.0, 0.0),
+                             'density'     : (0.0, 0.0) }
+
+        self.use_custom_minmax = {'temperature' : False,
+                                  'density' : False}
 
         self.log_scale = { 'temperature' : False,
                            'density' : False }
@@ -337,6 +343,15 @@ class PlotView(_PlotBase):
                                           False)
 
         return domains
+
+    def getDataLimits(self):
+        return self.data_minmax
+
+    def getColorLimits(self, property):
+        if self.use_custom_minmax[property]:
+            return self.user_minmax[property]
+        else:
+            return self.data_minmax[property]
 
 class DomainView():
     """ Represents view settings for OpenMC cell or material.
