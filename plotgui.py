@@ -243,7 +243,13 @@ class PlotImage(FigureCanvas):
 
         id, properties, domain, domain_kind = self.getIDinfo(event)
 
-        if id != str(_NOT_FOUND):
+        # always provide undo option
+        self.menu.addSeparator()
+        self.menu.addAction(self.mw.undoAction)
+        self.menu.addAction(self.mw.redoAction)
+        self.menu.addSeparator()
+
+        if id != str(_NOT_FOUND) and domain_kind.lower() not in ('density', 'temperature'):
 
             # Domain ID
             domainID = self.menu.addAction(f"{domain_kind} {id}")
@@ -253,11 +259,6 @@ class PlotImage(FigureCanvas):
             if domain[id].name:
                 domainName = self.menu.addAction(domain[id].name)
                 domainName.setDisabled(True)
-
-            self.menu.addSeparator()
-            self.menu.addAction(self.mw.undoAction)
-            self.menu.addAction(self.mw.redoAction)
-            self.menu.addSeparator()
 
             colorAction = self.menu.addAction(f'Edit {domain_kind} Color...')
             colorAction.setDisabled(self.model.currentView.highlighting)
@@ -302,9 +303,10 @@ class PlotImage(FigureCanvas):
         self.menu.addMenu(self.mw.basisMenu)
         self.menu.addMenu(self.mw.colorbyMenu)
         self.menu.addSeparator()
-        self.menu.addAction(self.mw.maskingAction)
-        self.menu.addAction(self.mw.highlightingAct)
-        self.menu.addSeparator()
+        if domain_kind.lower() not in ('density', 'temperature'):
+            self.menu.addAction(self.mw.maskingAction)
+            self.menu.addAction(self.mw.highlightingAct)
+            self.menu.addSeparator()
         self.menu.addAction(self.mw.dockAction)
 
         self.mw.maskingAction.setChecked(self.model.currentView.masking)
