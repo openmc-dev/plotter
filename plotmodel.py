@@ -21,6 +21,7 @@ __VERSION__ = "0.1.0"
 _VOID_REGION = -1
 _NOT_FOUND = -2
 
+_MODEL_PROPERTIES = ('temperature', 'density')
 
 class PlotModel():
     """ Geometry and plot settings for OpenMC Plot Explorer model

@@ -20,9 +20,9 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
 
-        openmc.capi.init(['-c'])
-
         self.setWindowTitle('OpenMC Plot Explorer')
+
+        openmc.capi.init(["-c"])
 
         self.restored = False
         self.pixmap = None
@@ -81,7 +81,6 @@ class MainWindow(QMainWindow):
     # Create and update menus:
     def createMenuBar(self):
         self.mainMenu = self.menuBar()
-
 
         # File Menu
         self.saveImageAction = QAction("&Save Image As...", self)

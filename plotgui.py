@@ -27,7 +27,8 @@ else:
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
 from plot_colors import rgb_normalize, invert_rgb
-from plotmodel import DomainDelegate, _NOT_FOUND, _VOID_REGION
+from plotmodel import DomainDelegate
+from plotmodel import _NOT_FOUND, _VOID_REGION, _MODEL_PROPERTIES
 
 class PlotImage(FigureCanvas):
 
@@ -163,7 +164,7 @@ class PlotImage(FigureCanvas):
         id, properties, domain, domain_kind = self.getIDinfo(event)
         if self.ax.contains_point((event.pos().x(), event.pos().y())):
 
-            if domain_kind.lower() in ('temperature', 'density'):
+            if domain_kind.lower() in _MODEL_PROPERTIES:
                 line_val = float(properties[domain_kind.lower()])
                 self.updateDataindicatorValue(line_val if line_val >= 0.0 else 0.0)
 
@@ -290,7 +291,7 @@ class PlotImage(FigureCanvas):
             self.menu.addAction(self.mw.undoAction)
             self.menu.addAction(self.mw.redoAction)
 
-            if cv.colorby not in ('temperature', 'density'):
+            if cv.colorby not in _MODEL_PROPERTIES:
                 self.menu.addSeparator()
                 bgColorAction = self.menu.addAction('Edit Background Color...')
                 bgColorAction.setToolTip('Edit background color')
@@ -402,7 +403,7 @@ class PlotImage(FigureCanvas):
 
     def updateDataindicatorVisibility(self):
         av = self.model.activeView
-        if self.data_indicator and av.colorby in ('temperature', 'density'):
+        if self.data_indicator and av.colorby in _MODEL_PROPERTIES:
             val = av.dataindicator_enabled[av.colorby]
             self.data_indicator.set_visible(val)
             self.draw()
@@ -820,15 +821,17 @@ class ColorDialog(QDialog):
             self.temperatureTab.colormapBox.setCurrentIndex(index)
 
     def updateColorMinMax(self):
-        minmax = self.model.activeView.user_minmax['density']
-        self.densityTab.minBox.setValue(minmax[0])
-        self.densityTab.maxBox.setValue(minmax[1])
         minmax = self.model.activeView.user_minmax['temperature']
         self.temperatureTab.minBox.setValue(minmax[0])
         self.temperatureTab.maxBox.setValue(minmax[1])
 
-        self.densityTab.minMaxCheckBox.setChecked(self.model.activeView.use_custom_minmax['density'])
+        minmax = self.model.activeView.user_minmax['density']
+        self.densityTab.minBox.setValue(minmax[0])
+        self.densityTab.maxBox.setValue(minmax[1])
+
         self.temperatureTab.minMaxCheckBox.setChecked(self.model.activeView.use_custom_minmax['temperature'])
+        self.densityTab.minMaxCheckBox.setChecked(self.model.activeView.use_custom_minmax['density'])
+
 
     def createPropertyTab(self, property_kind):
         propertyTab = QWidget()
