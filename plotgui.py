@@ -26,7 +26,7 @@ else:
     from matplotlib.backends.backend_qt5agg import (
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
-from plot_colors import rgb_normalize
+from plot_colors import rgb_normalize, invert_rgb
 from plotmodel import DomainDelegate, _NOT_FOUND, _VOID_REGION
 
 class PlotImage(FigureCanvas):
@@ -394,6 +394,8 @@ class PlotImage(FigureCanvas):
         if self.data_line:
             data = self.data_line.get_data()
             self.data_line.set_data([data[0], [y_val, y_val]])
+            dl_color = invert_rgb(self.colorbar.get_cmap()(y_val), True)
+            self.data_line.set_c(dl_color)
             self.draw()
 
     def updateDataLineVisibility(self):
