@@ -454,6 +454,13 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
+    def toggleColorBarScale(self, state, property, apply=False):
+        av = self.model.currentView
+        av.color_scale_log[property] = bool(state)
+        self.plotIm.updateColorBarScale()
+        if apply:
+            self.applyChanges()
+
     def toggleUserMinMax(self, state, property):
         av = self.model.activeView
         av.use_custom_minmax[property] = bool(state)
@@ -463,7 +470,7 @@ class MainWindow(QMainWindow):
         self.plotIm.updateColorMinMax('density')
         self.colorDialog.updateColorMinMax()
 
-    def toggleDataindicatorCheckBox(self, state, property, apply=False):
+    def toggleDataIndicatorCheckBox(self, state, property, apply=False):
         av = self.model.activeView
         av.dataindicator_enabled[property] = bool(state)
         self.plotIm.updateDataindicatorVisibility()

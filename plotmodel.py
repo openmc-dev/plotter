@@ -280,20 +280,12 @@ class PlotView(_PlotBase):
         self.colormaps = { 'temperature' : 'Oranges',
                            'density' : 'Greys' }
 
-        self.data_minmax = { 'temperature' : (0.0, 0.0),
-                             'density'     : (0.0, 0.0) }
-
-        self.user_minmax = { 'temperature' : (0.0, 0.0),
-                             'density'     : (0.0, 0.0) }
-
-        self.use_custom_minmax = {'temperature' : False,
-                                  'density' : False}
-
-        self.log_scale = { 'temperature' : False,
-                           'density' : False }
-
-        self.dataindicator_enabled = { 'temperature' : False,
-                                       'density' : False }
+        # set defaults for color dialog
+        self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
+        self.user_minmax =  {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
+        self.use_custom_minmax = {prop: False for prop in _MODEL_PROPERTIES}
+        self.dataindicator_enabled = {prop: False for prop in _MODEL_PROPERTIES}
+        self.color_scale_log = {prop: False for prop in _MODEL_PROPERTIES}
 
         self.cells = self.getDomains('geometry.xml', 'cell')
         self.materials = self.getDomains('materials.xml', 'material')

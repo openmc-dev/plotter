@@ -15,7 +15,7 @@ from matplotlib.figure import Figure
 from matplotlib import image as mpimage
 from matplotlib import lines as mlines
 from matplotlib import cm as mcolormaps
-from matplotlib.colors import LogNorm
+from matplotlib.colors import SymLogNorm, NoNorm
 
 import matplotlib.pyplot as plt
 
@@ -323,7 +323,7 @@ class PlotImage(FigureCanvas):
 
         self.menu.exec_(event.globalPos())
 
-    def setPixmap(self, w, h):
+    def setPixmap(self, w=None, h=None):
 
         # clear out figure
         self.figure.clear()
@@ -333,8 +333,10 @@ class PlotImage(FigureCanvas):
         window_background = self.parent.palette().color(QtGui.QPalette.Background)
         self.figure.patch.set_facecolor(rgb_normalize(window_background.getRgb()))
         # set figure width
-        self.figure.set_figwidth(0.99 * w / self.figure.get_dpi())
-        self.figure.set_figheight(0.99 * h / self.figure.get_dpi())
+        if w:
+            self.figure.set_figwidth(0.99 * w / self.figure.get_dpi())
+        if h:
+            self.figure.set_figheight(0.99 * h / self.figure.get_dpi())
         # set data extents for automatic reporting of pointer location
         data_bounds = [cv.origin[self.mw.xBasis] - cv.width/2.,
                        cv.origin[self.mw.xBasis] + cv.width/2.,
@@ -358,16 +360,19 @@ class PlotImage(FigureCanvas):
                 idx = 1
                 cmap_label = "Density (g/ccm)"
 
+            norm = SymLogNorm(1E-2) if cv.color_scale_log[cv.colorby] else None
+
             self.image = self.figure.subplots().matshow(self.model.properties[:,:,idx],
-                                              cmap=cmap,
-                                              extent=data_bounds,
-                                              alpha=cv.plotAlpha)
+                                                        cmap=cmap,
+                                                        norm=norm,
+                                                        extent=data_bounds,
+                                                        alpha=cv.plotAlpha)
             cmap_ax = self.figure.add_axes([0.9, 0.1, 0.03, 0.8])
+
             # add colorbar
             self.colorbar = self.figure.colorbar(self.image,
                                                  cax=cmap_ax,
                                                  anchor=(1.0,0.0))
-            self.colorbar.on_mappable_changed(self.image)
             self.colorbar.ax.set_ylabel(cmap_label,
                                         rotation=-90,
                                         va='bottom',
@@ -392,6 +397,9 @@ class PlotImage(FigureCanvas):
         self.ax.set_ylabel(axis_label_str.format(cv.basis[1]))
 
         self.draw()
+
+    def updateColorBarScale(self):
+        self.setPixmap()
 
     def updateDataindicatorValue(self, y_val):
         if self.data_indicator:
@@ -832,6 +840,10 @@ class ColorDialog(QDialog):
         self.temperatureTab.minMaxCheckBox.setChecked(self.model.activeView.use_custom_minmax['temperature'])
         self.densityTab.minMaxCheckBox.setChecked(self.model.activeView.use_custom_minmax['density'])
 
+    def updateColorBarScale(self):
+        av = self.model.activeView
+        self.temperatureTab.colorBarScaleCheckBox.setChecked(av.color_scale_log['temperature'])
+        self.densityTab.colorBarScaleCheckBox.setChecked(av.color_scale_log['density'])
 
     def createPropertyTab(self, property_kind):
         propertyTab = QWidget()
@@ -867,8 +879,13 @@ class ColorDialog(QDialog):
 
         propertyTab.dataindicatorCheckBox = QCheckBox()
         propertyTab.dataindicatorCheckBox.setCheckable(True)
-        connector4 = partial(self.mw.toggleDataindicatorCheckBox, property=property_kind)
+        connector4 = partial(self.mw.toggleDataIndicatorCheckBox, property=property_kind)
         propertyTab.dataindicatorCheckBox.stateChanged.connect(connector4)
+
+        propertyTab.colorBarScaleCheckBox = QCheckBox()
+        propertyTab.colorBarScaleCheckBox.setCheckable(True)
+        connector5 = partial(self.mw.toggleColorBarScale, property=property_kind)
+        propertyTab.colorBarScaleCheckBox.stateChanged.connect(connector5)
 
         formLayout = QFormLayout()
         formLayout.setAlignment(QtCore.Qt.AlignHCenter)
@@ -879,6 +896,7 @@ class ColorDialog(QDialog):
 
         formLayout.addRow('Custom Min/Max', propertyTab.minMaxCheckBox)
         formLayout.addRow('Data Indicator', propertyTab.dataindicatorCheckBox)
+        formLayout.addRow('Log Scale', propertyTab.colorBarScaleCheckBox)
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Max: ', propertyTab.maxBox)
         formLayout.addRow('Min: ', propertyTab.minBox)
@@ -908,6 +926,7 @@ class ColorDialog(QDialog):
         self.updateMaskingColor()
         self.updateColorMaps()
         self.updateColorMinMax()
+        self.updateColorBarScale()
         self.updateDataindicatorVisibility()
         self.updateHighlighting()
         self.updateHighlightColor()
