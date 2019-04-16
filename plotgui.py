@@ -165,8 +165,7 @@ class PlotImage(FigureCanvas):
 
             if domain_kind.lower() in ('temperature', 'density'):
                 line_val = float(properties[domain_kind.lower()])
-                self.updateDataLine(line_val if line_val >= 0.0 else 0.0,
-                                    True)
+                self.updateDataLineValue(line_val if line_val >= 0.0 else 0.0)
 
             if id == str(_VOID_REGION):
                 domainInfo = ("VOID")
@@ -182,7 +181,7 @@ class PlotImage(FigureCanvas):
                 domainInfo = ""
         else:
             domainInfo = ""
-            self.updateDataLine(0.0, False)
+            self.updateDataLineValue(0.0)
 
         self.mw.statusBar().showMessage(f" {domainInfo}")
 
@@ -378,7 +377,7 @@ class PlotImage(FigureCanvas):
                                            color='blue',
                                            clip_on=True)
             self.colorbar.ax.add_line(self.data_line)
-
+            self.updateDataLineVisibility()
             self.updateColorMinMax(cv.colorby)
 
         self.ax = self.figure.axes[0]
@@ -391,11 +390,17 @@ class PlotImage(FigureCanvas):
 
         self.draw()
 
-    def updateDataLine(self, y_val, visible):
+    def updateDataLineValue(self, y_val):
         if self.data_line:
-            self.data_line.set_visible(True)
             data = self.data_line.get_data()
             self.data_line.set_data([data[0], [y_val, y_val]])
+            self.draw()
+
+    def updateDataLineVisibility(self):
+        av = self.model.activeView
+        if self.data_line and av.colorby in ('temperature', 'density'):
+            val = av.dataline_enabled[av.colorby]
+            self.data_line.set_visible(val)
             self.draw()
 
     def updateColorMap(self, colormap_name, property_type):
@@ -408,7 +413,10 @@ class PlotImage(FigureCanvas):
     def updateColorMinMax(self, property_type):
         av = self.model.activeView
         if self.colorbar and property_type == av.colorby:
-            self.colorbar.set_clim(*av.getColorLimits(property_type))
+            clim = av.getColorLimits(property_type)
+            self.colorbar.set_clim(*clim)
+            self.data_line.set_data((clim[0], clim[1]),
+                                    (0.0, 0.0))
             self.colorbar.draw_all()
             self.draw()
 
@@ -793,6 +801,11 @@ class ColorDialog(QDialog):
 
         return domainTab
 
+    def updateDataLineVisibility(self):
+        av = self.model.activeView
+        self.densityTab.datalineCheckBox.setChecked(av.dataline_enabled['temperature'])
+        self.densityTab.datalineCheckBox.setChecked(av.dataline_enabled['density'])
+
     def updateColorMaps(self):
         colormaps = self.model.activeView.colormaps
         index = self.densityTab.colormapBox.findText(colormaps['density'], QtCore.Qt.MatchFixedString)
@@ -845,6 +858,11 @@ class ColorDialog(QDialog):
 
         propertyTab.colormapBox.currentTextChanged[str].connect(connector)
 
+        propertyTab.datalineCheckBox = QCheckBox()
+        propertyTab.datalineCheckBox.setCheckable(True)
+        connector4 = partial(self.mw.toggleDataLineCheckBox, property=property_kind)
+        propertyTab.datalineCheckBox.stateChanged.connect(connector4)
+
         formLayout = QFormLayout()
         formLayout.setAlignment(QtCore.Qt.AlignHCenter)
         formLayout.setFormAlignment(QtCore.Qt.AlignHCenter)
@@ -853,6 +871,7 @@ class ColorDialog(QDialog):
         formLayout.addRow('Colormap:', propertyTab.colormapBox)
 
         formLayout.addRow('Custom Min/Max', propertyTab.minMaxCheckBox)
+        formLayout.addRow('Data Line', propertyTab.datalineCheckBox)
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Max: ', propertyTab.maxBox)
         formLayout.addRow('Min: ', propertyTab.minBox)
@@ -882,6 +901,7 @@ class ColorDialog(QDialog):
         self.updateMaskingColor()
         self.updateColorMaps()
         self.updateColorMinMax()
+        self.updateDataLineVisibility()
         self.updateHighlighting()
         self.updateHighlightColor()
         self.updateAlpha()

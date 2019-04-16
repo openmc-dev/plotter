@@ -291,6 +291,9 @@ class PlotView(_PlotBase):
         self.log_scale = { 'temperature' : False,
                            'density' : False }
 
+        self.dataline_enabled = { 'temperature' : False,
+                                  'density' : False }
+
         self.cells = self.getDomains('geometry.xml', 'cell')
         self.materials = self.getDomains('materials.xml', 'material')
 

@@ -354,6 +354,7 @@ class MainWindow(QMainWindow):
             if saved['version'] == self.model.version:
                 self.model.activeView = saved['current']
                 self.dock.updateDock()
+                self.colorDialog.updateDialogValues()
                 self.applyChanges()
                 message = f'{filename} settings loaded'
             else:
@@ -441,16 +442,16 @@ class MainWindow(QMainWindow):
     def editColorBarMin(self, min_val, property_type, apply=False):
         current = self.model.activeView.user_minmax[property_type]
         self.model.activeView.user_minmax[property_type] = (min_val, current[1])
-        self.plotIm.updateColorMinMax(property_type)
         self.colorDialog.updateColorMinMax()
+        self.plotIm.updateColorMinMax(property_type)
         if apply:
             self.applyChanges()
 
     def editColorBarMax(self, max_val, property_type, apply=False):
         current = self.model.activeView.user_minmax[property_type]
         self.model.activeView.user_minmax[property_type] = (current[0], max_val)
-        self.plotIm.updateColorMinMax(property_type)
         self.colorDialog.updateColorMinMax()
+        self.plotIm.updateColorMinMax(property_type)
         if apply:
             self.applyChanges()
 
@@ -462,6 +463,13 @@ class MainWindow(QMainWindow):
         self.plotIm.updateColorMinMax('temperature')
         self.plotIm.updateColorMinMax('density')
         self.colorDialog.updateColorMinMax()
+
+    def toggleDataLineCheckBox(self, state, property, apply=False):
+        av = self.model.activeView
+        av.dataline_enabled[property] = bool(state)
+        self.plotIm.updateDataLineVisibility()
+        if apply:
+            self.applyChanges()
 
     def toggleMasking(self, state, apply=False):
         self.model.activeView.masking = bool(state)
