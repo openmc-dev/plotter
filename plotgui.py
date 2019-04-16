@@ -51,7 +51,7 @@ class PlotImage(FigureCanvas):
         self.y_plot_origin = None
 
         self.colorbar = None
-        self.data_line = None
+        self.data_indicator = None
         self.image = None
 
         self.menu = QMenu(self)
@@ -165,7 +165,7 @@ class PlotImage(FigureCanvas):
 
             if domain_kind.lower() in ('temperature', 'density'):
                 line_val = float(properties[domain_kind.lower()])
-                self.updateDataLineValue(line_val if line_val >= 0.0 else 0.0)
+                self.updateDataindicatorValue(line_val if line_val >= 0.0 else 0.0)
 
             if id == str(_VOID_REGION):
                 domainInfo = ("VOID")
@@ -181,7 +181,7 @@ class PlotImage(FigureCanvas):
                 domainInfo = ""
         else:
             domainInfo = ""
-            self.updateDataLineValue(0.0)
+            self.updateDataindicatorValue(0.0)
 
         self.mw.statusBar().showMessage(f" {domainInfo}")
 
@@ -349,10 +349,8 @@ class PlotImage(FigureCanvas):
             if cv.colorby == 'temperature':
                 idx = 0
                 cmap_label = "Temperature (K)"
-                clim = cv.getDataLimits()[cv.colorby]
             else:
                 idx = 1
-                clim = cv.getDataLimits()[cv.colorby]
                 cmap_label = "Density (g/ccm)"
 
             self.image = self.figure.subplots().matshow(self.model.properties[:,:,idx],
@@ -364,20 +362,20 @@ class PlotImage(FigureCanvas):
             self.colorbar = self.figure.colorbar(self.image,
                                                  cax=cmap_ax,
                                                  anchor=(1.0,0.0))
+            self.colorbar.on_mappable_changed(self.image)
             self.colorbar.ax.set_ylabel(cmap_label,
                                         rotation=-90,
                                         va='bottom',
                                         ha='right')
-            self.colorbar.set_clim(clim)
             # draw line on colorbar
             dl = self.colorbar.ax.dataLim.get_points()
-            self.data_line = mlines.Line2D([dl[0][0], dl[1][0]],
-                                           [0.0, 0.0],
-                                           linewidth=3.,
-                                           color='blue',
-                                           clip_on=True)
-            self.colorbar.ax.add_line(self.data_line)
-            self.updateDataLineVisibility()
+            self.data_indicator = mlines.Line2D(dl[:][0],
+                                                [0.0, 0.0],
+                                                linewidth=3.,
+                                                color='blue',
+                                                clip_on=True)
+            self.colorbar.ax.add_line(self.data_indicator)
+            self.updateDataindicatorVisibility()
             self.updateColorMinMax(cv.colorby)
 
         self.ax = self.figure.axes[0]
@@ -390,19 +388,19 @@ class PlotImage(FigureCanvas):
 
         self.draw()
 
-    def updateDataLineValue(self, y_val):
-        if self.data_line:
-            data = self.data_line.get_data()
-            self.data_line.set_data([data[0], [y_val, y_val]])
+    def updateDataindicatorValue(self, y_val):
+        if self.data_indicator:
+            data = self.data_indicator.get_data()
+            self.data_indicator.set_data([data[0], [y_val, y_val]])
             dl_color = invert_rgb(self.colorbar.get_cmap()(y_val), True)
-            self.data_line.set_c(dl_color)
+            self.data_indicator.set_c(dl_color)
             self.draw()
 
-    def updateDataLineVisibility(self):
+    def updateDataindicatorVisibility(self):
         av = self.model.activeView
-        if self.data_line and av.colorby in ('temperature', 'density'):
-            val = av.dataline_enabled[av.colorby]
-            self.data_line.set_visible(val)
+        if self.data_indicator and av.colorby in ('temperature', 'density'):
+            val = av.dataindicator_enabled[av.colorby]
+            self.data_indicator.set_visible(val)
             self.draw()
 
     def updateColorMap(self, colormap_name, property_type):
@@ -417,8 +415,8 @@ class PlotImage(FigureCanvas):
         if self.colorbar and property_type == av.colorby:
             clim = av.getColorLimits(property_type)
             self.colorbar.set_clim(*clim)
-            self.data_line.set_data((clim[0], clim[1]),
-                                    (0.0, 0.0))
+            self.data_indicator.set_data((clim[0], clim[1]),
+                                         (0.0, 0.0))
             self.colorbar.draw_all()
             self.draw()
 
@@ -803,10 +801,10 @@ class ColorDialog(QDialog):
 
         return domainTab
 
-    def updateDataLineVisibility(self):
+    def updateDataindicatorVisibility(self):
         av = self.model.activeView
-        self.densityTab.datalineCheckBox.setChecked(av.dataline_enabled['temperature'])
-        self.densityTab.datalineCheckBox.setChecked(av.dataline_enabled['density'])
+        self.densityTab.dataindicatorCheckBox.setChecked(av.dataindicator_enabled['temperature'])
+        self.densityTab.dataindicatorCheckBox.setChecked(av.dataindicator_enabled['density'])
 
     def updateColorMaps(self):
         colormaps = self.model.activeView.colormaps
@@ -860,10 +858,10 @@ class ColorDialog(QDialog):
 
         propertyTab.colormapBox.currentTextChanged[str].connect(connector)
 
-        propertyTab.datalineCheckBox = QCheckBox()
-        propertyTab.datalineCheckBox.setCheckable(True)
-        connector4 = partial(self.mw.toggleDataLineCheckBox, property=property_kind)
-        propertyTab.datalineCheckBox.stateChanged.connect(connector4)
+        propertyTab.dataindicatorCheckBox = QCheckBox()
+        propertyTab.dataindicatorCheckBox.setCheckable(True)
+        connector4 = partial(self.mw.toggleDataindicatorCheckBox, property=property_kind)
+        propertyTab.dataindicatorCheckBox.stateChanged.connect(connector4)
 
         formLayout = QFormLayout()
         formLayout.setAlignment(QtCore.Qt.AlignHCenter)
@@ -873,7 +871,7 @@ class ColorDialog(QDialog):
         formLayout.addRow('Colormap:', propertyTab.colormapBox)
 
         formLayout.addRow('Custom Min/Max', propertyTab.minMaxCheckBox)
-        formLayout.addRow('Data Line', propertyTab.datalineCheckBox)
+        formLayout.addRow('Data Indicator', propertyTab.dataindicatorCheckBox)
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Max: ', propertyTab.maxBox)
         formLayout.addRow('Min: ', propertyTab.minBox)
@@ -903,7 +901,7 @@ class ColorDialog(QDialog):
         self.updateMaskingColor()
         self.updateColorMaps()
         self.updateColorMinMax()
-        self.updateDataLineVisibility()
+        self.updateDataindicatorVisibility()
         self.updateHighlighting()
         self.updateHighlightColor()
         self.updateAlpha()

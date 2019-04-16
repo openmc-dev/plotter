@@ -464,10 +464,10 @@ class MainWindow(QMainWindow):
         self.plotIm.updateColorMinMax('density')
         self.colorDialog.updateColorMinMax()
 
-    def toggleDataLineCheckBox(self, state, property, apply=False):
+    def toggleDataindicatorCheckBox(self, state, property, apply=False):
         av = self.model.activeView
-        av.dataline_enabled[property] = bool(state)
-        self.plotIm.updateDataLineVisibility()
+        av.dataindicator_enabled[property] = bool(state)
+        self.plotIm.updateDataindicatorVisibility()
         if apply:
             self.applyChanges()
 
