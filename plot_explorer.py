@@ -7,16 +7,16 @@ import os
 from pathlib import Path
 import pickle
 import sys
+import time
 
 import openmc
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMenu, QAction, QFileDialog,
-                               QColorDialog, QInputDialog)
+                               QColorDialog, QInputDialog, QSplashScreen)
 
 from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, ColorDialog, OptionsDock
-
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -24,6 +24,9 @@ class MainWindow(QMainWindow):
 
         self.setWindowTitle('OpenMC Plot Explorer')
 
+    def loadGui(self):
+
+        openmc.capi.set_verbosity(0)
         openmc.capi.init(["-c"])
 
         self.restored = False
@@ -78,6 +81,7 @@ class MainWindow(QMainWindow):
             # Timer allows GUI to render before plot finishes loading
             QtCore.QTimer.singleShot(0, self.model.generatePlot)
             QtCore.QTimer.singleShot(0, self.showCurrentView)
+
 
     # Create and update menus:
     def createMenuBar(self):
@@ -793,15 +797,35 @@ class MainWindow(QMainWindow):
 
 if __name__ == '__main__':
 
+    path_icon = str(Path(__file__).parent / 'openmc_logo.png')
+    path_splash = str(Path(__file__).parent / 'splash.png')
+
+
     app = QApplication(sys.argv)
     app.setOrganizationName("OpenMC")
     app.setOrganizationDomain("openmc.org")
     app.setApplicationName("OpenMC Plot Explorer")
-    path_logo = Path(__file__).parent / 'openmc_logo.png'
-    app.setWindowIcon(QtGui.QIcon(str(path_logo)))
+    app.setWindowIcon(QtGui.QIcon(path_icon))
     app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, True)
+
+    splash_pix = QtGui.QPixmap(path_splash)
+    splash = QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)
+    splash.setPixmap(splash_pix)
+    splash.setMask(splash_pix.mask())
+    splash.showMessage("Starting GUI...", QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+    splash.show()
+
+    # this loop sucks, but it makes the splashscreen work
+    start = time.time()
+    timer = 0.0
+    while timer < 0.1:
+        timer = time.time() - start
+        time.sleep(0.001)
+        app.processEvents()
 
     FM = QtGui.QFontMetricsF(app.font())
     mainWindow = MainWindow()
+    mainWindow.loadGui()
     mainWindow.show()
+    splash.close()
     sys.exit(app.exec_())
