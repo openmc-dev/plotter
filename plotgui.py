@@ -242,13 +242,15 @@ class PlotImage(FigureCanvas):
 
         id, properties, domain, domain_kind = self.getIDinfo(event)
 
+        cv = self.model.currentView
+
         # always provide undo option
         self.menu.addSeparator()
         self.menu.addAction(self.mw.undoAction)
         self.menu.addAction(self.mw.redoAction)
         self.menu.addSeparator()
 
-        if id != str(_NOT_FOUND) and domain_kind.lower() not in ('density', 'temperature'):
+        if id != str(_NOT_FOUND) and cv.colorby not in ('density', 'temperature'):
 
             # Domain ID
             domainID = self.menu.addAction(f"{domain_kind} {id}")
@@ -260,7 +262,7 @@ class PlotImage(FigureCanvas):
                 domainName.setDisabled(True)
 
             colorAction = self.menu.addAction(f'Edit {domain_kind} Color...')
-            colorAction.setDisabled(self.model.currentView.highlighting)
+            colorAction.setDisabled(cv.highlighting)
             colorAction.setToolTip(f'Edit {domain_kind} color')
             colorAction.setStatusTip(f'Edit {domain_kind} color')
             colorAction.triggered.connect(lambda :
@@ -269,7 +271,7 @@ class PlotImage(FigureCanvas):
             maskAction = self.menu.addAction(f'Mask {domain_kind}')
             maskAction.setCheckable(True)
             maskAction.setChecked(domain[id].masked)
-            maskAction.setDisabled(not self.model.currentView.masking)
+            maskAction.setDisabled(not cv.masking)
             maskAction.setToolTip(f'Toggle {domain_kind} mask')
             maskAction.setStatusTip(f'Toggle {domain_kind} mask')
             maskAction.triggered[bool].connect(lambda bool=bool:
@@ -278,7 +280,7 @@ class PlotImage(FigureCanvas):
             highlightAction = self.menu.addAction(f'Highlight {domain_kind}')
             highlightAction.setCheckable(True)
             highlightAction.setChecked(domain[id].highlighted)
-            highlightAction.setDisabled(not self.model.currentView.highlighting)
+            highlightAction.setDisabled(not cv.highlighting)
             highlightAction.setToolTip(f'Toggle {domain_kind} highlight')
             highlightAction.setStatusTip(f'Toggle {domain_kind} highlight')
             highlightAction.triggered[bool].connect(lambda bool=bool:
@@ -287,12 +289,14 @@ class PlotImage(FigureCanvas):
         else:
             self.menu.addAction(self.mw.undoAction)
             self.menu.addAction(self.mw.redoAction)
-            self.menu.addSeparator()
-            bgColorAction = self.menu.addAction('Edit Background Color...')
-            bgColorAction.setToolTip('Edit background color')
-            bgColorAction.setStatusTip('Edit plot background color')
-            bgColorAction.triggered.connect(lambda :
-                self.mw.editBackgroundColor(apply=True))
+
+            if cv.colorby not in ('temperature', 'density'):
+                self.menu.addSeparator()
+                bgColorAction = self.menu.addAction('Edit Background Color...')
+                bgColorAction.setToolTip('Edit background color')
+                bgColorAction.setStatusTip('Edit plot background color')
+                connector = lambda : self.mw.editBackgroundColor(apply=True)
+                bgColorAction.triggered.connect(connector)
 
         self.menu.addSeparator()
         self.menu.addAction(self.mw.saveImageAction)
@@ -308,8 +312,8 @@ class PlotImage(FigureCanvas):
             self.menu.addSeparator()
         self.menu.addAction(self.mw.dockAction)
 
-        self.mw.maskingAction.setChecked(self.model.currentView.masking)
-        self.mw.highlightingAct.setChecked(self.model.currentView.highlighting)
+        self.mw.maskingAction.setChecked(cv.masking)
+        self.mw.highlightingAct.setChecked(cv.highlighting)
 
         if self.mw.dock.isVisible():
             self.mw.dockAction.setText('Hide &Dock')
