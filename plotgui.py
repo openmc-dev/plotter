@@ -16,14 +16,13 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QFileDialog, QDialog, QTabWidget, QGridLayout,
                                QToolButton, QColorDialog, QFrame, QDockWidget,
                                QTableView, QItemDelegate, QHeaderView, QSlider)
+import matplotlib.pyplot as plt
 from matplotlib.backends.qt_compat import is_pyqt5
 from matplotlib.figure import Figure
 from matplotlib import image as mpimage
 from matplotlib import lines as mlines
 from matplotlib import cm as mcolormaps
 from matplotlib.colors import SymLogNorm, NoNorm
-
-import matplotlib.pyplot as plt
 
 if is_pyqt5():
     from matplotlib.backends.backend_qt5agg import (
@@ -274,7 +273,7 @@ class PlotImage(FigureCanvas):
             colorAction.setToolTip(f'Edit {domain_kind} color')
             colorAction.setStatusTip(f'Edit {domain_kind} color')
             colorAction.triggered.connect(lambda:
-                self.mw.editDomainColor(domain_kind, id))
+                                          self.mw.editDomainColor(domain_kind, id))
 
             maskAction = self.menu.addAction(f'Mask {domain_kind}')
             maskAction.setCheckable(True)
@@ -283,7 +282,7 @@ class PlotImage(FigureCanvas):
             maskAction.setToolTip(f'Toggle {domain_kind} mask')
             maskAction.setStatusTip(f'Toggle {domain_kind} mask')
             maskAction.triggered[bool].connect(lambda bool=bool:
-                self.mw.toggleDomainMask(bool, domain_kind, id))
+                                               self.mw.toggleDomainMask(bool, domain_kind, id))
 
             highlightAction = self.menu.addAction(f'Highlight {domain_kind}')
             highlightAction.setCheckable(True)
@@ -292,7 +291,7 @@ class PlotImage(FigureCanvas):
             highlightAction.setToolTip(f'Toggle {domain_kind} highlight')
             highlightAction.setStatusTip(f'Toggle {domain_kind} highlight')
             highlightAction.triggered[bool].connect(lambda bool=bool:
-                self.mw.toggleDomainHighlight(bool, domain_kind, id))
+                                                    self.mw.toggleDomainHighlight(bool, domain_kind, id))
 
         else:
             self.menu.addAction(self.mw.undoAction)
@@ -410,17 +409,17 @@ class PlotImage(FigureCanvas):
         self.setPixmap()
 
     def updateDataIndicatorValue(self, y_val):
-        av = self.model.currentView
+        cv = self.model.currentView
+
+        if cv.colorby not in _MODEL_PROPERTIES or \
+           not cv.data_indicator_enabled[cv.colorby]:
+            return
+
         if self.data_indicator:
             data = self.data_indicator.get_data()
-            if av.color_scale_log[av.colorby]:
-                print(y_val)
-                trans = self.colorbar.ax.transData + \
-                        self.colorbar.ax.transAxes.inverted()
-                print(y_val)
-                _, y_val = trans.transform((0.0, y_val))
-                y_val  = 1 - y_val
-                print(y_val)
+            # use norm to get axis value if log scale
+            if cv.color_scale_log[cv.colorby]:
+                y_val = self.image.norm(y_val)
             self.data_indicator.set_data([data[0], [y_val, y_val]])
             dl_color = invert_rgb(self.colorbar.get_cmap()(y_val), True)
             self.data_indicator.set_c(dl_color)
@@ -838,8 +837,8 @@ class ColorDialog(QDialog):
     def updateColorMaps(self):
         cmaps = self.model.activeView.colormaps
         for key, val in cmaps.items():
-            idx= self.tabs[key].colormapBox.findText(val,
-                                                     QtCore.Qt.MatchFixedString)
+            idx = self.tabs[key].colormapBox.findText(val,
+                                                      QtCore.Qt.MatchFixedString)
             if idx >= 0:
                 self.tabs[key].colormapBox.setCurrentIndex(idx)
 
