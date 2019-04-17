@@ -70,10 +70,10 @@ class PlotImage(FigureCanvas):
 
     def mousePressEvent(self, event):
         self.mw.coord_label.hide()
-
+        position = event.pos()
         # Set rubber band absolute and relative position
-        self.band_origin = event.pos()
-        self.x_plot_origin, self.y_plot_origin = self.getPlotCoords(event.pos())
+        self.band_origin = position
+        self.x_plot_origin, self.y_plot_origin = self.getPlotCoords(position)
 
         # Create rubber band
         self.rubber_band.setGeometry(QtCore.QRect(self.band_origin,
@@ -85,8 +85,9 @@ class PlotImage(FigureCanvas):
 
         cv = self.model.currentView
 
+        transform = self.ax.transAxes.inverted()
         # get the normalized axis coordinates from the event display units
-        xPlotCoord, yPlotCoord = self.ax.transAxes.inverted().transform((pos.x(), pos.y()))
+        xPlotCoord, yPlotCoord = transform.transform((pos.x(), pos.y()))
         # flip the y-axis (its zero is in the upper left)
         yPlotCoord = 1 - yPlotCoord
 
@@ -704,24 +705,24 @@ class ColorDialog(QDialog):
 
         self.cellTable = self.createDomainTable(self.mw.cellsModel)
         self.matTable = self.createDomainTable(self.mw.materialsModel)
-        self.cellTab = self.createDomainTab(self.cellTable)
-        self.matTab = self.createDomainTab(self.matTable)
-        self.densityTab = self.createPropertyTab('density')
-        self.temperatureTab = self.createPropertyTab('temperature')
+        self.tabs = {'cell': self.createDomainTab(self.cellTable),
+                     'material': self.createDomainTab(self.matTable),
+                     'temperature': self.createPropertyTab('temperature'),
+                     'density': self.createPropertyTab('density')}
 
-        self.tabs = QTabWidget()
-        self.tabs.setMaximumHeight(800)
-        self.tabs.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.tabs.addTab(self.generalTab, 'General')
-        self.tabs.addTab(self.cellTab, 'Cells')
-        self.tabs.addTab(self.matTab, 'Materials')
-        self.tabs.addTab(self.densityTab, 'Density')
-        self.tabs.addTab(self.temperatureTab, 'Temperature')
+        self.tab_bar = QTabWidget()
+        self.tab_bar.setMaximumHeight(800)
+        self.tab_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.tab_bar.addTab(self.generalTab, 'General')
+        self.tab_bar.addTab(self.tabs['cell'], 'Cells')
+        self.tab_bar.addTab(self.tabs['material'], 'Materials')
+        self.tab_bar.addTab(self.tabs['temperature'], 'Temperature')
+        self.tab_bar.addTab(self.tabs['density'], 'Density')
 
         self.createButtonBox()
 
         self.colorDialogLayout = QVBoxLayout()
-        self.colorDialogLayout.addWidget(self.tabs)
+        self.colorDialogLayout.addWidget(self.tab_bar)
         self.colorDialogLayout.addWidget(self.buttonBox)
         self.setLayout(self.colorDialogLayout)
 
@@ -822,36 +823,30 @@ class ColorDialog(QDialog):
 
     def updateDataindicatorVisibility(self):
         av = self.model.activeView
-        self.densityTab.dataindicatorCheckBox.setChecked(av.dataindicator_enabled['temperature'])
-        self.densityTab.dataindicatorCheckBox.setChecked(av.dataindicator_enabled['density'])
+        for key, val in av.dataindicator_enabled.items():
+            self.tabs[key].dataindicatorCheckBox.setChecked(val)
 
     def updateColorMaps(self):
-        colormaps = self.model.activeView.colormaps
-        index = self.densityTab.colormapBox.findText(colormaps['density'],
+        cmaps = self.model.activeView.colormaps
+        for key, val in cmaps.items():
+            idx= self.tabs[key].colormapBox.findText(val,
                                                      QtCore.Qt.MatchFixedString)
-        if index >= 0:
-            self.densityTab.colormapBox.setCurrentIndex(index)
-        index = self.densityTab.colormapBox.findText(colormaps['temperature'],
-                                                     QtCore.Qt.MatchFixedString)
-        if index >= 0:
-            self.temperatureTab.colormapBox.setCurrentIndex(index)
+            if idx >= 0:
+                self.tabs[key].colormapBox.setCurrentIndex(idx)
 
     def updateColorMinMax(self):
-        minmax = self.model.activeView.user_minmax['temperature']
-        self.temperatureTab.minBox.setValue(minmax[0])
-        self.temperatureTab.maxBox.setValue(minmax[1])
-
-        minmax = self.model.activeView.user_minmax['density']
-        self.densityTab.minBox.setValue(minmax[0])
-        self.densityTab.maxBox.setValue(minmax[1])
-
-        self.temperatureTab.minMaxCheckBox.setChecked(self.model.activeView.use_custom_minmax['temperature'])
-        self.densityTab.minMaxCheckBox.setChecked(self.model.activeView.use_custom_minmax['density'])
+        minmax = self.model.activeView.user_minmax
+        for key, val in minmax.items():
+            self.tabs[key].minBox.setValue(val[0])
+            self.tabs[key].maxBox.setValue(val[1])
+        custom_minmax = self.model.activeView.use_custom_minmax
+        for key, val, in custom_minmax.items():
+            self.tabs[key].minMaxCheckBox.setChecked(val)
 
     def updateColorBarScale(self):
         av = self.model.activeView
-        self.temperatureTab.colorBarScaleCheckBox.setChecked(av.color_scale_log['temperature'])
-        self.densityTab.colorBarScaleCheckBox.setChecked(av.color_scale_log['density'])
+        for key, val in av.color_scale_log.items():
+            self.tabs[key].colorBarScaleCheckBox.setChecked(val)
 
     def createPropertyTab(self, property_kind):
         propertyTab = QWidget()
