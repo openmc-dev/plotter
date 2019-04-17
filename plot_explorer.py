@@ -475,8 +475,8 @@ class MainWindow(QMainWindow):
 
     def toggleDataIndicatorCheckBox(self, state, property, apply=False):
         av = self.model.activeView
-        av.dataindicator_enabled[property] = bool(state)
-        self.plotIm.updateDataindicatorVisibility()
+        av.data_indicator_enabled[property] = bool(state)
+        self.plotIm.updateDataIndicatorVisibility()
         if apply:
             self.applyChanges()
 

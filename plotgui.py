@@ -172,7 +172,7 @@ class PlotImage(FigureCanvas):
             if domain_kind.lower() in _MODEL_PROPERTIES:
                 line_val = float(properties[domain_kind.lower()])
                 line_val = max(line_val, 0.0)
-                self.updateDataindicatorValue(line_val)
+                self.updateDataIndicatorValue(line_val)
 
             if id == str(_VOID_REGION):
                 domainInfo = ("VOID")
@@ -188,7 +188,7 @@ class PlotImage(FigureCanvas):
                 domainInfo = ""
         else:
             domainInfo = ""
-            self.updateDataindicatorValue(0.0)
+            self.updateDataIndicatorValue(0.0)
 
         self.mw.statusBar().showMessage(f" {domainInfo}")
 
@@ -393,7 +393,7 @@ class PlotImage(FigureCanvas):
                                                 color='blue',
                                                 clip_on=True)
             self.colorbar.ax.add_line(self.data_indicator)
-            self.updateDataindicatorVisibility()
+            self.updateDataIndicatorVisibility()
             self.updateColorMinMax(cv.colorby)
 
         self.ax = self.figure.axes[0]
@@ -409,7 +409,7 @@ class PlotImage(FigureCanvas):
     def updateColorBarScale(self):
         self.setPixmap()
 
-    def updateDataindicatorValue(self, y_val):
+    def updateDataIndicatorValue(self, y_val):
         if self.data_indicator:
             data = self.data_indicator.get_data()
             self.data_indicator.set_data([data[0], [y_val, y_val]])
@@ -417,10 +417,10 @@ class PlotImage(FigureCanvas):
             self.data_indicator.set_c(dl_color)
             self.draw()
 
-    def updateDataindicatorVisibility(self):
+    def updateDataIndicatorVisibility(self):
         av = self.model.activeView
         if self.data_indicator and av.colorby in _MODEL_PROPERTIES:
-            val = av.dataindicator_enabled[av.colorby]
+            val = av.data_indicator_enabled[av.colorby]
             self.data_indicator.set_visible(val)
             self.draw()
 
@@ -821,10 +821,10 @@ class ColorDialog(QDialog):
 
         return domainTab
 
-    def updateDataindicatorVisibility(self):
+    def updateDataIndicatorVisibility(self):
         av = self.model.activeView
-        for key, val in av.dataindicator_enabled.items():
-            self.tabs[key].dataindicatorCheckBox.setChecked(val)
+        for key, val in av.data_indicator_enabled.items():
+            self.tabs[key].dataIndicatorCheckBox.setChecked(val)
 
     def updateColorMaps(self):
         cmaps = self.model.activeView.colormaps
@@ -882,11 +882,11 @@ class ColorDialog(QDialog):
 
         propertyTab.colormapBox.currentTextChanged[str].connect(connector)
 
-        propertyTab.dataindicatorCheckBox = QCheckBox()
-        propertyTab.dataindicatorCheckBox.setCheckable(True)
+        propertyTab.dataIndicatorCheckBox = QCheckBox()
+        propertyTab.dataIndicatorCheckBox.setCheckable(True)
         connector4 = partial(self.mw.toggleDataIndicatorCheckBox,
                              property=property_kind)
-        propertyTab.dataindicatorCheckBox.stateChanged.connect(connector4)
+        propertyTab.dataIndicatorCheckBox.stateChanged.connect(connector4)
 
         propertyTab.colorBarScaleCheckBox = QCheckBox()
         propertyTab.colorBarScaleCheckBox.setCheckable(True)
@@ -902,7 +902,7 @@ class ColorDialog(QDialog):
         formLayout.addRow('Colormap:', propertyTab.colormapBox)
 
         formLayout.addRow('Custom Min/Max', propertyTab.minMaxCheckBox)
-        formLayout.addRow('Data Indicator', propertyTab.dataindicatorCheckBox)
+        formLayout.addRow('Data Indicator', propertyTab.dataIndicatorCheckBox)
         formLayout.addRow('Log Scale', propertyTab.colorBarScaleCheckBox)
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Max: ', propertyTab.maxBox)
@@ -934,7 +934,7 @@ class ColorDialog(QDialog):
         self.updateColorMaps()
         self.updateColorMinMax()
         self.updateColorBarScale()
-        self.updateDataindicatorVisibility()
+        self.updateDataIndicatorVisibility()
         self.updateHighlighting()
         self.updateHighlightColor()
         self.updateAlpha()

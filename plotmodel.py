@@ -289,7 +289,7 @@ class PlotView(_PlotBase):
         self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
         self.user_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
         self.use_custom_minmax = {prop: False for prop in _MODEL_PROPERTIES}
-        self.dataindicator_enabled = {prop: False for prop in _MODEL_PROPERTIES}
+        self.data_indicator_enabled = {prop: False for prop in _MODEL_PROPERTIES}
         self.color_scale_log = {prop: False for prop in _MODEL_PROPERTIES}
 
         self.cells = self.getDomains('geometry.xml', 'cell')
