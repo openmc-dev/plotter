@@ -381,10 +381,10 @@ class PlotImage(FigureCanvas):
             self.colorbar = self.figure.colorbar(self.image,
                                                  cax=cmap_ax,
                                                  anchor=(1.0, 0.0))
-            self.colorbar.ax.set_ylabel(cmap_label,
-                                        rotation=-90,
-                                        va='bottom',
-                                        ha='right')
+            self.colorbar.set_label(cmap_label,
+                                    rotation=-90,
+                                    va='bottom',
+                                    ha='right')
             # draw line on colorbar
             dl = self.colorbar.ax.dataLim.get_points()
             self.data_indicator = mlines.Line2D(dl[:][0],
@@ -410,8 +410,17 @@ class PlotImage(FigureCanvas):
         self.setPixmap()
 
     def updateDataIndicatorValue(self, y_val):
+        av = self.model.currentView
         if self.data_indicator:
             data = self.data_indicator.get_data()
+            if av.color_scale_log[av.colorby]:
+                print(y_val)
+                trans = self.colorbar.ax.transData + \
+                        self.colorbar.ax.transAxes.inverted()
+                print(y_val)
+                _, y_val = trans.transform((0.0, y_val))
+                y_val  = 1 - y_val
+                print(y_val)
             self.data_indicator.set_data([data[0], [y_val, y_val]])
             dl_color = invert_rgb(self.colorbar.get_cmap()(y_val), True)
             self.data_indicator.set_c(dl_color)
