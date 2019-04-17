@@ -10,7 +10,8 @@ import sys
 import openmc
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
-    QScrollArea, QMenu, QAction, QFileDialog, QColorDialog, QInputDialog)
+                               QScrollArea, QMenu, QAction, QFileDialog,
+                               QColorDialog, QInputDialog)
 
 from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, ColorDialog, OptionsDock
@@ -34,7 +35,6 @@ class MainWindow(QMainWindow):
 
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
-
 
         # Create viewing area
         self.frame = QScrollArea(self)
@@ -157,24 +157,24 @@ class MainWindow(QMainWindow):
         self.xyAction.setShortcut('Alt+X')
         self.xyAction.setToolTip('Change to xy basis')
         self.xyAction.setStatusTip('Change to xy basis')
-        self.xyAction.triggered.connect(lambda :
-            self.editBasis('xy', apply=True))
+        self.xyAction.triggered.connect(lambda:
+                                        self.editBasis('xy', apply=True))
 
         self.xzAction = QAction('x&z  ', self)
         self.xzAction.setCheckable(True)
         self.xzAction.setShortcut('Alt+Z')
         self.xzAction.setToolTip('Change to xz basis')
         self.xzAction.setStatusTip('Change to xz basis')
-        self.xzAction.triggered.connect(lambda :
-            self.editBasis('xz', apply=True))
+        self.xzAction.triggered.connect(lambda:
+                                        self.editBasis('xz', apply=True))
 
         self.yzAction = QAction('&yz  ', self)
         self.yzAction.setCheckable(True)
         self.yzAction.setShortcut('Alt+Y')
         self.yzAction.setToolTip('Change to yz basis')
         self.yzAction.setStatusTip('Change to yz basis')
-        self.yzAction.triggered.connect(lambda :
-            self.editBasis('yz', apply=True))
+        self.yzAction.triggered.connect(lambda:
+                                        self.editBasis('yz', apply=True))
 
         self.basisMenu = self.editMenu.addMenu('&Basis')
         self.basisMenu.addAction(self.xyAction)
@@ -188,32 +188,32 @@ class MainWindow(QMainWindow):
         self.cellAction.setShortcut('Alt+C')
         self.cellAction.setToolTip('Color by cell')
         self.cellAction.setStatusTip('Color plot by cell')
-        self.cellAction.triggered.connect(lambda :
-            self.editColorBy('cell', apply=True))
+        self.cellAction.triggered.connect(lambda:
+                                          self.editColorBy('cell', apply=True))
 
         self.materialAction = QAction('&Material', self)
         self.materialAction.setCheckable(True)
         self.materialAction.setShortcut('Alt+M')
         self.materialAction.setToolTip('Color by material')
         self.materialAction.setStatusTip('Color plot by material')
-        self.materialAction.triggered.connect(lambda :
-            self.editColorBy('material', apply=True))
+        self.materialAction.triggered.connect(lambda:
+                                              self.editColorBy('material', apply=True))
 
         self.temperatureAction = QAction('&Temperature', self)
         self.temperatureAction.setCheckable(True)
         self.temperatureAction.setShortcut('Alt+T')
         self.temperatureAction.setToolTip('Color by temperature')
         self.temperatureAction.setStatusTip('Color plot by temperature')
-        self.temperatureAction.triggered.connect(lambda :
-            self.editColorBy('temperature', apply=True))
+        self.temperatureAction.triggered.connect(lambda:
+                                                 self.editColorBy('temperature', apply=True))
 
         self.densityAction = QAction('&Density', self)
         self.densityAction.setCheckable(True)
         self.densityAction.setShortcut('Alt+D')
         self.densityAction.setToolTip('Color by density')
         self.densityAction.setStatusTip('Color plot by density')
-        self.densityAction.triggered.connect(lambda :
-            self.editColorBy('density', apply=True))
+        self.densityAction.triggered.connect(lambda:
+                                             self.editColorBy('density', apply=True))
 
         self.colorbyMenu = self.editMenu.addMenu('&Color By')
         self.colorbyMenu.addAction(self.cellAction)
@@ -231,7 +231,7 @@ class MainWindow(QMainWindow):
         self.maskingAction.setToolTip('Toggle masking')
         self.maskingAction.setStatusTip('Toggle whether masking is enabled')
         self.maskingAction.triggered[bool].connect(lambda bool=bool:
-            self.toggleMasking(bool, apply=True))
+                                                   self.toggleMasking(bool, apply=True))
         self.editMenu.addAction(self.maskingAction)
 
         self.highlightingAct = QAction('Enable High&lighting', self)
@@ -240,7 +240,7 @@ class MainWindow(QMainWindow):
         self.highlightingAct.setToolTip('Toggle highlighting')
         self.highlightingAct.setStatusTip('Toggle whether highlighting is enabled')
         self.highlightingAct.triggered[bool].connect(lambda bool=bool:
-            self.toggleHighlighting(bool, apply=True))
+                                                     self.toggleHighlighting(bool, apply=True))
         self.editMenu.addAction(self.highlightingAct)
 
         # View Menu
@@ -316,8 +316,10 @@ class MainWindow(QMainWindow):
     # Menu and shared methods:
 
     def saveImage(self):
-        filename, ext = QFileDialog.getSaveFileName(self, "Save Plot Image",
-                                         "untitled", "Images (*.png *.ppm)")
+        filename, ext = QFileDialog.getSaveFileName(self,
+                                                    "Save Plot Image",
+                                                    "untitled",
+                                                    "Images (*.png)")
         if filename:
             if "." not in filename:
                 filename += ".png"
@@ -327,15 +329,16 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage('Plot Image Saved', 5000)
 
     def saveView(self):
-        filename, ext = QFileDialog.getSaveFileName(self, "Save View Settings",
-                                        "untitled", "View Settings (*.pltvw)")
+        filename, ext = QFileDialog.getSaveFileName(self,
+                                                    "Save View Settings",
+                                                    "untitled",
+                                                    "View Settings (*.pltvw)")
         if filename:
             if "." not in filename:
                 filename += ".pltvw"
 
-            saved = {'version' : self.model.version,
+            saved = {'version': self.model.version,
                      'current': self.model.currentView}
-
             with open(filename, 'wb') as file:
                 pickle.dump(saved, file)
 
@@ -598,7 +601,7 @@ class MainWindow(QMainWindow):
     # Plot image methods
 
     def editPlotOrigin(self, xOr, yOr, zOr=None, apply=False):
-        if zOr != None:
+        if zOr is not None:
             self.model.activeView.origin = [xOr, yOr, zOr]
         else:
             origin = [None, None, None]
@@ -658,13 +661,19 @@ class MainWindow(QMainWindow):
     def restoreWindowSettings(self):
         settings = QtCore.QSettings()
 
-        self.resize(settings.value("mainWindow/Size", QtCore.QSize(800,600)))
-        self.move(settings.value("mainWindow/Position", QtCore.QPoint(100,100)))
+        self.resize(settings.value("mainWindow/Size",
+                                   QtCore.QSize(800, 600)))
+        self.move(settings.value("mainWindow/Position",
+                                 QtCore.QPoint(100, 100)))
         self.restoreState(settings.value("mainWindow/State"))
 
-        self.colorDialog.resize(settings.value("colorDialog/Size", QtCore.QSize(400, 500)))
-        self.colorDialog.move(settings.value("colorDialog/Position", QtCore.QPoint(600, 200)))
-        self.colorDialog.setVisible(bool(int(settings.value("colorDialog/Visible", 0))))
+        self.colorDialog.resize(settings.value("colorDialog/Size",
+                                               QtCore.QSize(400, 500)))
+        self.colorDialog.move(settings.value("colorDialog/Position",
+                                             QtCore.QPoint(600, 200)))
+        is_visible = settings.value("colorDialog/Visible", 0)
+        is_visible = bool(int(is_visible))
+        self.colorDialog.setVisible(is_visible)
 
     def restoreModelSettings(self):
         if os.path.isfile("plot_settings.pkl"):
@@ -678,7 +687,7 @@ class MainWindow(QMainWindow):
                 self.model.previousViews = model.previousViews
                 self.model.subsequentViews = model.subsequentViews
                 if os.path.isfile('plot_ids.binary') \
-                    and os.path.isfile('plot.ppm'):
+                   and os.path.isfile('plot.ppm'):
                     self.restored = True
 
     def resetModels(self):
@@ -715,6 +724,7 @@ class MainWindow(QMainWindow):
         self.xBasis = 0 if cv.basis[0] == 'x' else 1
         self.yBasis = 1 if cv.basis[1] == 'y' else 2
         self.zBasis = 3 - (self.xBasis + self.yBasis)
+
     def adjustWindow(self):
         self.screen = app.desktop().screenGeometry()
         self.setMaximumSize(self.screen.width(), self.screen.height())

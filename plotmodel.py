@@ -8,13 +8,14 @@ import openmc.capi.plot as capi_plot
 from openmc.capi.plot import _PlotBase
 import numpy as np
 import xml.etree.ElementTree as ET
-from PySide2.QtWidgets import QTableView, QItemDelegate, QColorDialog, QLineEdit
+from PySide2.QtWidgets import (QTableView, QItemDelegate,
+                               QColorDialog, QLineEdit)
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
 from PySide2.QtGui import QColor
 
 from plot_colors import random_rgb
 
-ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = (range(0,6))
+ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = tuple(range(0, 6))
 
 __VERSION__ = "0.1.0"
 
@@ -22,6 +23,9 @@ _VOID_REGION = -1
 _NOT_FOUND = -2
 
 _MODEL_PROPERTIES = ('temperature', 'density')
+_PROPERTY_INDICES = {'temperature': 0,
+                     'density': 1}
+
 
 class PlotModel():
     """ Geometry and plot settings for OpenMC Plot Explorer model
@@ -125,25 +129,25 @@ class PlotModel():
         ids = capi_plot.id_map(cv)
         props = capi_plot.property_map(cv)
         # empty image data
-        image = np.ones((cv.v_res, cv.h_res, 3), dtype = int)
+        image = np.ones((cv.v_res, cv.h_res, 3), dtype=int)
 
         # set model ids based on domain
         if cv.colorby == 'cell':
-            self.ids = ids[:,:,0]
+            self.ids = ids[:, :, 0]
             domain = cv.cells
             source = self.modelCells
         else:
-            self.ids = ids[:,:,1]
+            self.ids = ids[:, :, 1]
             domain = cv.materials
             source = self.modelMaterials
 
         # generate colors if not present
         for cell_id, cell in cv.cells.items():
-            if cell.color == None:
+            if cell.color is None:
                 cell.color = random_rgb()
 
         for mat_id, mat in cv.materials.items():
-            if mat.color == None:
+            if mat.color is None:
                 mat.color = random_rgb()
 
         unique_ids = np.unique(self.ids)
@@ -170,10 +174,12 @@ class PlotModel():
 
         self.properties[self.properties < 0.0] = 0.0
 
-        self.activeView.data_minmax['temperature'] = (np.min(self.properties[:,:,0]),
-                                                          np.max(self.properties[:,:,0]))
-        self.activeView.data_minmax['density'] = (np.min(self.properties[:,:,1]),
-                                                      np.max(self.properties[:,:,1]))
+        minmax = {}
+        for prop in _MODEL_PROPERTIES:
+            idx = _PROPERTY_INDICES[prop]
+            minmax[prop] = (np.min(self.properties[:, :, idx]),
+                            np.max(self.properties[:, :, idx]))
+        self.activeView.data_minmax = minmax
 
     def undo(self):
         """ Revert to previous PlotView instance. Re-generate plot image """
@@ -268,7 +274,7 @@ class PlotView(_PlotBase):
         self.colorby = 'material'
 
         self.masking = True
-        self.maskBackground = (0,0,0)
+        self.maskBackground = (0, 0, 0)
         self.highlighting = False
         self.highlightBackground = (80, 80, 80)
         self.highlightAlpha = 0.5
@@ -277,12 +283,11 @@ class PlotView(_PlotBase):
 
         self.plotAlpha = 1.0
 
-        self.colormaps = { 'temperature' : 'Oranges',
-                           'density' : 'Greys' }
+        self.colormaps = {'temperature': 'Oranges', 'density': 'Greys'}
 
         # set defaults for color dialog
         self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
-        self.user_minmax =  {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
+        self.user_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
         self.use_custom_minmax = {prop: False for prop in _MODEL_PROPERTIES}
         self.dataindicator_enabled = {prop: False for prop in _MODEL_PROPERTIES}
         self.color_scale_log = {prop: False for prop in _MODEL_PROPERTIES}
@@ -348,6 +353,7 @@ class PlotView(_PlotBase):
             return self.user_minmax[property]
         else:
             return self.data_minmax[property]
+
 
 class DomainView():
     """ Represents view settings for OpenMC cell or material.
@@ -436,11 +442,12 @@ class DomainTableModel(QAbstractTableModel):
                 return int(Qt.AlignLeft | Qt.AlignVCenter)
 
         elif role == Qt.BackgroundColorRole:
+            color = domain.color
             if column == COLOR:
-                if isinstance(domain.color, tuple):
-                        return QColor.fromRgb(*domain.color)
-                elif isinstance(domain.color, str):
-                    return QColor.fromRgb(*openmc.plots._SVG_COLORS[domain.color])
+                if isinstance(color, tuple):
+                        return QColor.fromRgb(*color)
+                elif isinstance(color, str):
+                    return QColor.fromRgb(*openmc.plots._SVG_COLORS[color])
 
         elif role == Qt.CheckStateRole:
             if column == MASK:
@@ -454,12 +461,13 @@ class DomainTableModel(QAbstractTableModel):
 
         if role == Qt.TextAlignmentRole:
             if orientation == Qt.Horizontal:
-                return int(Qt.AlignLeft|Qt.AlignVCenter)
-            return int(Qt.AlignRight|Qt.AlignVCenter)
+                return int(Qt.AlignLeft | Qt.AlignVCenter)
+            return int(Qt.AlignRight | Qt.AlignVCenter)
 
         elif role == Qt.DisplayRole:
             if orientation == Qt.Horizontal:
-                headers = ['ID', 'Name', 'Color', 'SVG/RGB', 'Mask', 'Highlight']
+                headers = ['ID', 'Name', 'Color',
+                           'SVG/RGB', 'Mask', 'Highlight']
                 return headers[section]
             return int(section + 1)
 
@@ -553,7 +561,7 @@ class DomainDelegate(QItemDelegate):
             if not int(index.flags() & Qt.ItemIsEditable) > 0:
                 return False
             if event.type() == QEvent.MouseButtonRelease \
-                and event.button() == Qt.RightButton:
+               and event.button() == Qt.RightButton:
                 self.setModelData(None, model, index)
                 return True
             return False
@@ -573,15 +581,21 @@ class DomainDelegate(QItemDelegate):
             if color != QColor():
                 color = color.getRgb()[:3]
                 model.setData(index, color, Qt.BackgroundColorRole)
-                model.setData(model.index(row, column+1), color, Qt.DisplayRole)
+                model.setData(model.index(row, column+1),
+                              color,
+                              Qt.DisplayRole)
         elif column == COLORLABEL:
             if editor is None:
-                model.setData(model.index(row, column-1), None, Qt.BackgroundColorRole)
+                model.setData(model.index(row, column-1),
+                              None,
+                              Qt.BackgroundColorRole)
                 model.setData(index, None, Qt.DisplayRole)
             elif editor.text().lower() in openmc.plots._SVG_COLORS:
                 svg = editor.text().lower()
                 color = openmc.plots._SVG_COLORS[svg]
-                model.setData(model.index(row, column-1), color, Qt.BackgroundColorRole)
+                model.setData(model.index(row, column-1),
+                              color,
+                              Qt.BackgroundColorRole)
                 model.setData(index, svg, Qt.DisplayRole)
             else:
                 try:
@@ -593,7 +607,9 @@ class DomainDelegate(QItemDelegate):
                 for val in input:
                     if not isinstance(val, int) or not 0 <= val <= 255:
                         return None
-                model.setData(model.index(row, column-1), input, Qt.BackgroundColorRole)
+                model.setData(model.index(row, column-1),
+                              input,
+                              Qt.BackgroundColorRole)
                 model.setData(index, input, Qt.DisplayRole)
         else:
             QItemDelegate.setModelData(self, editor, model, index)
