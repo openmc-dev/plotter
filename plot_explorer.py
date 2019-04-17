@@ -458,8 +458,11 @@ class MainWindow(QMainWindow):
             self.applyChanges()
 
     def toggleColorBarScale(self, state, property, apply=False):
-        av = self.model.currentView
+        av = self.model.activeView
         av.color_scale_log[property] = bool(state)
+        # temporary, should be resolved diferently in the future
+        cv = self.model.currentView
+        cv.color_scale_log[property] = bool(state)
         self.plotIm.updateColorBarScale()
         if apply:
             self.applyChanges()
