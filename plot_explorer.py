@@ -797,8 +797,8 @@ class MainWindow(QMainWindow):
 
 if __name__ == '__main__':
 
-    path_icon = str(Path(__file__).parent / 'openmc_logo.png')
-    path_splash = str(Path(__file__).parent / 'splash.png')
+    path_icon = str(Path(__file__).parent / 'assets/openmc_logo.png')
+    path_splash = str(Path(__file__).parent / 'assets/splash.png')
 
 
     app = QApplication(sys.argv)
