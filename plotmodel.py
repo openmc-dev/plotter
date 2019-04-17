@@ -23,8 +23,7 @@ _VOID_REGION = -1
 _NOT_FOUND = -2
 
 _MODEL_PROPERTIES = ('temperature', 'density')
-_PROPERTY_INDICES = {'temperature': 0,
-                     'density': 1}
+_PROPERTY_INDICES = {'temperature': 0, 'density': 1}
 
 
 class PlotModel():

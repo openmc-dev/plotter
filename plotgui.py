@@ -84,8 +84,8 @@ class PlotImage(FigureCanvas):
 
         cv = self.model.currentView
 
-        transform = self.ax.transAxes.inverted()
         # get the normalized axis coordinates from the event display units
+        transform = self.ax.transAxes.inverted()
         xPlotCoord, yPlotCoord = transform.transform((pos.x(), pos.y()))
         # flip the y-axis (its zero is in the upper left)
         yPlotCoord = 1 - yPlotCoord
