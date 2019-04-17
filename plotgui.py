@@ -3,13 +3,19 @@
 
 from functools import partial
 
+from plot_colors import rgb_normalize, invert_rgb
+from plotmodel import DomainDelegate
+from plotmodel import _NOT_FOUND, _VOID_REGION, _MODEL_PROPERTIES
+
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
-    QApplication, QGroupBox, QFormLayout, QLabel, QLineEdit, QComboBox,
-    QSpinBox, QDoubleSpinBox, QSizePolicy, QSpacerItem, QMainWindow,
-    QCheckBox, QRubberBand, QMenu, QAction, QMenuBar, QFileDialog, QDialog,
-    QTabWidget, QGridLayout, QToolButton, QColorDialog, QFrame, QDockWidget,
-    QTableView, QItemDelegate, QHeaderView, QSlider)
+                               QApplication, QGroupBox, QFormLayout, QLabel,
+                               QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox,
+                               QSizePolicy, QSpacerItem, QMainWindow, QCheckBox,
+                               QRubberBand, QMenu, QAction, QMenuBar,
+                               QFileDialog, QDialog, QTabWidget, QGridLayout,
+                               QToolButton, QColorDialog, QFrame, QDockWidget,
+                               QTableView, QItemDelegate, QHeaderView, QSlider)
 from matplotlib.backends.qt_compat import is_pyqt5
 from matplotlib.figure import Figure
 from matplotlib import image as mpimage
@@ -26,9 +32,6 @@ else:
     from matplotlib.backends.backend_qt5agg import (
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
-from plot_colors import rgb_normalize, invert_rgb
-from plotmodel import DomainDelegate
-from plotmodel import _NOT_FOUND, _VOID_REGION, _MODEL_PROPERTIES
 
 class PlotImage(FigureCanvas):
 
@@ -73,7 +76,8 @@ class PlotImage(FigureCanvas):
         self.x_plot_origin, self.y_plot_origin = self.getPlotCoords(event.pos())
 
         # Create rubber band
-        self.rubber_band.setGeometry(QtCore.QRect(self.band_origin, QtCore.QSize()))
+        self.rubber_band.setGeometry(QtCore.QRect(self.band_origin,
+                                                  QtCore.QSize()))
 
         FigureCanvas.mousePressEvent(self, event)
 
@@ -104,7 +108,7 @@ class PlotImage(FigureCanvas):
         cv = self.model.currentView
 
         # get origin in axes coordinates
-        x0, y0 = self.ax.transAxes.transform((0.,0.))
+        x0, y0 = self.ax.transAxes.transform((0.0, 0.0))
 
         # get the extents of the axes box in axes coordinates
         bbox = self.ax.get_window_extent().transformed(
@@ -120,8 +124,8 @@ class PlotImage(FigureCanvas):
         yPos = int((event.pos().y()-y0 + 0.01) / factor[1])
 
         # check that the position is in the axes view
-        if  0 <= yPos < self.model.currentView.v_res \
-            and 0 <= xPos and xPos < self.model.currentView.h_res:
+        if 0 <= yPos < self.model.currentView.v_res \
+           and 0 <= xPos and xPos < self.model.currentView.h_res:
             id = f"{self.model.ids[yPos][xPos]}"
             temp = f"{self.model.properties[yPos][xPos][0]:g}"
             density = f"{self.model.properties[yPos][xPos][1]:g}"
@@ -143,8 +147,8 @@ class PlotImage(FigureCanvas):
             domain = self.model.activeView.materials
             domain_kind = 'Material'
 
-        properties = {'density' : density,
-                      'temperature' : temp}
+        properties = {'density': density,
+                      'temperature': temp}
 
         return id, properties, domain, domain_kind
 
@@ -166,14 +170,15 @@ class PlotImage(FigureCanvas):
 
             if domain_kind.lower() in _MODEL_PROPERTIES:
                 line_val = float(properties[domain_kind.lower()])
-                self.updateDataindicatorValue(line_val if line_val >= 0.0 else 0.0)
+                line_val = max(line_val, 0.0)
+                self.updateDataindicatorValue(line_val)
 
             if id == str(_VOID_REGION):
                 domainInfo = ("VOID")
             elif id != str(_NOT_FOUND) and domain[id].name:
                 domainInfo = (f"{domain_kind} {id}: \"{domain[id].name}\"\t "
-                             f"Density: {properties['density']} g/cm3\t"
-                             f"Temperature: {properties['temperature']} K")
+                              f"Density: {properties['density']} g/cm3\t"
+                              f"Temperature: {properties['temperature']} K")
             elif id != str(_NOT_FOUND):
                 domainInfo = (f"{domain_kind} {id}\t"
                               f"Density: {properties['density']} g/cm3\t"
@@ -211,7 +216,8 @@ class PlotImage(FigureCanvas):
                 width = cv.width * (cv.h_res / max(bandwidth, .001))
                 bandheight = abs(self.band_origin.y() - event.pos().y())
                 height = cv.height * (cv.v_res / max(bandheight, .001))
-            else: # Zoom in
+            # Zoom in
+            else:
                 width = max(abs(self.x_plot_origin - xPlotPos), 0.1)
                 height = max(abs(self.y_plot_origin - yPlotPos), 0.1)
 
@@ -251,7 +257,7 @@ class PlotImage(FigureCanvas):
         self.menu.addAction(self.mw.redoAction)
         self.menu.addSeparator()
 
-        if id != str(_NOT_FOUND) and cv.colorby not in ('density', 'temperature'):
+        if id != str(_NOT_FOUND) and cv.colorby not in _MODEL_PROPERTIES:
 
             # Domain ID
             domainID = self.menu.addAction(f"{domain_kind} {id}")
@@ -266,7 +272,7 @@ class PlotImage(FigureCanvas):
             colorAction.setDisabled(cv.highlighting)
             colorAction.setToolTip(f'Edit {domain_kind} color')
             colorAction.setStatusTip(f'Edit {domain_kind} color')
-            colorAction.triggered.connect(lambda :
+            colorAction.triggered.connect(lambda:
                 self.mw.editDomainColor(domain_kind, id))
 
             maskAction = self.menu.addAction(f'Mask {domain_kind}')
@@ -296,7 +302,7 @@ class PlotImage(FigureCanvas):
                 bgColorAction = self.menu.addAction('Edit Background Color...')
                 bgColorAction.setToolTip('Edit background color')
                 bgColorAction.setStatusTip('Edit plot background color')
-                connector = lambda : self.mw.editBackgroundColor(apply=True)
+                connector = lambda: self.mw.editBackgroundColor(apply=True)
                 bgColorAction.triggered.connect(connector)
 
         self.menu.addSeparator()
@@ -330,8 +336,9 @@ class PlotImage(FigureCanvas):
 
         cv = self.model.currentView
         # set figure bg color to match window
-        window_background = self.parent.palette().color(QtGui.QPalette.Background)
-        self.figure.patch.set_facecolor(rgb_normalize(window_background.getRgb()))
+        window_bg = self.parent.palette().color(QtGui.QPalette.Background)
+        self.figure.patch.set_facecolor(rgb_normalize(window_bg.getRgb()))
+
         # set figure width
         if w:
             self.figure.set_figwidth(0.99 * w / self.figure.get_dpi())
@@ -344,13 +351,13 @@ class PlotImage(FigureCanvas):
                        cv.origin[self.mw.yBasis] + cv.height/2.]
 
         # make sure we have an image to load
-        if not hasattr(self.model,'image'):
+        if not hasattr(self.model, 'image'):
             self.model.generatePlot()
 
         if cv.colorby in ('material', 'cell'):
             self.image = self.figure.subplots().imshow(self.model.image,
-                                              extent=data_bounds,
-                                              alpha=cv.plotAlpha)
+                                                       extent=data_bounds,
+                                                       alpha=cv.plotAlpha)
         else:
             cmap = cv.colormaps[cv.colorby]
             if cv.colorby == 'temperature':
@@ -361,8 +368,8 @@ class PlotImage(FigureCanvas):
                 cmap_label = "Density (g/ccm)"
 
             norm = SymLogNorm(1E-2) if cv.color_scale_log[cv.colorby] else None
-
-            self.image = self.figure.subplots().matshow(self.model.properties[:,:,idx],
+            data = self.model.properties[:, :, idx]
+            self.image = self.figure.subplots().matshow(data,
                                                         cmap=cmap,
                                                         norm=norm,
                                                         extent=data_bounds,
@@ -372,7 +379,7 @@ class PlotImage(FigureCanvas):
             # add colorbar
             self.colorbar = self.figure.colorbar(self.image,
                                                  cax=cmap_ax,
-                                                 anchor=(1.0,0.0))
+                                                 anchor=(1.0, 0.0))
             self.colorbar.ax.set_ylabel(cmap_label,
                                         rotation=-90,
                                         va='bottom',
@@ -442,7 +449,7 @@ class OptionsDock(QDockWidget):
         self.FM = FM
         self.mw = parent
 
-        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding) # Doesn't work?
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
         self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea |
                              QtCore.Qt.RightDockWidgetArea)
 
@@ -453,7 +460,8 @@ class OptionsDock(QDockWidget):
 
         # Create submit button
         self.applyButton = QPushButton("Apply Changes")
-        self.applyButton.setMinimumHeight(self.FM.height() * 1.6) # Mac bug fix
+        # Mac bug fix
+        self.applyButton.setMinimumHeight(self.FM.height() * 1.6)
         self.applyButton.clicked.connect(self.mw.applyChanges)
 
         # Create Zoom box
@@ -466,7 +474,7 @@ class OptionsDock(QDockWidget):
         self.zoomLayout = QHBoxLayout()
         self.zoomLayout.addWidget(QLabel('Zoom:'))
         self.zoomLayout.addWidget(self.zoomBox)
-        self.zoomLayout.setContentsMargins(0,0,0,0)
+        self.zoomLayout.setContentsMargins(0, 0, 0, 0)
         self.zoomWidget = QWidget()
         self.zoomWidget.setLayout(self.zoomLayout)
 
@@ -491,28 +499,27 @@ class OptionsDock(QDockWidget):
         self.xOrBox.setDecimals(9)
         self.xOrBox.setRange(-99999, 99999)
         self.xOrBox.valueChanged.connect(lambda value:
-            self.mw.editSingleOrigin(value, 0))
+                                         self.mw.editSingleOrigin(value, 0))
 
         # Y Origin
         self.yOrBox = QDoubleSpinBox()
         self.yOrBox.setDecimals(9)
         self.yOrBox.setRange(-99999, 99999)
         self.yOrBox.valueChanged.connect(lambda value:
-            self.mw.editSingleOrigin(value, 1))
+                                         self.mw.editSingleOrigin(value, 1))
 
         # Z Origin
         self.zOrBox = QDoubleSpinBox()
         self.zOrBox.setDecimals(9)
         self.zOrBox.setRange(-99999, 99999)
         self.zOrBox.valueChanged.connect(lambda value:
-            self.mw.editSingleOrigin(value, 2))
+                                         self.mw.editSingleOrigin(value, 2))
 
         # Origin Form Layout
         self.orLayout = QFormLayout()
         self.orLayout.addRow('X:', self.xOrBox)
         self.orLayout.addRow('Y:', self.yOrBox)
         self.orLayout.addRow('Z:', self.zOrBox)
-        #self.orLayout.setVerticalSpacing(4)
         self.orLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
         self.orLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
@@ -677,7 +684,9 @@ class OptionsDock(QDockWidget):
     def moveEvent(self, event):
         self.mw.resizeEvent(event)
 
+
 class ColorDialog(QDialog):
+
     def __init__(self, model, FM, parent=None):
         super(ColorDialog, self).__init__(parent)
 
@@ -700,7 +709,6 @@ class ColorDialog(QDialog):
         self.densityTab = self.createPropertyTab('density')
         self.temperatureTab = self.createPropertyTab('temperature')
 
-
         self.tabs = QTabWidget()
         self.tabs.setMaximumHeight(800)
         self.tabs.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -713,7 +721,6 @@ class ColorDialog(QDialog):
         self.createButtonBox()
 
         self.colorDialogLayout = QVBoxLayout()
-        #self.colorDialogLayout.setContentsMargins(0, 0, 0, 0)
         self.colorDialogLayout.addWidget(self.tabs)
         self.colorDialogLayout.addWidget(self.buttonBox)
         self.setLayout(self.colorDialogLayout)
@@ -768,7 +775,6 @@ class ColorDialog(QDialog):
         formLayout.setAlignment(QtCore.Qt.AlignHCenter)
         formLayout.setFormAlignment(QtCore.Qt.AlignHCenter)
         formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
-        #formLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         formLayout.addRow('Masking:', self.maskingCheck)
         formLayout.addRow('Mask Color:', self.maskColorButton)
@@ -821,10 +827,12 @@ class ColorDialog(QDialog):
 
     def updateColorMaps(self):
         colormaps = self.model.activeView.colormaps
-        index = self.densityTab.colormapBox.findText(colormaps['density'], QtCore.Qt.MatchFixedString)
+        index = self.densityTab.colormapBox.findText(colormaps['density'],
+                                                     QtCore.Qt.MatchFixedString)
         if index >= 0:
             self.densityTab.colormapBox.setCurrentIndex(index)
-        index = self.densityTab.colormapBox.findText(colormaps['temperature'], QtCore.Qt.MatchFixedString)
+        index = self.densityTab.colormapBox.findText(colormaps['temperature'],
+                                                     QtCore.Qt.MatchFixedString)
         if index >= 0:
             self.temperatureTab.colormapBox.setCurrentIndex(index)
 
@@ -863,9 +871,11 @@ class ColorDialog(QDialog):
         propertyTab.maxBox.setMaximum(1E9)
         propertyTab.maxBox.setMinimum(0)
 
-        connector2 = partial(self.mw.editColorBarMin, property_type=property_kind)
+        connector2 = partial(self.mw.editColorBarMin,
+                             property_type=property_kind)
         propertyTab.minBox.valueChanged.connect(connector2)
-        connector3 = partial(self.mw.editColorBarMax, property_type=property_kind)
+        connector3 = partial(self.mw.editColorBarMax,
+                             property_type=property_kind)
         propertyTab.maxBox.valueChanged.connect(connector3)
 
         propertyTab.colormapBox = QComboBox(self)
@@ -879,12 +889,14 @@ class ColorDialog(QDialog):
 
         propertyTab.dataindicatorCheckBox = QCheckBox()
         propertyTab.dataindicatorCheckBox.setCheckable(True)
-        connector4 = partial(self.mw.toggleDataIndicatorCheckBox, property=property_kind)
+        connector4 = partial(self.mw.toggleDataIndicatorCheckBox,
+                             property=property_kind)
         propertyTab.dataindicatorCheckBox.stateChanged.connect(connector4)
 
         propertyTab.colorBarScaleCheckBox = QCheckBox()
         propertyTab.colorBarScaleCheckBox.setCheckable(True)
-        connector5 = partial(self.mw.toggleColorBarScale, property=property_kind)
+        connector5 = partial(self.mw.toggleColorBarScale,
+                             property=property_kind)
         propertyTab.colorBarScaleCheckBox.stateChanged.connect(connector5)
 
         formLayout = QFormLayout()
@@ -952,8 +964,8 @@ class ColorDialog(QDialog):
 
     def updateMaskingColor(self):
         color = self.model.activeView.maskBackground
-        self.maskColorButton.setStyleSheet("border-radius: 8px;"
-                                    "background-color: rgb%s" % (str(color)))
+        style_values = "border-radius: 8px; background-color: rgb{}"
+        self.maskColorButton.setStyleSheet(style_values.format(str(color)))
 
     def updateHighlighting(self):
         highlighting = self.model.activeView.highlighting
@@ -980,8 +992,8 @@ class ColorDialog(QDialog):
 
     def updateHighlightColor(self):
         color = self.model.activeView.highlightBackground
-        self.hlColorButton.setStyleSheet("border-radius: 8px;"
-                                    "background-color: rgb%s" % (str(color)))
+        style_values = "border-radius: 8px; background-color: rgb{}"
+        self.hlColorButton.setStyleSheet(style_values.format(str(color)))
 
     def updateAlpha(self):
         self.alphaBox.setValue(self.model.activeView.highlightAlpha)
