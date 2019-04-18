@@ -411,7 +411,7 @@ class PlotImage(FigureCanvas):
 
         self.draw()
 
-    def updateColorBarScale(self):
+    def updateColorbarScale(self):
         self.setPixmap()
 
     def updateDataIndicatorValue(self, y_val):
@@ -432,9 +432,9 @@ class PlotImage(FigureCanvas):
             self.draw()
 
     def updateDataIndicatorVisibility(self):
-        av = self.model.activeView
+        cv = self.model.currentView
         if self.data_indicator and av.colorby in _MODEL_PROPERTIES:
-            val = av.data_indicator_enabled[av.colorby]
+            val = cv.data_indicator_enabled[cv.colorby]
             self.data_indicator.set_visible(val)
             self.draw()
 
@@ -860,7 +860,7 @@ class ColorDialog(QDialog):
         for key, val, in custom_minmax.items():
             self.tabs[key].minMaxCheckBox.setChecked(val)
 
-    def updateColorBarScale(self):
+    def updateColorbarScale(self):
         av = self.model.activeView
         for key, val in av.color_scale_log.items():
             self.tabs[key].colorBarScaleCheckBox.setChecked(val)
@@ -883,10 +883,10 @@ class ColorDialog(QDialog):
         propertyTab.maxBox.setMaximum(1E9)
         propertyTab.maxBox.setMinimum(0)
 
-        connector2 = partial(self.mw.editColorBarMin,
+        connector2 = partial(self.mw.editColorbarMin,
                              property_type=property_kind)
         propertyTab.minBox.valueChanged.connect(connector2)
-        connector3 = partial(self.mw.editColorBarMax,
+        connector3 = partial(self.mw.editColorbarMax,
                              property_type=property_kind)
         propertyTab.maxBox.valueChanged.connect(connector3)
 
@@ -907,7 +907,7 @@ class ColorDialog(QDialog):
 
         propertyTab.colorBarScaleCheckBox = QCheckBox()
         propertyTab.colorBarScaleCheckBox.setCheckable(True)
-        connector5 = partial(self.mw.toggleColorBarScale,
+        connector5 = partial(self.mw.toggleColorbarScale,
                              property=property_kind)
         propertyTab.colorBarScaleCheckBox.stateChanged.connect(connector5)
 
@@ -950,7 +950,7 @@ class ColorDialog(QDialog):
         self.updateMaskingColor()
         self.updateColorMaps()
         self.updateColorMinMax()
-        self.updateColorBarScale()
+        self.updateColorbarScale()
         self.updateDataIndicatorVisibility()
         self.updateHighlighting()
         self.updateHighlightColor()

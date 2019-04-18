@@ -440,7 +440,7 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
-    def editColorBarMin(self, min_val, property_type, apply=False):
+    def editColorbarMin(self, min_val, property_type, apply=False):
         current = self.model.activeView.user_minmax[property_type]
         self.model.activeView.user_minmax[property_type] = (min_val, current[1])
         self.colorDialog.updateColorMinMax()
@@ -448,7 +448,7 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
-    def editColorBarMax(self, max_val, property_type, apply=False):
+    def editColorbarMax(self, max_val, property_type, apply=False):
         current = self.model.activeView.user_minmax[property_type]
         self.model.activeView.user_minmax[property_type] = (current[0], max_val)
         self.colorDialog.updateColorMinMax()
@@ -456,13 +456,13 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
-    def toggleColorBarScale(self, state, property, apply=False):
+    def toggleColorbarScale(self, state, property, apply=False):
         av = self.model.activeView
         av.color_scale_log[property] = bool(state)
         # temporary, should be resolved diferently in the future
         cv = self.model.currentView
         cv.color_scale_log[property] = bool(state)
-        self.plotIm.updateColorBarScale()
+        self.plotIm.updateColorbarScale()
         if apply:
             self.applyChanges()
 
@@ -478,6 +478,10 @@ class MainWindow(QMainWindow):
     def toggleDataIndicatorCheckBox(self, state, property, apply=False):
         av = self.model.activeView
         av.data_indicator_enabled[property] = bool(state)
+
+        cv = self.model.currentView
+        cv.data_indicator_enabled[property] = bool(state)
+
         self.plotIm.updateDataIndicatorVisibility()
         if apply:
             self.applyChanges()
