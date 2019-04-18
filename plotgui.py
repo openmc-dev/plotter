@@ -433,7 +433,7 @@ class PlotImage(FigureCanvas):
 
     def updateDataIndicatorVisibility(self):
         cv = self.model.currentView
-        if self.data_indicator and av.colorby in _MODEL_PROPERTIES:
+        if self.data_indicator and cv.colorby in _MODEL_PROPERTIES:
             val = cv.data_indicator_enabled[cv.colorby]
             self.data_indicator.set_visible(val)
             self.draw()
@@ -450,7 +450,7 @@ class PlotImage(FigureCanvas):
         if self.colorbar and property_type == av.colorby:
             clim = av.getColorLimits(property_type)
             self.colorbar.set_clim(*clim)
-            self.data_indicator.set_data((clim[0], clim[1]),
+            self.data_indicator.set_data(clim[:2],
                                          (0.0, 0.0))
             self.colorbar.draw_all()
             self.draw()
