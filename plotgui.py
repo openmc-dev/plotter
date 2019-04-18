@@ -371,7 +371,7 @@ class PlotImage(FigureCanvas):
                 cmap_label = "Temperature (K)"
             else:
                 idx = 1
-                cmap_label = "Density (g/ccm)"
+                cmap_label = "Density (g/cc)"
 
             norm = SymLogNorm(1E-2) if cv.color_scale_log[cv.colorby] else None
             data = self.model.properties[:, :, idx]
