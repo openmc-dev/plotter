@@ -272,8 +272,10 @@ class PlotImage(FigureCanvas):
             colorAction.setDisabled(cv.highlighting)
             colorAction.setToolTip(f'Edit {domain_kind} color')
             colorAction.setStatusTip(f'Edit {domain_kind} color')
-            colorAction.triggered.connect(lambda:
-                                          self.mw.editDomainColor(domain_kind, id))
+            domain_color_connector = partial(self.mw.editDomainColor,
+                                             domain_kind,
+                                             id)
+            colorAction.triggered.connect(domain_color_connector)
 
             maskAction = self.menu.addAction(f'Mask {domain_kind}')
             maskAction.setCheckable(True)
@@ -281,8 +283,10 @@ class PlotImage(FigureCanvas):
             maskAction.setDisabled(not cv.masking)
             maskAction.setToolTip(f'Toggle {domain_kind} mask')
             maskAction.setStatusTip(f'Toggle {domain_kind} mask')
-            maskAction.triggered[bool].connect(lambda bool=bool:
-                                               self.mw.toggleDomainMask(bool, domain_kind, id))
+            mask_connector = partial(self.mw.toggleDomainMask,
+                                     kind=domain_kind,
+                                     id=id)
+            maskAction.toggled.connect(mask_connector)
 
             highlightAction = self.menu.addAction(f'Highlight {domain_kind}')
             highlightAction.setCheckable(True)
@@ -290,8 +294,10 @@ class PlotImage(FigureCanvas):
             highlightAction.setDisabled(not cv.highlighting)
             highlightAction.setToolTip(f'Toggle {domain_kind} highlight')
             highlightAction.setStatusTip(f'Toggle {domain_kind} highlight')
-            highlightAction.triggered[bool].connect(lambda bool=bool:
-                                                    self.mw.toggleDomainHighlight(bool, domain_kind, id))
+            highlight_connector = partial(self.mw.toggleDomainHighlight,
+                                          kind=domain_kind,
+                                          id=id)
+            highlightAction.toggled.connect(highlight_connector)
 
         else:
             self.menu.addAction(self.mw.undoAction)
@@ -302,7 +308,7 @@ class PlotImage(FigureCanvas):
                 bgColorAction = self.menu.addAction('Edit Background Color...')
                 bgColorAction.setToolTip('Edit background color')
                 bgColorAction.setStatusTip('Edit plot background color')
-                connector = lambda: self.mw.editBackgroundColor(apply=True)
+                connector = partial(self.mw.editBackgroundColor, apply=True)
                 bgColorAction.triggered.connect(connector)
 
         self.menu.addSeparator()
@@ -507,22 +513,25 @@ class OptionsDock(QDockWidget):
         self.xOrBox = QDoubleSpinBox()
         self.xOrBox.setDecimals(9)
         self.xOrBox.setRange(-99999, 99999)
-        self.xOrBox.valueChanged.connect(lambda value:
-                                         self.mw.editSingleOrigin(value, 0))
+        xbox_connector = partial(self.mw.editSingleOrigin,
+                                 dimension=0)
+        self.xOrBox.valueChanged.connect(xbox_connector)
 
         # Y Origin
         self.yOrBox = QDoubleSpinBox()
         self.yOrBox.setDecimals(9)
         self.yOrBox.setRange(-99999, 99999)
-        self.yOrBox.valueChanged.connect(lambda value:
-                                         self.mw.editSingleOrigin(value, 1))
+        ybox_connector = partial(self.mw.editSingleOrigin,
+                                 dimension=1)
+        self.yOrBox.valueChanged.connect(ybox_connector)
 
         # Z Origin
         self.zOrBox = QDoubleSpinBox()
         self.zOrBox.setDecimals(9)
         self.zOrBox.setRange(-99999, 99999)
-        self.zOrBox.valueChanged.connect(lambda value:
-                                         self.mw.editSingleOrigin(value, 2))
+        zbox_connector = partial(self.mw.editSingleOrigin,
+                                 dimension=2)
+        self.zOrBox.valueChanged.connect(zbox_connector)
 
         # Origin Form Layout
         self.orLayout = QFormLayout()
@@ -949,7 +958,6 @@ class ColorDialog(QDialog):
         self.updateSeed()
         self.updateBackgroundColor()
         self.updateColorBy()
-
         self.updateDomainTabs()
 
     def updateMasking(self):

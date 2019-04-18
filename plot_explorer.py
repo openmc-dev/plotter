@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import copy
+from functools import partial
 import os
 from pathlib import Path
 import pickle
@@ -157,24 +158,24 @@ class MainWindow(QMainWindow):
         self.xyAction.setShortcut('Alt+X')
         self.xyAction.setToolTip('Change to xy basis')
         self.xyAction.setStatusTip('Change to xy basis')
-        self.xyAction.triggered.connect(lambda:
-                                        self.editBasis('xy', apply=True))
+        xy_connector = partial(self.editBasis, 'xy', apply=True)
+        self.xyAction.triggered.connect(xy_connector)
 
         self.xzAction = QAction('x&z  ', self)
         self.xzAction.setCheckable(True)
         self.xzAction.setShortcut('Alt+Z')
         self.xzAction.setToolTip('Change to xz basis')
         self.xzAction.setStatusTip('Change to xz basis')
-        self.xzAction.triggered.connect(lambda:
-                                        self.editBasis('xz', apply=True))
+        xz_connector = partial(self.editBasis, 'xz', apply=True)
+        self.xzAction.triggered.connect(xz_connector)
 
         self.yzAction = QAction('&yz  ', self)
         self.yzAction.setCheckable(True)
         self.yzAction.setShortcut('Alt+Y')
         self.yzAction.setToolTip('Change to yz basis')
         self.yzAction.setStatusTip('Change to yz basis')
-        self.yzAction.triggered.connect(lambda:
-                                        self.editBasis('yz', apply=True))
+        yz_connector = partial(self.editBasis, 'yz', apply=True)
+        self.yzAction.triggered.connect(yz_connector)
 
         self.basisMenu = self.editMenu.addMenu('&Basis')
         self.basisMenu.addAction(self.xyAction)
@@ -188,32 +189,32 @@ class MainWindow(QMainWindow):
         self.cellAction.setShortcut('Alt+C')
         self.cellAction.setToolTip('Color by cell')
         self.cellAction.setStatusTip('Color plot by cell')
-        self.cellAction.triggered.connect(lambda:
-                                          self.editColorBy('cell', apply=True))
+        cell_connector = partial(self.editColorBy, 'cell', apply=True)
+        self.cellAction.triggered.connect(cell_connector)
 
         self.materialAction = QAction('&Material', self)
         self.materialAction.setCheckable(True)
         self.materialAction.setShortcut('Alt+M')
         self.materialAction.setToolTip('Color by material')
         self.materialAction.setStatusTip('Color plot by material')
-        self.materialAction.triggered.connect(lambda:
-                                              self.editColorBy('material', apply=True))
+        material_connector = partial(self.editColorBy, 'material', apply=True)
+        self.materialAction.triggered.connect(material_connector)
 
         self.temperatureAction = QAction('&Temperature', self)
         self.temperatureAction.setCheckable(True)
         self.temperatureAction.setShortcut('Alt+T')
         self.temperatureAction.setToolTip('Color by temperature')
         self.temperatureAction.setStatusTip('Color plot by temperature')
-        self.temperatureAction.triggered.connect(lambda:
-                                                 self.editColorBy('temperature', apply=True))
+        temp_connector = partial(self.editColorBy, 'temperature', apply=True)
+        self.temperatureAction.triggered.connect(temp_connector)
 
         self.densityAction = QAction('&Density', self)
         self.densityAction.setCheckable(True)
         self.densityAction.setShortcut('Alt+D')
         self.densityAction.setToolTip('Color by density')
         self.densityAction.setStatusTip('Color plot by density')
-        self.densityAction.triggered.connect(lambda:
-                                             self.editColorBy('density', apply=True))
+        density_connector = partial(self.editColorBy, 'density', apply=True)
+        self.densityAction.triggered.connect(density_connector)
 
         self.colorbyMenu = self.editMenu.addMenu('&Color By')
         self.colorbyMenu.addAction(self.cellAction)
@@ -230,8 +231,8 @@ class MainWindow(QMainWindow):
         self.maskingAction.setCheckable(True)
         self.maskingAction.setToolTip('Toggle masking')
         self.maskingAction.setStatusTip('Toggle whether masking is enabled')
-        self.maskingAction.triggered[bool].connect(lambda bool=bool:
-                                                   self.toggleMasking(bool, apply=True))
+        masking_connector = partial(self.toggleMasking, apply=True)
+        self.maskingAction.toggled.connect(masking_connector)
         self.editMenu.addAction(self.maskingAction)
 
         self.highlightingAct = QAction('Enable High&lighting', self)
@@ -239,8 +240,8 @@ class MainWindow(QMainWindow):
         self.highlightingAct.setCheckable(True)
         self.highlightingAct.setToolTip('Toggle highlighting')
         self.highlightingAct.setStatusTip('Toggle whether highlighting is enabled')
-        self.highlightingAct.triggered[bool].connect(lambda bool=bool:
-                                                     self.toggleHighlighting(bool, apply=True))
+        highlight_connector = partial(self.toggleHighlighting, apply=True)
+        self.highlightingAct.toggled.connect(highlight_connector)
         self.editMenu.addAction(self.highlightingAct)
 
         # View Menu
