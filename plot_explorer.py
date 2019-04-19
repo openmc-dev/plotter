@@ -289,8 +289,8 @@ class MainWindow(QMainWindow):
         self.maskingAction.setChecked(self.model.currentView.masking)
         self.highlightingAct.setChecked(self.model.currentView.highlighting)
 
-        self.undoAction.setText(f'&Undo ({len(self.model.previousViews)})')
-        self.redoAction.setText(f'&Redo ({len(self.model.subsequentViews)})')
+        self.undoAction.setText('&Undo ({})'.format(len(self.model.previousViews)))
+        self.redoAction.setText('&Redo ({})'.format(len(self.model.subsequentViews)))
 
     def updateBasisMenu(self):
         self.xyAction.setChecked(self.model.currentView.basis == 'xy')
@@ -357,7 +357,7 @@ class MainWindow(QMainWindow):
                 self.dock.updateDock()
                 self.colorDialog.updateDialogValues()
                 self.applyChanges()
-                message = f'{filename} settings loaded'
+                message = '{} settings loaded'.format(filename)
             else:
                 message = 'Error loading plot settings. Incompatible model.'
             self.statusBar().showMessage(message, 5000)
@@ -745,15 +745,18 @@ class MainWindow(QMainWindow):
     def showCoords(self, xPlotPos, yPlotPos):
         cv = self.model.currentView
         if cv.basis == 'xy':
-            coords = (f"({round(xPlotPos, 2)}, {round(yPlotPos, 2)}, "
-                      f"{round(cv.origin[2], 2)})")
+            coords = ("({}, {}, {})".format(round(xPlotPos, 2),
+                                            round(yPlotPos, 2),
+                                            round(cv.origin[2], 2)))
         elif cv.basis == 'xz':
-            coords = (f"({round(xPlotPos, 2)}, {round(cv.origin[1], 2)}, "
-                      f"{round(yPlotPos, 2)})")
+            coords = ("({}, {}, {})".format(round(xPlotPos, 2),
+                                            round(cv.origin[1], 2),
+                                            round(yPlotPos, 2)))
         else:
-            coords = (f"({round(cv.origin[0], 2)}, {round(xPlotPos, 2)}, "
-                      f"{round(yPlotPos, 2)})")
-        self.coord_label.setText(f'{coords}')
+            coords = ("({}, {}, {})".format(round(cv.origin[0], 2),
+                                            round(xPlotPos, 2),
+                                            round(yPlotPos, 2)))
+        self.coord_label.setText('{}'.format(coords))
 
     def resizePixmap(self):
         z = self.zoom / 100.

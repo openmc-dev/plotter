@@ -383,8 +383,12 @@ class DomainView():
         self.highlighted = highlighted
 
     def __repr__(self):
-        return (f"id: {self.id} \nname: {self.name} \ncolor: {self.color} \
-                \nmask: {self.masked} \nhighlight: {self.highlighted}\n\n")
+        return ("id: {} \nname: {} \ncolor: {} \
+                \nmask: {} \nhighlight: {}\n\n".format(self.id,
+                                                       self.name,
+                                                       self.color,
+                                                       self.masked,
+                                                       self.highlight))
 
     def __eq__(self, other):
         if isinstance(other, DomainView):

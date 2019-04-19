@@ -126,9 +126,9 @@ class PlotImage(FigureCanvas):
         # check that the position is in the axes view
         if 0 <= yPos < self.model.currentView.v_res \
            and 0 <= xPos and xPos < self.model.currentView.h_res:
-            id = f"{self.model.ids[yPos][xPos]}"
-            temp = f"{self.model.properties[yPos][xPos][0]:g}"
-            density = f"{self.model.properties[yPos][xPos][1]:g}"
+            id = "{}".format(self.model.ids[yPos][xPos])
+            temp = "{:g}".format(self.model.properties[yPos][xPos][0])
+            density = "{:g}".format(self.model.properties[yPos][xPos][1])
         else:
             id = str(_NOT_FOUND)
             density = str(_NOT_FOUND)
@@ -172,24 +172,34 @@ class PlotImage(FigureCanvas):
                 line_val = float(properties[domain_kind.lower()])
                 line_val = max(line_val, 0.0)
                 self.updateDataIndicatorValue(line_val)
+                domain_kind = 'Material'
+
+            temperature = properties['temperature']
+            density = properties['density']
 
             if id == str(_VOID_REGION):
                 domainInfo = ("VOID")
             elif id != str(_NOT_FOUND) and domain[id].name:
-                domainInfo = (f"{domain_kind} {id}: \"{domain[id].name}\"\t "
-                              f"Density: {properties['density']} g/cm3\t"
-                              f"Temperature: {properties['temperature']} K")
+                domainInfo = ("{} {}: \"{}\"\t Density: {} g/cc\t"
+                              "Temperature: {} K".format(domain_kind,
+                                                         id,
+                                                         domain[id].name,
+                                                         density,
+                                                         temperature))
             elif id != str(_NOT_FOUND):
-                domainInfo = (f"{domain_kind} {id}\t"
-                              f"Density: {properties['density']} g/cm3\t"
-                              f"Temperature: {properties['temperature']} K")
+                domainInfo = ("{} {}\t Density: {} g/cc\t"
+                              "Temperature: {} K".format(domain_kind,
+                                                         id,
+                                                         domain[id].name,
+                                                         density,
+                                                         temperature))
             else:
                 domainInfo = ""
         else:
             domainInfo = ""
             self.updateDataIndicatorValue(0.0)
 
-        self.mw.statusBar().showMessage(f" {domainInfo}")
+        self.mw.statusBar().showMessage(" " + domainInfo)
 
         # Update rubber band and values if mouse button held down
         if event.buttons() == QtCore.Qt.LeftButton:
@@ -244,8 +254,8 @@ class PlotImage(FigureCanvas):
 
         self.menu.clear()
 
-        self.mw.undoAction.setText(f'&Undo ({len(self.model.previousViews)})')
-        self.mw.redoAction.setText(f'&Redo ({len(self.model.subsequentViews)})')
+        self.mw.undoAction.setText('&Undo ({})'.format(len(self.model.previousViews)))
+        self.mw.redoAction.setText('&Redo ({})'.format(len(self.model.subsequentViews)))
 
         id, properties, domain, domain_kind = self.getIDinfo(event)
 
@@ -260,7 +270,7 @@ class PlotImage(FigureCanvas):
         if id != str(_NOT_FOUND) and cv.colorby not in _MODEL_PROPERTIES:
 
             # Domain ID
-            domainID = self.menu.addAction(f"{domain_kind} {id}")
+            domainID = self.menu.addAction("{} {}".format(domain_kind, id))
             domainID.setDisabled(True)
 
             # Domain Name (if any)
@@ -268,32 +278,32 @@ class PlotImage(FigureCanvas):
                 domainName = self.menu.addAction(domain[id].name)
                 domainName.setDisabled(True)
 
-            colorAction = self.menu.addAction(f'Edit {domain_kind} Color...')
+            colorAction = self.menu.addAction('Edit {} Color...'.format(domain_kind))
             colorAction.setDisabled(cv.highlighting)
-            colorAction.setToolTip(f'Edit {domain_kind} color')
-            colorAction.setStatusTip(f'Edit {domain_kind} color')
+            colorAction.setToolTip('Edit {} color'.format(domain_kind))
+            colorAction.setStatusTip('Edit {} color'.format(domain_kind))
             domain_color_connector = partial(self.mw.editDomainColor,
                                              domain_kind,
                                              id)
             colorAction.triggered.connect(domain_color_connector)
 
-            maskAction = self.menu.addAction(f'Mask {domain_kind}')
+            maskAction = self.menu.addAction('Mask {}'.format(domain_kind))
             maskAction.setCheckable(True)
             maskAction.setChecked(domain[id].masked)
             maskAction.setDisabled(not cv.masking)
-            maskAction.setToolTip(f'Toggle {domain_kind} mask')
-            maskAction.setStatusTip(f'Toggle {domain_kind} mask')
+            maskAction.setToolTip('Toggle {} mask'.format(domain_kind))
+            maskAction.setStatusTip('Toggle {} mask'.format(domain_kind))
             mask_connector = partial(self.mw.toggleDomainMask,
                                      kind=domain_kind,
                                      id=id)
             maskAction.toggled.connect(mask_connector)
 
-            highlightAction = self.menu.addAction(f'Highlight {domain_kind}')
+            highlightAction = self.menu.addAction('Highlight {}'.format(domain_kind))
             highlightAction.setCheckable(True)
             highlightAction.setChecked(domain[id].highlighted)
             highlightAction.setDisabled(not cv.highlighting)
-            highlightAction.setToolTip(f'Toggle {domain_kind} highlight')
-            highlightAction.setStatusTip(f'Toggle {domain_kind} highlight')
+            highlightAction.setToolTip('Toggle {} highlight'.format(domain_kind))
+            highlightAction.setStatusTip('Toggle {} highlight'.format(domain_kind))
             highlight_connector = partial(self.mw.toggleDomainHighlight,
                                           kind=domain_kind,
                                           id=id)
