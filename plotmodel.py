@@ -171,7 +171,7 @@ class PlotModel():
         # set model properties
         self.properties = props
 
-        self.properties[self.properties < 0.0] = 0.0
+        self.properties[self.properties < 0.0] = np.nan
 
         minmax = {}
         for prop in _MODEL_PROPERTIES:
