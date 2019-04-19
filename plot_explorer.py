@@ -26,7 +26,6 @@ class MainWindow(QMainWindow):
 
     def loadGui(self):
 
-        openmc.capi.set_verbosity(0)
         openmc.capi.init(["-c"])
 
         self.restored = False
