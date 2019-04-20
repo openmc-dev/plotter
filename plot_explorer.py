@@ -811,19 +811,17 @@ if __name__ == '__main__':
     splash = QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)
     splash.setPixmap(splash_pix)
     splash.setMask(splash_pix.mask())
-    splash.showMessage("Starting GUI...", QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
+    splash.showMessage("Loading Model...",
+                       QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
     splash.show()
 
-    # this loop sucks, but it makes the splashscreen work
-    start = time.time()
-    timer = 0.0
-    while timer < 0.1:
-        timer = time.time() - start
-        time.sleep(0.001)
-        app.processEvents()
+    # delay a bit before processing events, to let splashscreen initialize
+    time.sleep(0.01)
+    app.processEvents()
 
     FM = QtGui.QFontMetricsF(app.font())
     mainWindow = MainWindow()
+    app.processEvents()
     mainWindow.loadGui()
     mainWindow.show()
     splash.close()
