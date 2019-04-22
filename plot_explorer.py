@@ -18,6 +18,7 @@ from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
 from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, ColorDialog, OptionsDock
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -25,8 +26,6 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('OpenMC Plot Explorer')
 
     def loadGui(self):
-
-        openmc.capi.init(["-c"])
 
         self.restored = False
         self.pixmap = None
@@ -80,7 +79,6 @@ class MainWindow(QMainWindow):
             # Timer allows GUI to render before plot finishes loading
             QtCore.QTimer.singleShot(0, self.model.generatePlot)
             QtCore.QTimer.singleShot(0, self.showCurrentView)
-
 
     # Create and update menus:
     def createMenuBar(self):
@@ -242,7 +240,8 @@ class MainWindow(QMainWindow):
         self.highlightingAct.setShortcut('Ctrl+L')
         self.highlightingAct.setCheckable(True)
         self.highlightingAct.setToolTip('Toggle highlighting')
-        self.highlightingAct.setStatusTip('Toggle whether highlighting is enabled')
+        self.highlightingAct.setStatusTip('Toggle whether '
+                                          'highlighting is enabled')
         highlight_connector = partial(self.toggleHighlighting, apply=True)
         self.highlightingAct.toggled.connect(highlight_connector)
         self.editMenu.addAction(self.highlightingAct)
@@ -292,8 +291,10 @@ class MainWindow(QMainWindow):
         self.maskingAction.setChecked(self.model.currentView.masking)
         self.highlightingAct.setChecked(self.model.currentView.highlighting)
 
-        self.undoAction.setText('&Undo ({})'.format(len(self.model.previousViews)))
-        self.redoAction.setText('&Redo ({})'.format(len(self.model.subsequentViews)))
+        num_previous_views = len(self.model.previousViews)
+        self.undoAction.setText('&Undo ({})'.format(num_previous_views))
+        num_subsequent_views = len(self.model.subsequentViews)
+        self.redoAction.setText('&Redo ({})'.format(num_subsequent_views))
 
     def updateBasisMenu(self):
         self.xyAction.setChecked(self.model.currentView.basis == 'xy')
@@ -444,16 +445,18 @@ class MainWindow(QMainWindow):
             self.applyChanges()
 
     def editColorbarMin(self, min_val, property_type, apply=False):
-        current = self.model.activeView.user_minmax[property_type]
-        self.model.activeView.user_minmax[property_type] = (min_val, current[1])
+        av = self.model.activeView
+        current = av.user_minmax[property_type]
+        av.user_minmax[property_type] = (min_val, current[1])
         self.colorDialog.updateColorMinMax()
         self.plotIm.updateColorMinMax(property_type)
         if apply:
             self.applyChanges()
 
     def editColorbarMax(self, max_val, property_type, apply=False):
-        current = self.model.activeView.user_minmax[property_type]
-        self.model.activeView.user_minmax[property_type] = (current[0], max_val)
+        av = self.model.activeView
+        current = av.user_minmax[property_type]
+        av.user_minmax[property_type] = (current[0], max_val)
         self.colorDialog.updateColorMinMax()
         self.plotIm.updateColorMinMax(property_type)
         if apply:
@@ -473,7 +476,7 @@ class MainWindow(QMainWindow):
         av = self.model.activeView
         av.use_custom_minmax[property] = bool(state)
         if av.user_minmax[property] == (0.0, 0.0):
-            self.model.activeView.user_minmax[property] = copy.copy(av.data_minmax[property])
+            av.user_minmax[property] = copy.copy(av.data_minmax[property])
         self.plotIm.updateColorMinMax('temperature')
         self.plotIm.updateColorMinMax('density')
         self.colorDialog.updateColorMinMax()
@@ -794,11 +797,23 @@ class MainWindow(QMainWindow):
         with open('plot_settings.pkl', 'wb') as file:
             pickle.dump(self.model, file)
 
+
+class ModelLoader(QtCore.QThread):
+
+    def __init__(self):
+        QtCore.QThread.__init__(self)
+
+    def __del__(self):
+        self.wait()
+
+    def run(self):
+        openmc.capi.init(['-c'])
+
+
 if __name__ == '__main__':
 
     path_icon = str(Path(__file__).parent / 'assets/openmc_logo.png')
     path_splash = str(Path(__file__).parent / 'assets/splash.png')
-
 
     app = QApplication(sys.argv)
     app.setOrganizationName("OpenMC")
@@ -808,21 +823,31 @@ if __name__ == '__main__':
     app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, True)
 
     splash_pix = QtGui.QPixmap(path_splash)
+    print(splash_pix)
     splash = QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)
-    splash.setPixmap(splash_pix)
+    splash.setMask(splash_pix.mask())
+    splash.show()
+    app.processEvents()
     splash.setMask(splash_pix.mask())
     splash.showMessage("Loading Model...",
                        QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
-    splash.show()
+    app.processEvents()
+    # load OpenMC model on another thread
+    loader_thread = ModelLoader()
+    loader_thread.start()
+    # while thread is working, process app events
+    while loader_thread.isRunning():
+        app.processEvents()
 
-    # delay a bit before processing events, to let splashscreen initialize
-    time.sleep(0.01)
+    splash.clearMessage()
+    splash.showMessage("Starting GUI...",
+                       QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
     app.processEvents()
 
     FM = QtGui.QFontMetricsF(app.font())
     mainWindow = MainWindow()
-    app.processEvents()
+    # connect splashscreen to main window, close when main window opens
+    splash.finish(mainWindow)
     mainWindow.loadGui()
     mainWindow.show()
-    splash.close()
     sys.exit(app.exec_())
