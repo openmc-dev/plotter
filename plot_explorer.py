@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import pickle
 import sys
+from threading import Thread
 import time
 
 import openmc
@@ -797,19 +798,6 @@ class MainWindow(QMainWindow):
         with open('plot_settings.pkl', 'wb') as file:
             pickle.dump(self.model, file)
 
-
-class ModelLoader(QtCore.QThread):
-
-    def __init__(self):
-        QtCore.QThread.__init__(self)
-
-    def __del__(self):
-        self.wait()
-
-    def run(self):
-        openmc.capi.init(['-c'])
-
-
 if __name__ == '__main__':
 
     path_icon = str(Path(__file__).parent / 'assets/openmc_logo.png')
@@ -833,10 +821,10 @@ if __name__ == '__main__':
                        QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
     app.processEvents()
     # load OpenMC model on another thread
-    loader_thread = ModelLoader()
+    loader_thread = Thread(target=openmc.capi.init, args=(['-c'],))
     loader_thread.start()
     # while thread is working, process app events
-    while loader_thread.isRunning():
+    while loader_thread.is_alive():
         app.processEvents()
 
     splash.clearMessage()
