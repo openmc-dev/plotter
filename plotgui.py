@@ -82,14 +82,15 @@ class PlotImage(FigureCanvas):
         FigureCanvas.mousePressEvent(self, event)
 
     def getPlotCoords(self, pos):
-
+        print("FigCanvas coords:", self.mouseEventCoords(pos))
+        print("Event coords:", (pos.x(), pos.y()))
+        x, y = self.mouseEventCoords(pos)
         cv = self.model.currentView
 
         # get the normalized axis coordinates from the event display units
         transform = self.ax.transAxes.inverted()
-        xPlotCoord, yPlotCoord = transform.transform((pos.x(), pos.y()))
+        xPlotCoord, yPlotCoord = transform.transform((x, y))
         # flip the y-axis (its zero is in the upper left)
-        yPlotCoord = 1 - yPlotCoord
 
         # scale axes using the plot extents
         xPlotCoord = self.ax.dataLim.x0 + xPlotCoord * self.ax.dataLim.width
@@ -105,8 +106,8 @@ class PlotImage(FigureCanvas):
         return (xPlotCoord, yPlotCoord)
 
     def printPos(self, event):
-        print(event.x, event.y)
-        print(event.xdata, event.ydata)
+        print("MPL Event Disp Coords:", (event.x, event.y))
+        print("True Coords:", (event.xdata, event.ydata))
 
     def getIDinfo(self, event):
 
