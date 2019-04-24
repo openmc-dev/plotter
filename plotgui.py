@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from functools import partial
+import sys
 
 from plot_colors import rgb_normalize, invert_rgb
 from plotmodel import DomainDelegate
@@ -36,14 +37,14 @@ class PlotImage(FigureCanvas):
 
     def __init__(self, model, parent, main):
 
-        super(FigureCanvas, self).__init__(Figure())
+        self.figure = Figure(dpi=main.logicalDpiX())
+        super(FigureCanvas, self).__init__(self.figure)
 
         FigureCanvas.setSizePolicy(self,
                                    QSizePolicy.Expanding,
                                    QSizePolicy.Expanding)
 
         FigureCanvas.updateGeometry(self)
-
         self.model = model
         self.mw = main
         self.parent = parent
@@ -356,10 +357,15 @@ class PlotImage(FigureCanvas):
         self.figure.patch.set_facecolor(rgb_normalize(window_bg.getRgb()))
 
         # set figure width
+        if sys.platform == 'darwin':
+            dpi = self.logicalDpiX()
+        else:
+            dpi = self.figure.get_dpi()
+            
         if w:
-            self.figure.set_figwidth(0.99 * w / self.figure.get_dpi())
+            self.figure.set_figwidth(0.99 * w / dpi)
         if h:
-            self.figure.set_figheight(0.99 * h / self.figure.get_dpi())
+            self.figure.set_figheight(0.99 * h / dpi)
         # set data extents for automatic reporting of pointer location
         data_bounds = [cv.origin[self.mw.xBasis] - cv.width/2.,
                        cv.origin[self.mw.xBasis] + cv.width/2.,
