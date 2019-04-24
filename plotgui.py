@@ -169,7 +169,7 @@ class PlotImage(FigureCanvas):
 
         # Show Cell/Material ID, Name in status bar
         id, properties, domain, domain_kind = self.getIDinfo(event)
-        if self.ax.contains_point((event.pos().x(), event.pos().y())):
+        if self.parent.underMouse():
 
             if domain_kind.lower() in _MODEL_PROPERTIES:
                 line_val = float(properties[domain_kind.lower()])
