@@ -104,6 +104,10 @@ class PlotImage(FigureCanvas):
 
         return (xPlotCoord, yPlotCoord)
 
+    def printPos(self, event):
+        print(event.x, event.y)
+        print(event.xdata, event.ydata)
+
     def getIDinfo(self, event):
 
         cv = self.model.currentView
@@ -235,6 +239,8 @@ class PlotImage(FigureCanvas):
             self.mw.editWidth(width)
             self.mw.editHeight(height)
 
+        FigureCanvas.mouseMoveEvent(self, event)
+
     def mouseReleaseEvent(self, event):
 
         if self.rubber_band.isVisible():
@@ -350,6 +356,8 @@ class PlotImage(FigureCanvas):
 
         # clear out figure
         self.figure.clear()
+        self.figure.canvas.mpl_connect('motion_notify_event', self.printPos)
+        self.figure.canvas.mpl_connect('button_press_event', self.printPos)
 
         cv = self.model.currentView
         # set figure bg color to match window
@@ -361,7 +369,7 @@ class PlotImage(FigureCanvas):
             dpi = self.logicalDpiX()
         else:
             dpi = self.figure.get_dpi()
-            
+
         if w:
             self.figure.set_figwidth(0.99 * w / dpi)
         if h:
