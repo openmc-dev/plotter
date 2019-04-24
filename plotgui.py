@@ -82,8 +82,6 @@ class PlotImage(FigureCanvas):
         FigureCanvas.mousePressEvent(self, event)
 
     def getPlotCoords(self, pos):
-        print("FigCanvas coords:", self.mouseEventCoords(pos))
-        print("Event coords:", (pos.x(), pos.y()))
         x, y = self.mouseEventCoords(pos)
         cv = self.model.currentView
 
@@ -105,13 +103,11 @@ class PlotImage(FigureCanvas):
 
         return (xPlotCoord, yPlotCoord)
 
-    def printPos(self, event):
-        print("MPL Event Disp Coords:", (event.x, event.y))
-        print("True Coords:", (event.xdata, event.ydata))
-
     def getIDinfo(self, event):
 
         cv = self.model.currentView
+
+        x, y = self.mouseEventCoords(event.pos())
 
         # get origin in axes coordinates
         x0, y0 = self.ax.transAxes.transform((0.0, 0.0))
@@ -126,8 +122,9 @@ class PlotImage(FigureCanvas):
 
         # use factor to get proper x,y position in pixels
         factor = (width/cv.h_res, height/cv.v_res)
-        xPos = int((event.pos().x()-x0 + 0.01) / factor[0])
-        yPos = int((event.pos().y()-y0 + 0.01) / factor[1])
+        xPos = int((x - x0 + 0.01) / factor[0])
+        # flip y-axis
+        yPos = cv.v_res - int((y - y0 + 0.01) / factor[1])
 
         # check that the position is in the axes view
         if 0 <= yPos < self.model.currentView.v_res \
@@ -196,7 +193,6 @@ class PlotImage(FigureCanvas):
                 domainInfo = ("{} {}\t Density: {} g/cc\t"
                               "Temperature: {} K".format(domain_kind,
                                                          id,
-                                                         domain[id].name,
                                                          density,
                                                          temperature))
             else:
@@ -357,8 +353,6 @@ class PlotImage(FigureCanvas):
 
         # clear out figure
         self.figure.clear()
-        self.figure.canvas.mpl_connect('motion_notify_event', self.printPos)
-        self.figure.canvas.mpl_connect('button_press_event', self.printPos)
 
         cv = self.model.currentView
         # set figure bg color to match window
