@@ -79,7 +79,7 @@ class PlotImage(FigureCanvas):
         self.rubber_band.setGeometry(QtCore.QRect(self.band_origin,
                                                   QtCore.QSize()))
 
-        FigureCanvas.mousePressEvent(self, event)
+#        FigureCanvas.mousePressEvent(self, event)
 
     def getPlotCoords(self, pos):
         x, y = self.mouseEventCoords(pos)
@@ -160,7 +160,7 @@ class PlotImage(FigureCanvas):
         xCenter, yCenter = self.getPlotCoords(event.pos())
         self.mw.editPlotOrigin(xCenter, yCenter, apply=True)
 
-        FigureCanvas.mouseDoubleClickEvent(self, event)
+#        FigureCanvas.mouseDoubleClickEvent(self, event)
 
     def mouseMoveEvent(self, event):
 
@@ -236,7 +236,7 @@ class PlotImage(FigureCanvas):
             self.mw.editWidth(width)
             self.mw.editHeight(height)
 
-        FigureCanvas.mouseMoveEvent(self, event)
+        self.draw()
 
     def mouseReleaseEvent(self, event):
 
@@ -246,6 +246,8 @@ class PlotImage(FigureCanvas):
         else:
             self.mw.revertDockControls()
 
+
+
     def wheelEvent(self, event):
 
         if event.delta() and event.modifiers() == QtCore.Qt.ShiftModifier:
@@ -253,6 +255,8 @@ class PlotImage(FigureCanvas):
 
             if 24 < self.mw.zoom + numDegrees < 5001:
                 self.mw.editZoom(self.mw.zoom + numDegrees)
+
+        self.draw()
 
     def contextMenuEvent(self, event):
 
