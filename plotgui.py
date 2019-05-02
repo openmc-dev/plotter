@@ -403,7 +403,7 @@ class PlotImage(FigureCanvas):
                                                         norm=norm,
                                                         extent=data_bounds,
                                                         alpha=cv.plotAlpha)
-            cmap_ax = self.figure.add_axes([0.9, 0.1, 0.03, 0.8])
+            cmap_ax = self.figure.add_axes()
 
             # add colorbar
             self.colorbar = self.figure.colorbar(self.image,
