@@ -176,8 +176,10 @@ class PlotModel():
         minmax = {}
         for prop in _MODEL_PROPERTIES:
             idx = _PROPERTY_INDICES[prop]
-            minmax[prop] = (np.min(self.properties[:, :, idx]),
-                            np.max(self.properties[:, :, idx]))
+            prop_data = self.properties[:, :, idx]
+            minmax[prop] = (np.min(np.nan_to_num(prop_data)),
+                            np.max(np.nan_to_num(prop_data)))
+
         self.activeView.data_minmax = minmax
 
     def undo(self):
