@@ -363,16 +363,10 @@ class PlotImage(FigureCanvas):
         window_bg = self.parent.palette().color(QtGui.QPalette.Background)
         self.figure.patch.set_facecolor(rgb_normalize(window_bg.getRgb()))
 
-        # set figure width
-        if sys.platform == 'darwin':
-            dpi = self.logicalDpiX()
-        else:
-            dpi = self.figure.get_dpi()
-
         if w:
-            self.figure.set_figwidth(0.99 * w / dpi)
+            self.figure.set_figwidth(0.99 * w / self.figure.dpi)
         if h:
-            self.figure.set_figheight(0.99 * h / dpi)
+            self.figure.set_figheight(0.99 * h / self.figure.dpi)
         # set data extents for automatic reporting of pointer location
         data_bounds = [cv.origin[self.mw.xBasis] - cv.width/2.,
                        cv.origin[self.mw.xBasis] + cv.width/2.,
