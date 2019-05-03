@@ -236,7 +236,6 @@ class PlotImage(FigureCanvas):
             self.mw.editWidth(width)
             self.mw.editHeight(height)
 
-        self.draw()
 
     def mouseReleaseEvent(self, event):
 
@@ -256,7 +255,6 @@ class PlotImage(FigureCanvas):
             if 24 < self.mw.zoom + numDegrees < 5001:
                 self.mw.editZoom(self.mw.zoom + numDegrees)
 
-        self.draw()
 
     def contextMenuEvent(self, event):
 
