@@ -835,7 +835,7 @@ if __name__ == '__main__':
     FM = QtGui.QFontMetricsF(app.font())
     mainWindow = MainWindow()
     # connect splashscreen to main window, close when main window opens
-    splash.finish(mainWindow)
     mainWindow.loadGui()
     mainWindow.show()
+    splash.close()
     sys.exit(app.exec_())
