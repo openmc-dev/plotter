@@ -15,7 +15,7 @@ from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMenu, QAction, QFileDialog,
                                QColorDialog, QInputDialog, QSplashScreen,
-                               QWidget, QGestureEvent)
+                               QWidget, QGestureEvent, QPushButton)
 
 from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, ColorDialog, OptionsDock
@@ -75,6 +75,10 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.coord_label)
         self.coord_label.hide()
 
+        # Keyboard overlay
+        self.shortcutOverlay = KeyboardShorcutsWidget(self)
+        self.shortcutOverlay.hide()
+
         # Load Plot
         self.statusBar().showMessage('Generating Plot...')
         self.dock.updateDock()
@@ -97,6 +101,14 @@ class MainWindow(QMainWindow):
     def show(self):
         super().show()
         self.plotIm._resize()
+
+    def toggleShortcutsOverlay(self):
+        self.shortcutOverlay.move(0, 0)
+        self.shortcutOverlay.resize(self.width(), self.height())
+        if self.shortcutOverlay.isVisible():
+            self.shortcutOverlay.close()
+        else:
+            self.shortcutOverlay.show()
 
     # Create and update menus:
     def createMenuBar(self):
@@ -297,9 +309,17 @@ class MainWindow(QMainWindow):
         self.colorDialogAction.setStatusTip('Bring Color Dialog to front')
         self.colorDialogAction.triggered.connect(self.showColorDialog)
 
+        # Keyboard Shortcuts Overlay
+        self.keyboardShortcutsAction = QAction("&Keyboard Shortcuts...", self)
+        self.keyboardShortcutsAction.setShortcut("?")
+        self.keyboardShortcutsAction.setToolTip("Display Keyboard Shortcuts")
+        self.keyboardShortcutsAction.setStatusTip("Display Keyboard Shortcuts")
+        self.keyboardShortcutsAction.triggered.connect(self.toggleShortcutsOverlay)
+
         self.windowMenu = self.mainMenu.addMenu('&Window')
         self.windowMenu.addAction(self.mainWindowAction)
         self.windowMenu.addAction(self.colorDialogAction)
+        self.windowMenu.addAction(self.keyboardShortcutsAction)
         self.windowMenu.aboutToShow.connect(self.updateWindowMenu)
 
     def updateEditMenu(self):
@@ -795,6 +815,8 @@ class MainWindow(QMainWindow):
         self.plotIm._resize()
         self.adjustWindow()
         self.updateScale()
+        if self.shortcutOverlay.isVisible():
+            self.shortcutOverlay.resize(self.width(), self.height())
 
     def closeEvent(self, event):
         settings = QtCore.QSettings()
@@ -815,6 +837,48 @@ class MainWindow(QMainWindow):
         with open('plot_settings.pkl', 'wb') as file:
             pickle.dump(self.model, file)
 
+class KeyboardShorcutsWidget(QWidget):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
+        self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        # transparent window fill
+        self.fillColor = QtGui.QColor(30, 30, 30, 120)
+        self.penColor = QtGui.QColor(255, 255, 255, 120)
+
+        # pop-up colors (solid)
+        self.popupFillColor = QtGui.QColor(150, 150, 150, 255)
+        self.popupPenColor = QtGui.QColor(255, 255, 255, 255)
+
+        self.close_btn = QPushButton(self)
+        self.close_btn.setText("X")
+        font = QtGui.QFont()
+        self.close_btn.setFixedSize(30, 30)
+        self.close_btn.clicked.connect(self.hide)
+
+    def resizeEvent(self, event):
+        overlay_size = self.size()
+        btn_size = self.close_btn.size()
+        x_pos = int(overlay_size.width() - btn_size.width())
+        self.close_btn.move(x_pos, 0)
+
+    def paintEvent(self, event):
+        s = self.size()
+        painter = QtGui.QPainter()
+        painter.begin(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
+        painter.setPen(self.penColor)
+        painter.setBrush(self.fillColor)
+        painter.drawRect(0, 0, s.width(), s.height())
+        painter.end()
+
+    def _onclose(self):
+        pass
+
 if __name__ == '__main__':
 
     path_icon = str(Path(__file__).parent / 'assets/openmc_logo.png')
@@ -828,7 +892,6 @@ if __name__ == '__main__':
     app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, True)
 
     splash_pix = QtGui.QPixmap(path_splash)
-    print(splash_pix)
     splash = QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)
     splash.setMask(splash_pix.mask())
     splash.show()
