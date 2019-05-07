@@ -15,7 +15,7 @@ from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMenu, QAction, QFileDialog,
                                QColorDialog, QInputDialog, QSplashScreen,
-                               QWidget, QGestureEvent, QPushButton)
+                               QWidget, QPushButton, QListWidget, QListWidgetItem, QTableWidget, QVBoxLayout, QTableWidgetItem, QGestureEvent)
 
 from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, ColorDialog, OptionsDock
@@ -844,21 +844,45 @@ class KeyboardShorcutsWidget(QWidget):
 
         self.setWindowFlags(QtCore.Qt.FramelessWindowHint)
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.setStyleSheet("background-color: rgba(30, 30, 30, 255); border: 0px")
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         # transparent window fill
-        self.fillColor = QtGui.QColor(30, 30, 30, 120)
-        self.penColor = QtGui.QColor(255, 255, 255, 120)
-
-        # pop-up colors (solid)
-        self.popupFillColor = QtGui.QColor(150, 150, 150, 255)
-        self.popupPenColor = QtGui.QColor(255, 255, 255, 255)
+        self.fillColor = QtGui.QColor(30, 30, 30, 200)
+        self.framePenColor = QtGui.QColor(255, 255, 255, 120)
+        self.textPenColor = QtGui.QColor(152, 196, 5, 255)
 
         self.close_btn = QPushButton(self)
+        self.close_btn.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.close_btn.setStyleSheet("background-color: rgba(0, 0, 0, 0); border: 0px")
         self.close_btn.setText("X")
         font = QtGui.QFont()
         self.close_btn.setFixedSize(30, 30)
         self.close_btn.clicked.connect(self.hide)
+
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+        self.shortcutTable = QTableWidget(1, 1, self)
+        self.shortcutTable.setShowGrid(False)
+        self.shortcutTable.verticalHeader().setVisible(False)
+        self.shortcutTable.horizontalHeader().setVisible(False)
+        #self.shortcutTable.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.shortcutTable.setStyleSheet("background-color: rgba(30, 30, 30, 200); border: 0px")
+        self.layout.addWidget(self.shortcutTable)
+
+        item1 = QTableWidgetItem()
+        item1.setText("View by material: Alt + m")
+        item1.setTextColor(self.textPenColor)
+        self.shortcutTable.setItem(0, 0, item1)
+
+        self.shortcutTable.resizeColumnsToContents()
+
+        # self.shortcutList = QListWidget()
+        # self.shortcutList.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        # item = QListWidgetItem()
+        # item.setText("View by cell: Alt + C")
+        # self.addItem(item)
+
 
     def resizeEvent(self, event):
         overlay_size = self.size()
@@ -871,9 +895,12 @@ class KeyboardShorcutsWidget(QWidget):
         painter = QtGui.QPainter()
         painter.begin(self)
         painter.setRenderHint(QtGui.QPainter.Antialiasing, True)
-        painter.setPen(self.penColor)
+        painter.setPen(self.framePenColor)
         painter.setBrush(self.fillColor)
-        painter.drawRect(0, 0, s.width(), s.height())
+        #painter.drawRect(0, 0, s.width(), s.height())
+        painter.setPen(self.textPenColor)
+        #painter.drawText(5, 20, "View by cell: Alt + c")
+        #painter.drawText(5, 40, "View by material: Alt + m")
         painter.end()
 
     def _onclose(self):
