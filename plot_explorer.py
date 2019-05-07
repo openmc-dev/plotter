@@ -852,18 +852,12 @@ class KeyboardShorcutsWidget(QWidget):
         self.framePenColor = QtGui.QColor(255, 255, 255, 120)
         self.textPenColor = QtGui.QColor(152, 196, 5, 255)
 
-        self.close_btn = QPushButton(self)
-        self.close_btn.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.close_btn.setStyleSheet("background-color: rgba(0, 0, 0, 0); border: 0px")
-        self.close_btn.setText("X")
-        font = QtGui.QFont()
-        self.close_btn.setFixedSize(30, 30)
-        self.close_btn.clicked.connect(self.hide)
 
         self.layout = QVBoxLayout()
         self.setLayout(self.layout)
         self.shortcutTable = QTableWidget(1, 1, self)
         self.shortcutTable.setShowGrid(False)
+        self.shortcutTable.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.shortcutTable.verticalHeader().setVisible(False)
         self.shortcutTable.horizontalHeader().setVisible(False)
         #self.shortcutTable.setAttribute(QtCore.Qt.WA_TranslucentBackground)
@@ -876,6 +870,14 @@ class KeyboardShorcutsWidget(QWidget):
         self.shortcutTable.setItem(0, 0, item1)
 
         self.shortcutTable.resizeColumnsToContents()
+
+        self.close_btn = QPushButton(self)
+        self.close_btn.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+        self.close_btn.setStyleSheet("background-color: rgba(0, 0, 0, 0); border: 0px")
+        self.close_btn.setText("X")
+        font = QtGui.QFont()
+        self.close_btn.setFixedSize(30, 30)
+        self.close_btn.clicked.connect(self.hide)
 
         # self.shortcutList = QListWidget()
         # self.shortcutList.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
