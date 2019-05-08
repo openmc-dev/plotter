@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from functools import partial
-import sys
 
 from plot_colors import rgb_normalize, invert_rgb
 from plotmodel import DomainDelegate
@@ -79,11 +78,8 @@ class PlotImage(FigureCanvas):
         self.rubber_band.setGeometry(QtCore.QRect(self.band_origin,
                                                   QtCore.QSize()))
 
-#        FigureCanvas.mousePressEvent(self, event)
-
     def getPlotCoords(self, pos):
         x, y = self.mouseEventCoords(pos)
-        cv = self.model.currentView
 
         # get the normalized axis coordinates from the event display units
         transform = self.ax.transAxes.inverted()
@@ -251,7 +247,6 @@ class PlotImage(FigureCanvas):
             self.mw.editWidth(width)
             self.mw.editHeight(height)
 
-
     def mouseReleaseEvent(self, event):
 
         if self.rubber_band.isVisible():
@@ -260,8 +255,6 @@ class PlotImage(FigureCanvas):
         else:
             self.mw.revertDockControls()
 
-
-
     def wheelEvent(self, event):
 
         if event.delta() and event.modifiers() == QtCore.Qt.ShiftModifier:
@@ -269,7 +262,6 @@ class PlotImage(FigureCanvas):
 
             if 24 < self.mw.zoom + numDegrees < 5001:
                 self.mw.editZoom(self.mw.zoom + numDegrees)
-
 
     def contextMenuEvent(self, event):
 
@@ -291,13 +283,10 @@ class PlotImage(FigureCanvas):
         if id != str(_NOT_FOUND) and cv.colorby not in _MODEL_PROPERTIES:
 
             # Domain ID
-            domainID = self.menu.addAction("{} {}".format(domain_kind, id))
-            domainID.setDisabled(True)
-
-            # Domain Name (if any)
             if domain[id].name:
-                domainName = self.menu.addAction(domain[id].name)
-                domainName.setDisabled(True)
+                domainID = self.menu.addAction("{} {}: \"{}\"".format(domain_kind, id, domain[id].name))
+            else:
+                domainID = self.menu.addAction("{} {}".format(domain_kind, id))
 
             colorAction = self.menu.addAction('Edit {} Color...'.format(domain_kind))
             colorAction.setDisabled(cv.highlighting)

@@ -14,7 +14,8 @@ import openmc
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMenu, QAction, QFileDialog,
-                               QColorDialog, QInputDialog, QSplashScreen, QWidget, QGestureEvent)
+                               QColorDialog, QInputDialog, QSplashScreen,
+                               QWidget, QGestureEvent)
 
 from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, ColorDialog, OptionsDock
@@ -49,8 +50,6 @@ class MainWindow(QMainWindow):
 
         # connect pinch gesture (OSX)
         self.grabGesture(QtCore.Qt.PinchGesture)
-
-
 
         # Create plot image
         self.plotIm = PlotImage(self.model, self.frame, self)
@@ -89,6 +88,7 @@ class MainWindow(QMainWindow):
             QtCore.QTimer.singleShot(0, self.showCurrentView)
 
     def event(self, event):
+        # use pinch event to update zoom
         if isinstance(event, QGestureEvent):
             pinch = event.gesture(QtCore.Qt.PinchGesture)
             self.editZoom(self.zoom * pinch.scaleFactor())
@@ -385,7 +385,6 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(message, 5000)
 
         return super().event(event)
-
 
     def applyChanges(self):
         if self.model.activeView != self.model.currentView:
@@ -793,7 +792,6 @@ class MainWindow(QMainWindow):
         self.adjustWindow()
 
     def resizeEvent(self, event):
-        z = self.zoom / 101.
         self.plotIm._resize()
         self.updateScale()
 
