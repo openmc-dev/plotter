@@ -38,7 +38,7 @@ class PlotImage(FigureCanvas):
     def __init__(self, model, parent, main):
 
         self.figure = Figure(dpi=main.logicalDpiX())
-        super(FigureCanvas, self).__init__(self.figure)
+        super().__init__(self.figure)
 
         FigureCanvas.setSizePolicy(self,
                                    QSizePolicy.Expanding,
