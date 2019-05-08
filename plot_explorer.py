@@ -14,7 +14,7 @@ import openmc
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMenu, QAction, QFileDialog,
-                               QColorDialog, QInputDialog, QSplashScreen, QWidget)
+                               QColorDialog, QInputDialog, QSplashScreen, QWidget, QGestureEvent)
 
 from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, ColorDialog, OptionsDock
@@ -46,6 +46,11 @@ class MainWindow(QMainWindow):
         self.frame.setAlignment(QtCore.Qt.AlignCenter)
         self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setCentralWidget(self.frame)
+
+        # connect pinch gesture (OSX)
+        self.grabGesture(QtCore.Qt.PinchGesture)
+
+
 
         # Create plot image
         self.plotIm = PlotImage(self.model, self.frame, self)
@@ -82,6 +87,12 @@ class MainWindow(QMainWindow):
             # Timer allows GUI to render before plot finishes loading
             QtCore.QTimer.singleShot(0, self.plotIm.generatePixmap)
             QtCore.QTimer.singleShot(0, self.showCurrentView)
+
+    def event(self, event):
+        if isinstance(event, QGestureEvent):
+            pinch = event.gesture(QtCore.Qt.PinchGesture)
+            self.editZoom(self.zoom * pinch.scaleFactor())
+        return super().event(event)
 
     def show(self):
         super().show()
@@ -372,6 +383,9 @@ class MainWindow(QMainWindow):
             else:
                 message = 'Error loading plot settings. Incompatible model.'
             self.statusBar().showMessage(message, 5000)
+
+        return super().event(event)
+
 
     def applyChanges(self):
         if self.model.activeView != self.model.currentView:
