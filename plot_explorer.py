@@ -775,9 +775,13 @@ class MainWindow(QMainWindow):
         self.adjustWindow()
 
     def resizeEvent(self, event):
-        if self.pixmap:
-            self.adjustWindow()
-            self.updateScale()
+        z = self.zoom / 101.
+        self.plotIm.resize(self.frame.width() * z,
+                           self.frame.height() * z)
+        self.updateScale()
+        # if hasattr(self.model, 'image') and self.model.image is not None:
+        #     self.adjustWindow()
+        #     self.updateScale()
 
     def closeEvent(self, event):
         settings = QtCore.QSettings()
