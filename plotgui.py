@@ -103,6 +103,21 @@ class PlotImage(FigureCanvas):
 
         return (xPlotCoord, yPlotCoord)
 
+    def _resize(self):
+        z = self.mw.zoom / 100.0
+        # manage scroll bars
+        if z <= 1.0:
+            self.parent.verticalScrollBar().hide()
+            self.parent.horizontalScrollBar().hide()
+            self.parent.cornerWidget().hide()
+        else:
+            self.parent.verticalScrollBar().show()
+            self.parent.horizontalScrollBar().show()
+            self.parent.cornerWidget().show()
+        # resize plot
+        self.resize(self.parent.width() * z,
+                    self.parent.height() * z)
+
     def getIDinfo(self, event):
 
         cv = self.model.currentView
@@ -351,7 +366,11 @@ class PlotImage(FigureCanvas):
 
         self.menu.exec_(event.globalPos())
 
-    def setPixmap(self, w=None, h=None):
+    def generatePixmap(self):
+        self.model.generatePlot()
+        self.updatePixmap()
+
+    def updatePixmap(self):
 
         # clear out figure
         self.figure.clear()
@@ -361,10 +380,6 @@ class PlotImage(FigureCanvas):
         window_bg = self.parent.palette().color(QtGui.QPalette.Background)
         self.figure.patch.set_facecolor(rgb_normalize(window_bg.getRgb()))
 
-        if w:
-            self.figure.set_figwidth(0.99 * w / self.figure.dpi)
-        if h:
-            self.figure.set_figheight(0.99 * h / self.figure.dpi)
         # set data extents for automatic reporting of pointer location
         data_bounds = [cv.origin[self.mw.xBasis] - cv.width/2.,
                        cv.origin[self.mw.xBasis] + cv.width/2.,
@@ -395,11 +410,9 @@ class PlotImage(FigureCanvas):
                                                        norm=norm,
                                                        extent=data_bounds,
                                                        alpha=cv.plotAlpha)
-            cmap_ax = self.figure.add_axes()
 
             # add colorbar
             self.colorbar = self.figure.colorbar(self.image,
-                                                 cax=cmap_ax,
                                                  anchor=(1.0, 0.0))
             self.colorbar.set_label(cmap_label,
                                     rotation=-90,
@@ -413,6 +426,7 @@ class PlotImage(FigureCanvas):
                                                 color='blue',
                                                 clip_on=True)
             self.colorbar.ax.add_line(self.data_indicator)
+            self.colorbar.ax.margins(0.0 ,0.0)
             self.updateDataIndicatorVisibility()
             self.updateColorMinMax(cv.colorby)
 
@@ -427,7 +441,7 @@ class PlotImage(FigureCanvas):
         self.draw()
 
     def updateColorbarScale(self):
-        self.setPixmap()
+        self.updatePixmap()
 
     def updateDataIndicatorValue(self, y_val):
         cv = self.model.currentView
