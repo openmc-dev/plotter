@@ -390,11 +390,11 @@ class PlotImage(FigureCanvas):
 
             norm = SymLogNorm(1E-2) if cv.color_scale_log[cv.colorby] else None
             data = self.model.properties[:, :, idx]
-            self.image = self.figure.subplots().matshow(data,
-                                                        cmap=cmap,
-                                                        norm=norm,
-                                                        extent=data_bounds,
-                                                        alpha=cv.plotAlpha)
+            self.image = self.figure.subplots().imshow(data,
+                                                       cmap=cmap,
+                                                       norm=norm,
+                                                       extent=data_bounds,
+                                                       alpha=cv.plotAlpha)
             cmap_ax = self.figure.add_axes()
 
             # add colorbar
