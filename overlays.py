@@ -5,29 +5,29 @@ from PySide2.QtWidgets import (QWidget, QTableWidget, QSizePolicy,
 
 
 class ShortcutsOverlay(QWidget):
-    shortcuts = {"Color By" : [("Cell", "Alt + C"),
-                                ("Material", "Alt + M"),
-                                ("Temperature", "Alt + T"),
-                                ("Density", "Alt + D")],
-                 "View Options" : [("Apply Changes", "Ctrl + Enter"),
-                                    ("Undo", "Ctrl + Z"),
-                                    ("Redo", "Shift + Ctrl + Z"),
-                                    ("Restore Default Plot", "Ctrl + R"),
-                                    ("Zoom", "Alt + Shift + Z"),
-                                    ("Zoom", "Shift + scroll"),
-                                    ("Toggle Masking", "Ctrl + M"),
-                                    ("Toggle Highlighting", "Ctrl + L"),
-                                    ("Set XY Basis", "Alt + X"),
-                                    ("Set YZ Basis", "Alt + Y"),
-                                    ("Set XZ Basis", "Alt + Z"),
-                                    ("Update Plot Origin", "double-click"),
-                                    ("Modify Cell/Material Color", "right-click")],
-                 "Menus" : [("Hide/Show Options Dock", "Ctrl + D"),
-                             ("Save View", "Ctrl + S"),
-                             ("Open View", "Ctrl + O"),
-                             ("Save Plot Image", "Ctrl + Shift + S"),
-                             ("Quit", "Ctrl + D"),
-                             ("Display Shortcuts", "?")] }
+    shortcuts = {"Color By": [("Cell", "Alt + C"),
+                              ("Material", "Alt + M"),
+                              ("Temperature", "Alt + T"),
+                              ("Density", "Alt + D")],
+                 "View Options": [("Apply Changes", "Ctrl + Enter"),
+                                  ("Undo", "Ctrl + Z"),
+                                  ("Redo", "Shift + Ctrl + Z"),
+                                  ("Restore Default Plot", "Ctrl + R"),
+                                  ("Zoom", "Alt + Shift + Z"),
+                                  ("Zoom", "Shift + scroll"),
+                                  ("Toggle Masking", "Ctrl + M"),
+                                  ("Toggle Highlighting", "Ctrl + L"),
+                                  ("Set XY Basis", "Alt + X"),
+                                  ("Set YZ Basis", "Alt + Y"),
+                                  ("Set XZ Basis", "Alt + Z"),
+                                  ("Update Plot Origin", "double-click"),
+                                  ("Open Context Menu", "right-click")],
+                 "Menus": [("Hide/Show Options Dock", "Ctrl + D"),
+                           ("Save View", "Ctrl + S"),
+                           ("Open View", "Ctrl + O"),
+                           ("Save Plot Image", "Ctrl + Shift + S"),
+                           ("Quit", "Ctrl + D"),
+                           ("Display Shortcuts", "?")]}
 
     # colors
     header_color = QtGui.QColor(150, 150, 150, 255)
@@ -43,23 +43,29 @@ class ShortcutsOverlay(QWidget):
         self.setLayout(self.layout)
 
         n_rows = max((len(scts) for scts in self.shortcuts.values()))
-        n_rows += 1 # plus one for header
+        n_rows += 1  # plus one for header
         n_cols = len(self.shortcuts.keys()) * 3
         self.tableWidget = QTableWidget(n_rows, n_cols, self)
         self.layout.addWidget(self.tableWidget)
 
         self.tableWidget.setShowGrid(False)
-        self.tableWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.tableWidget.setSizePolicy(QSizePolicy.Expanding,
+                                       QSizePolicy.Expanding)
         self.tableWidget.verticalHeader().setVisible(False)
         self.tableWidget.horizontalHeader().setVisible(False)
-        self.tableWidget.setStyleSheet("background-color: rgba(30, 30, 30, 240); border: 0px; padding: 20px")
+        self.tableWidget.setStyleSheet("background-color:"
+                                       "rgba(30, 30, 30, 230);"
+                                       "border: 0px;"
+                                       "padding: 20px")
 
         # populate table cells
         self.set_cells()
 
         self.close_btn = QPushButton(self)
         self.close_btn.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-        self.close_btn.setStyleSheet("background-color: rgba(0, 0, 0, 0); border: 0px; color: rgba(150, 150, 150, 255)")
+        self.close_btn.setStyleSheet("background-color: rgba(0, 0, 0, 0);"
+                                     "border: 0px;"
+                                     "color: rgba(150, 150, 150, 255)")
         self.close_btn.setText("X")
         font = QtGui.QFont()
         self.close_btn.setFixedSize(30, 30)
