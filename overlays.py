@@ -1,8 +1,10 @@
+from sys import platform
 
 from PySide2 import QtGui, QtCore
 from PySide2.QtWidgets import (QWidget, QTableWidget, QSizePolicy,
                                QPushButton, QTableWidgetItem, QVBoxLayout)
 
+c_key = u"\u2318" if platform == 'darwin' else "Ctrl"
 
 class ShortcutTableItem(QTableWidgetItem):
 
@@ -17,24 +19,24 @@ class ShortcutsOverlay(QWidget):
                               ("Material", "Alt + M"),
                               ("Temperature", "Alt + T"),
                               ("Density", "Alt + D")],
-                 "View Options": [("Apply Changes", "Ctrl + Enter"),
-                                  ("Undo", "Ctrl + Z"),
+                 "View Options": [("Apply Changes", c_key + " + Enter"),
+                                  ("Undo", c_key + " + Z"),
                                   ("Redo", "Shift + Ctrl + Z"),
-                                  ("Restore Default Plot", "Ctrl + R"),
+                                  ("Restore Default Plot", c_key + " + R"),
                                   ("Zoom", "Alt + Shift + Z"),
                                   ("Zoom", "Shift + scroll"),
-                                  ("Toggle Masking", "Ctrl + M"),
-                                  ("Toggle Highlighting", "Ctrl + L"),
+                                  ("Toggle Masking", c_key + " + M"),
+                                  ("Toggle Highlighting", c_key + " + L"),
                                   ("Set XY Basis", "Alt + X"),
                                   ("Set YZ Basis", "Alt + Y"),
                                   ("Set XZ Basis", "Alt + Z"),
                                   ("Update Plot Origin", "Double-click"),
                                   ("Open Context Menu", "Right-click")],
-                 "Menus": [("Hide/Show Options Dock", "Ctrl + D"),
-                           ("Save View", "Ctrl + S"),
-                           ("Open View", "Ctrl + O"),
-                           ("Save Plot Image", "Ctrl + Shift + S"),
-                           ("Quit", "Ctrl + D"),
+                 "Menus": [("Hide/Show Options Dock", c_key + " + D"),
+                           ("Save View", c_key + " + S"),
+                           ("Open View", c_key + " + O"),
+                           ("Save Plot Image", c_key + " + Shift + S"),
+                           ("Quit", c_key + " + D"),
                            ("Display Shortcuts", "?")]}
 
     # colors
