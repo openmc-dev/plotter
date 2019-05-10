@@ -4,6 +4,14 @@ from PySide2.QtWidgets import (QWidget, QTableWidget, QSizePolicy,
                                QPushButton, QTableWidgetItem, QVBoxLayout)
 
 
+class ShortcutTableItem(QTableWidgetItem):
+
+    def __init__(self):
+        super().__init__()
+        # disable selection, editing
+        self.setFlags(QtCore.Qt.NoItemFlags)
+
+
 class ShortcutsOverlay(QWidget):
     shortcuts = {"Color By": [("Cell", "Alt + C"),
                               ("Material", "Alt + M"),
@@ -48,6 +56,11 @@ class ShortcutsOverlay(QWidget):
         self.tableWidget = QTableWidget(n_rows, n_cols, self)
         self.layout.addWidget(self.tableWidget)
 
+        # set all items to a non-editable cell item
+        for i in range(n_rows):
+            for j in range(n_cols):
+                self.tableWidget.setItem(i, j, ShortcutTableItem())
+
         self.tableWidget.setShowGrid(False)
         self.tableWidget.setSizePolicy(QSizePolicy.Expanding,
                                        QSizePolicy.Expanding)
@@ -78,22 +91,20 @@ class ShortcutsOverlay(QWidget):
 
         for menu in self.shortcuts:
             # set menu header
-            header_item = QTableWidgetItem()
+            header_item = self.tableWidget.item(row_idx, col_idx)
             header_item.setTextColor(QtGui.QColor(150, 150, 150, 255))
             header_item.setText(menu)
-            self.tableWidget.setItem(row_idx, col_idx, header_item)
+            header_item.setFlags(QtCore.Qt.NoItemFlags)
             row_idx += 1
 
             for shortcut in self.shortcuts[menu]:
-                desc_item = QTableWidgetItem()
+                desc_item = self.tableWidget.item(row_idx, col_idx)
                 desc_item.setTextColor(self.textPenColor)
                 desc_item.setText(shortcut[0])
-                self.tableWidget.setItem(row_idx, col_idx, desc_item)
 
-                key_item = QTableWidgetItem()
+                key_item = self.tableWidget.item(row_idx, col_idx + 1)
                 key_item.setTextColor(self.textPenColor)
                 key_item.setText(shortcut[1])
-                self.tableWidget.setItem(row_idx, col_idx + 1, key_item)
                 row_idx += 1
             # update for next menu
             row_idx = 0

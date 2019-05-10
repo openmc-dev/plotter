@@ -12,15 +12,19 @@ import time
 
 import openmc
 from PySide2 import QtCore, QtGui
+from PySide2.QtGui import QKeyEvent
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMenu, QAction, QFileDialog,
                                QColorDialog, QInputDialog, QSplashScreen,
-                               QWidget, QPushButton, QListWidget, QListWidgetItem, QTableWidget, QVBoxLayout, QTableWidgetItem, QGestureEvent)
+                               QWidget, QPushButton, QListWidget,
+                               QListWidgetItem, QTableWidget, QVBoxLayout,
+                               QTableWidgetItem, QGestureEvent)
 
 from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, ColorDialog, OptionsDock
 
 from overlays import ShortcutsOverlay
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -97,7 +101,7 @@ class MainWindow(QMainWindow):
         if isinstance(event, QGestureEvent):
             pinch = event.gesture(QtCore.Qt.PinchGesture)
             self.editZoom(self.zoom * pinch.scaleFactor())
-        if hasattr(self,"shortcutOverlay"):
+        if isinstance(event, QKeyEvent) and hasattr(self, "shortcutOverlay"):
             self.shortcutOverlay.event(event)
         return super().event(event)
 
@@ -105,16 +109,13 @@ class MainWindow(QMainWindow):
         super().show()
         self.plotIm._resize()
 
-    def toggleShortcutsOverlay(self):
-        self.setShortcutsVisible(not self.shortcutOverlay.isVisible())
-
-    def setShortcutsVisible(self, make_visible):
-        if make_visible:
+    def toggleShortcuts(self):
+        if self.shortcutOverlay.isVisible():
+            self.shortcutOverlay.close()
+        else:
             self.shortcutOverlay.move(0, 0)
             self.shortcutOverlay.resize(self.width(), self.height())
             self.shortcutOverlay.show()
-        else:
-            self.shortcutOverlay.close()
 
     # Create and update menus:
     def createMenuBar(self):
@@ -320,7 +321,7 @@ class MainWindow(QMainWindow):
         self.keyboardShortcutsAction.setShortcut("?")
         self.keyboardShortcutsAction.setToolTip("Display Keyboard Shortcuts")
         self.keyboardShortcutsAction.setStatusTip("Display Keyboard Shortcuts")
-        self.keyboardShortcutsAction.triggered.connect(self.toggleShortcutsOverlay)
+        self.keyboardShortcutsAction.triggered.connect(self.toggleShortcuts)
 
         self.windowMenu = self.mainMenu.addMenu('&Window')
         self.windowMenu.addAction(self.mainWindowAction)
