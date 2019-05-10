@@ -288,6 +288,8 @@ class PlotImage(FigureCanvas):
             else:
                 domainID = self.menu.addAction("{} {}".format(domain_kind, id))
 
+            self.menu.addSeparator()
+
             colorAction = self.menu.addAction('Edit {} Color...'.format(domain_kind))
             colorAction.setDisabled(cv.highlighting)
             colorAction.setToolTip('Edit {} color'.format(domain_kind))
