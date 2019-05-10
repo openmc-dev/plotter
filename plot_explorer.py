@@ -793,6 +793,7 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event):
         self.plotIm._resize()
+        self.adjustWindow()
         self.updateScale()
 
     def closeEvent(self, event):
