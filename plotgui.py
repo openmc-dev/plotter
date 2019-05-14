@@ -36,14 +36,14 @@ class PlotImage(FigureCanvas):
 
     def __init__(self, model, parent, main):
 
-        super(FigureCanvas, self).__init__(Figure())
+        self.figure = Figure(dpi=main.logicalDpiX())
+        super().__init__(self.figure)
 
         FigureCanvas.setSizePolicy(self,
                                    QSizePolicy.Expanding,
                                    QSizePolicy.Expanding)
 
         FigureCanvas.updateGeometry(self)
-
         self.model = model
         self.mw = main
         self.parent = parent
@@ -78,17 +78,13 @@ class PlotImage(FigureCanvas):
         self.rubber_band.setGeometry(QtCore.QRect(self.band_origin,
                                                   QtCore.QSize()))
 
-        FigureCanvas.mousePressEvent(self, event)
-
     def getPlotCoords(self, pos):
-
-        cv = self.model.currentView
+        x, y = self.mouseEventCoords(pos)
 
         # get the normalized axis coordinates from the event display units
         transform = self.ax.transAxes.inverted()
-        xPlotCoord, yPlotCoord = transform.transform((pos.x(), pos.y()))
+        xPlotCoord, yPlotCoord = transform.transform((x, y))
         # flip the y-axis (its zero is in the upper left)
-        yPlotCoord = 1 - yPlotCoord
 
         # scale axes using the plot extents
         xPlotCoord = self.ax.dataLim.x0 + xPlotCoord * self.ax.dataLim.width
@@ -103,9 +99,26 @@ class PlotImage(FigureCanvas):
 
         return (xPlotCoord, yPlotCoord)
 
+    def _resize(self):
+        z = self.mw.zoom / 100.0
+        # manage scroll bars
+        if z <= 1.0:
+            self.parent.verticalScrollBar().hide()
+            self.parent.horizontalScrollBar().hide()
+            self.parent.cornerWidget().hide()
+        else:
+            self.parent.verticalScrollBar().show()
+            self.parent.horizontalScrollBar().show()
+            self.parent.cornerWidget().show()
+        # resize plot
+        self.resize(self.parent.width() * z,
+                    self.parent.height() * z)
+
     def getIDinfo(self, event):
 
         cv = self.model.currentView
+
+        x, y = self.mouseEventCoords(event.pos())
 
         # get origin in axes coordinates
         x0, y0 = self.ax.transAxes.transform((0.0, 0.0))
@@ -120,8 +133,9 @@ class PlotImage(FigureCanvas):
 
         # use factor to get proper x,y position in pixels
         factor = (width/cv.h_res, height/cv.v_res)
-        xPos = int((event.pos().x()-x0 + 0.01) / factor[0])
-        yPos = int((event.pos().y()-y0 + 0.01) / factor[1])
+        xPos = int((x - x0 + 0.01) / factor[0])
+        # flip y-axis
+        yPos = cv.v_res - int((y - y0 + 0.01) / factor[1])
 
         # check that the position is in the axes view
         if 0 <= yPos < self.model.currentView.v_res \
@@ -157,7 +171,7 @@ class PlotImage(FigureCanvas):
         xCenter, yCenter = self.getPlotCoords(event.pos())
         self.mw.editPlotOrigin(xCenter, yCenter, apply=True)
 
-        FigureCanvas.mouseDoubleClickEvent(self, event)
+#        FigureCanvas.mouseDoubleClickEvent(self, event)
 
     def mouseMoveEvent(self, event):
 
@@ -166,7 +180,7 @@ class PlotImage(FigureCanvas):
 
         # Show Cell/Material ID, Name in status bar
         id, properties, domain, domain_kind = self.getIDinfo(event)
-        if self.ax.contains_point((event.pos().x(), event.pos().y())):
+        if self.parent.underMouse():
 
             if domain_kind.lower() in _MODEL_PROPERTIES:
                 line_val = float(properties[domain_kind.lower()])
@@ -190,7 +204,6 @@ class PlotImage(FigureCanvas):
                 domainInfo = ("{} {}\t Density: {} g/cc\t"
                               "Temperature: {} K".format(domain_kind,
                                                          id,
-                                                         domain[id].name,
                                                          density,
                                                          temperature))
             else:
@@ -270,13 +283,12 @@ class PlotImage(FigureCanvas):
         if id != str(_NOT_FOUND) and cv.colorby not in _MODEL_PROPERTIES:
 
             # Domain ID
-            domainID = self.menu.addAction("{} {}".format(domain_kind, id))
-            domainID.setDisabled(True)
-
-            # Domain Name (if any)
             if domain[id].name:
-                domainName = self.menu.addAction(domain[id].name)
-                domainName.setDisabled(True)
+                domainID = self.menu.addAction("{} {}: \"{}\"".format(domain_kind, id, domain[id].name))
+            else:
+                domainID = self.menu.addAction("{} {}".format(domain_kind, id))
+
+            self.menu.addSeparator()
 
             colorAction = self.menu.addAction('Edit {} Color...'.format(domain_kind))
             colorAction.setDisabled(cv.highlighting)
@@ -345,7 +357,11 @@ class PlotImage(FigureCanvas):
 
         self.menu.exec_(event.globalPos())
 
-    def setPixmap(self, w=None, h=None):
+    def generatePixmap(self):
+        self.model.generatePlot()
+        self.updatePixmap()
+
+    def updatePixmap(self):
 
         # clear out figure
         self.figure.clear()
@@ -355,11 +371,6 @@ class PlotImage(FigureCanvas):
         window_bg = self.parent.palette().color(QtGui.QPalette.Background)
         self.figure.patch.set_facecolor(rgb_normalize(window_bg.getRgb()))
 
-        # set figure width
-        if w:
-            self.figure.set_figwidth(0.99 * w / self.figure.get_dpi())
-        if h:
-            self.figure.set_figheight(0.99 * h / self.figure.get_dpi())
         # set data extents for automatic reporting of pointer location
         data_bounds = [cv.origin[self.mw.xBasis] - cv.width/2.,
                        cv.origin[self.mw.xBasis] + cv.width/2.,
@@ -385,16 +396,14 @@ class PlotImage(FigureCanvas):
 
             norm = SymLogNorm(1E-2) if cv.color_scale_log[cv.colorby] else None
             data = self.model.properties[:, :, idx]
-            self.image = self.figure.subplots().matshow(data,
-                                                        cmap=cmap,
-                                                        norm=norm,
-                                                        extent=data_bounds,
-                                                        alpha=cv.plotAlpha)
-            cmap_ax = self.figure.add_axes([0.9, 0.1, 0.03, 0.8])
+            self.image = self.figure.subplots().imshow(data,
+                                                       cmap=cmap,
+                                                       norm=norm,
+                                                       extent=data_bounds,
+                                                       alpha=cv.plotAlpha)
 
             # add colorbar
             self.colorbar = self.figure.colorbar(self.image,
-                                                 cax=cmap_ax,
                                                  anchor=(1.0, 0.0))
             self.colorbar.set_label(cmap_label,
                                     rotation=-90,
@@ -408,6 +417,7 @@ class PlotImage(FigureCanvas):
                                                 color='blue',
                                                 clip_on=True)
             self.colorbar.ax.add_line(self.data_indicator)
+            self.colorbar.ax.margins(0.0 ,0.0)
             self.updateDataIndicatorVisibility()
             self.updateColorMinMax(cv.colorby)
 
@@ -422,7 +432,7 @@ class PlotImage(FigureCanvas):
         self.draw()
 
     def updateColorbarScale(self):
-        self.setPixmap()
+        self.updatePixmap()
 
     def updateDataIndicatorValue(self, y_val):
         cv = self.model.currentView

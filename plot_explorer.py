@@ -14,7 +14,8 @@ import openmc
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMenu, QAction, QFileDialog,
-                               QColorDialog, QInputDialog, QSplashScreen)
+                               QColorDialog, QInputDialog, QSplashScreen,
+                               QWidget, QGestureEvent)
 
 from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, ColorDialog, OptionsDock
@@ -41,9 +42,14 @@ class MainWindow(QMainWindow):
 
         # Create viewing area
         self.frame = QScrollArea(self)
+        cw = QWidget()
+        self.frame.setCornerWidget(cw)
         self.frame.setAlignment(QtCore.Qt.AlignCenter)
         self.frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setCentralWidget(self.frame)
+
+        # connect pinch gesture (OSX)
+        self.grabGesture(QtCore.Qt.PinchGesture)
 
         # Create plot image
         self.plotIm = PlotImage(self.model, self.frame, self)
@@ -78,8 +84,19 @@ class MainWindow(QMainWindow):
             self.showCurrentView()
         else:
             # Timer allows GUI to render before plot finishes loading
-            QtCore.QTimer.singleShot(0, self.model.generatePlot)
+            QtCore.QTimer.singleShot(0, self.plotIm.generatePixmap)
             QtCore.QTimer.singleShot(0, self.showCurrentView)
+
+    def event(self, event):
+        # use pinch event to update zoom
+        if isinstance(event, QGestureEvent):
+            pinch = event.gesture(QtCore.Qt.PinchGesture)
+            self.editZoom(self.zoom * pinch.scaleFactor())
+        return super().event(event)
+
+    def show(self):
+        super().show()
+        self.plotIm._resize()
 
     # Create and update menus:
     def createMenuBar(self):
@@ -367,6 +384,8 @@ class MainWindow(QMainWindow):
                 message = 'Error loading plot settings. Incompatible model.'
             self.statusBar().showMessage(message, 5000)
 
+        return super().event(event)
+
     def applyChanges(self):
         if self.model.activeView != self.model.currentView:
             self.statusBar().showMessage('Generating Plot...')
@@ -374,7 +393,7 @@ class MainWindow(QMainWindow):
 
             self.model.storeCurrent()
             self.model.subsequentViews = []
-            self.model.generatePlot()
+            self.plotIm.generatePixmap()
             self.resetModels()
             self.showCurrentView()
 
@@ -417,7 +436,7 @@ class MainWindow(QMainWindow):
 
             self.model.storeCurrent()
             self.model.activeView = copy.deepcopy(self.model.defaultView)
-            self.model.generatePlot()
+            self.plotIm.generatePixmap()
             self.resetModels()
             self.showCurrentView()
             self.dock.updateDock()
@@ -713,7 +732,7 @@ class MainWindow(QMainWindow):
         self.colorDialog.updateDomainTabs()
 
     def showCurrentView(self):
-        self.resizePixmap()
+        self.plotIm.updatePixmap()
         self.updateScale()
         self.updateRelativeBases()
 
@@ -766,18 +785,16 @@ class MainWindow(QMainWindow):
         self.coord_label.setText('{}'.format(coords))
 
     def resizePixmap(self):
-        z = self.zoom / 100.
-        self.plotIm.setPixmap(self.frame.width() * z,
-                              self.frame.height() * z)
+        self.plotIm._resize()
         self.plotIm.adjustSize()
 
     def moveEvent(self, event):
         self.adjustWindow()
 
     def resizeEvent(self, event):
-        if self.pixmap:
-            self.adjustWindow()
-            self.updateScale()
+        self.plotIm._resize()
+        self.adjustWindow()
+        self.updateScale()
 
     def closeEvent(self, event):
         settings = QtCore.QSettings()
@@ -835,7 +852,7 @@ if __name__ == '__main__':
     FM = QtGui.QFontMetricsF(app.font())
     mainWindow = MainWindow()
     # connect splashscreen to main window, close when main window opens
-    splash.finish(mainWindow)
     mainWindow.loadGui()
     mainWindow.show()
+    splash.close()
     sys.exit(app.exec_())
