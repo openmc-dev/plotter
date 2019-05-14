@@ -38,12 +38,7 @@ class MainWindow(QMainWindow):
         self.pixmap = None
         self.zoom = 100
 
-        self.model = PlotModel()
-        self.updateRelativeBases()
-        self.restoreModelSettings()
-
-        self.cellsModel = DomainTableModel(self.model.activeView.cells)
-        self.materialsModel = DomainTableModel(self.model.activeView.materials)
+        self.loadModel()
 
         # Create viewing area
         self.frame = QScrollArea(self)
@@ -122,6 +117,13 @@ class MainWindow(QMainWindow):
         self.mainMenu = self.menuBar()
 
         # File Menu
+        self.reloadModelAction = QAction("&Reload model...", self)
+        self.reloadModelAction.setShortcut("Ctrl+Shift+R")
+        self.reloadModelAction.setToolTip("Reload current model")
+        self.reloadModelAction.setStatusTip("Reload current model")
+        reload_connector = partial(self.loadModel, reload=True)
+        self.reloadModelAction.triggered.connect(reload_connector)
+
         self.saveImageAction = QAction("&Save Image As...", self)
         self.saveImageAction.setShortcut("Ctrl+Shift+S")
         self.saveImageAction.setToolTip('Save plot image')
@@ -146,6 +148,7 @@ class MainWindow(QMainWindow):
         self.quitAction.triggered.connect(self.close)
 
         self.fileMenu = self.mainMenu.addMenu('&File')
+        self.fileMenu.addAction(self.reloadModelAction)
         self.fileMenu.addAction(self.saveImageAction)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.saveViewAction)
@@ -364,6 +367,26 @@ class MainWindow(QMainWindow):
         self.mainWindowAction.setChecked(self.isActiveWindow())
 
     # Menu and shared methods:
+
+    def loadModel(self, reload=False):
+        if reload:
+            self.statusBar().showMessage("Reloading model...")
+            self.saveSettings()
+
+        self.model = PlotModel()
+        self.updateRelativeBases()
+        self.restoreModelSettings()
+
+        self.cellsModel = DomainTableModel(self.model.activeView.cells)
+        self.materialsModel = DomainTableModel(self.model.activeView.materials)
+
+        openmc.capi.reset()
+        openmc.capi.finalize()
+        openmc.capi.init(["-c"])
+
+        if reload:
+            self.plotIm.model = self.model
+            self.applyChanges()
 
     def saveImage(self):
         filename, ext = QFileDialog.getSaveFileName(self,
@@ -835,6 +858,10 @@ class MainWindow(QMainWindow):
         settings.setValue("colorDialog/Position", self.colorDialog.pos())
         visible = int(self.colorDialog.isVisible())
         settings.setValue("colorDialog/Visible", visible)
+
+        self.saveSettings()
+
+    def saveSettings(self):
 
         if len(self.model.previousViews) > 10:
             self.model.previousViews = self.model.previousViews[-10:]

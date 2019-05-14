@@ -2,7 +2,8 @@
 import numpy as np
 
 # for consistent, but random, colors
-np.random.seed(10)
+def reset_seed():
+    np.random.seed(10)
 
 def random_rgb():
     return tuple(np.random.choice(range(256), size=3))
