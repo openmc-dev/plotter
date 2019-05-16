@@ -68,9 +68,8 @@ class ShortcutsOverlay(QWidget):
                                        QSizePolicy.Expanding)
         self.tableWidget.verticalHeader().setVisible(False)
         self.tableWidget.horizontalHeader().setVisible(False)
-        self.tableWidget.setStyleSheet("background-color:" \
-                                       "rgba(30, 30, 30, 230);" \
-                                       "border: 0px;" \
+        self.tableWidget.setStyleSheet("background-color: rgba(30, 30, 30, 230);"
+                                       "border: 0px;"
                                        "padding: 20px")
 
         # populate table cells
