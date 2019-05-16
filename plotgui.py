@@ -106,10 +106,15 @@ class PlotImage(FigureCanvas):
             self.parent.verticalScrollBar().hide()
             self.parent.horizontalScrollBar().hide()
             self.parent.cornerWidget().hide()
+            self.parent.verticalScrollBar().setEnabled(False)
+            self.parent.horizontalScrollBar().setEnabled(False)
         else:
             self.parent.verticalScrollBar().show()
             self.parent.horizontalScrollBar().show()
             self.parent.cornerWidget().show()
+            self.parent.verticalScrollBar().setEnabled(True)
+            self.parent.horizontalScrollBar().setEnabled(True)
+
         # resize plot
         self.resize(self.parent.width() * z,
                     self.parent.height() * z)

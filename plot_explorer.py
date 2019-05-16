@@ -12,13 +12,18 @@ import time
 
 import openmc
 from PySide2 import QtCore, QtGui
+from PySide2.QtGui import QKeyEvent
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMenu, QAction, QFileDialog,
                                QColorDialog, QInputDialog, QSplashScreen,
-                               QWidget, QGestureEvent)
+                               QWidget, QPushButton, QListWidget,
+                               QListWidgetItem, QTableWidget, QVBoxLayout,
+                               QTableWidgetItem, QGestureEvent)
 
 from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, ColorDialog, OptionsDock
+
+from overlays import ShortcutsOverlay
 
 
 class MainWindow(QMainWindow):
@@ -75,6 +80,10 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.coord_label)
         self.coord_label.hide()
 
+        # Keyboard overlay
+        self.shortcutOverlay = ShortcutsOverlay(self)
+        self.shortcutOverlay.hide()
+
         # Load Plot
         self.statusBar().showMessage('Generating Plot...')
         self.dock.updateDock()
@@ -92,11 +101,21 @@ class MainWindow(QMainWindow):
         if isinstance(event, QGestureEvent):
             pinch = event.gesture(QtCore.Qt.PinchGesture)
             self.editZoom(self.zoom * pinch.scaleFactor())
+        if isinstance(event, QKeyEvent) and hasattr(self, "shortcutOverlay"):
+            self.shortcutOverlay.event(event)
         return super().event(event)
 
     def show(self):
         super().show()
         self.plotIm._resize()
+
+    def toggleShortcuts(self):
+        if self.shortcutOverlay.isVisible():
+            self.shortcutOverlay.close()
+        else:
+            self.shortcutOverlay.move(0, 0)
+            self.shortcutOverlay.resize(self.width(), self.height())
+            self.shortcutOverlay.show()
 
     # Create and update menus:
     def createMenuBar(self):
@@ -297,9 +316,17 @@ class MainWindow(QMainWindow):
         self.colorDialogAction.setStatusTip('Bring Color Dialog to front')
         self.colorDialogAction.triggered.connect(self.showColorDialog)
 
+        # Keyboard Shortcuts Overlay
+        self.keyboardShortcutsAction = QAction("&Keyboard Shortcuts...", self)
+        self.keyboardShortcutsAction.setShortcut("?")
+        self.keyboardShortcutsAction.setToolTip("Display Keyboard Shortcuts")
+        self.keyboardShortcutsAction.setStatusTip("Display Keyboard Shortcuts")
+        self.keyboardShortcutsAction.triggered.connect(self.toggleShortcuts)
+
         self.windowMenu = self.mainMenu.addMenu('&Window')
         self.windowMenu.addAction(self.mainWindowAction)
         self.windowMenu.addAction(self.colorDialogAction)
+        self.windowMenu.addAction(self.keyboardShortcutsAction)
         self.windowMenu.aboutToShow.connect(self.updateWindowMenu)
 
     def updateEditMenu(self):
@@ -795,6 +822,8 @@ class MainWindow(QMainWindow):
         self.plotIm._resize()
         self.adjustWindow()
         self.updateScale()
+        if self.shortcutOverlay.isVisible():
+            self.shortcutOverlay.resize(self.width(), self.height())
 
     def closeEvent(self, event):
         settings = QtCore.QSettings()
@@ -815,6 +844,7 @@ class MainWindow(QMainWindow):
         with open('plot_settings.pkl', 'wb') as file:
             pickle.dump(self.model, file)
 
+
 if __name__ == '__main__':
 
     path_icon = str(Path(__file__).parent / 'assets/openmc_logo.png')
@@ -828,7 +858,6 @@ if __name__ == '__main__':
     app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, True)
 
     splash_pix = QtGui.QPixmap(path_splash)
-    print(splash_pix)
     splash = QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)
     splash.setMask(splash_pix.mask())
     splash.show()
