@@ -27,11 +27,11 @@ from overlays import ShortcutsOverlay
 
 
 def _openmcReload():
-            # reset OpenMC memory, instances
-            openmc.capi.reset()
-            openmc.capi.finalize()
-            # initialize geometry (for volume calculation)
-            openmc.capi.init(["-c"])
+    # reset OpenMC memory, instances
+    openmc.capi.reset()
+    openmc.capi.finalize()
+    # initialize geometry (for volume calculation)
+    openmc.capi.init(["-c"])
 
 
 class MainWindow(QMainWindow):
