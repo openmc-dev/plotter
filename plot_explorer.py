@@ -26,6 +26,14 @@ from plotgui import PlotImage, ColorDialog, OptionsDock
 from overlays import ShortcutsOverlay
 
 
+def _openmcReload():
+            # reset OpenMC memory, instances
+            openmc.capi.reset()
+            openmc.capi.finalize()
+            # initialize geometry (for volume calculation)
+            openmc.capi.init(["-c"])
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -365,8 +373,15 @@ class MainWindow(QMainWindow):
     # Menu and shared methods:
 
     def loadModel(self, reload=False):
+        loader_thread = Thread(target=self._loadModel, args=(reload,))
+        loader_thread.start()
+        while loader_thread.is_alive():
+            if reload:
+                self.statusBar().showMessage("Reloading model...")
+            app.processEvents()
+
+    def loadModel(self, reload=False):
         if reload:
-            self.statusBar().showMessage("Reloading model...")
             # save settings (to be reloaded when model is reloaded)
             self.saveSettings()
 
@@ -381,11 +396,12 @@ class MainWindow(QMainWindow):
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
 
         if reload:
-            # reset OpenMC memory, instances
-            openmc.capi.reset()
-            openmc.capi.finalize()
-            # initialize geometry (for volume calculation)
-            openmc.capi.init(["-c"])
+            loader_thread = Thread(target=_openmcReload)
+            loader_thread.start()
+            while loader_thread.is_alive():
+                self.statusBar().showMessage("Reloading model...")
+                app.processEvents()
+
             self.plotIm.model = self.model
             self.applyChanges()
 
@@ -891,7 +907,7 @@ if __name__ == '__main__':
                        QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
     app.processEvents()
     # load OpenMC model on another thread
-    loader_thread = Thread(target=openmc.capi.init, args=(['-c'],))
+    loader_thread = Thread(target=_openmcReload)
     loader_thread.start()
     # while thread is working, process app events
     while loader_thread.is_alive():
