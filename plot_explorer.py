@@ -765,11 +765,10 @@ class MainWindow(QMainWindow):
             with open('plot_settings.pkl', 'rb') as file:
                 model = pickle.load(file)
 
-            if model.defaultView == self.model.defaultView:
-                self.model.currentView = model.currentView
-                self.model.activeView = copy.deepcopy(model.currentView)
-                self.model.previousViews = model.previousViews
-                self.model.subsequentViews = model.subsequentViews
+        self.model.currentView = model.currentView
+        self.model.activeView = copy.deepcopy(model.currentView)
+        self.model.previousViews = model.previousViews
+        self.model.subsequentViews = model.subsequentViews
 
     def resetModels(self):
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
