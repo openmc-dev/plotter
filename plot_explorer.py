@@ -34,7 +34,6 @@ class MainWindow(QMainWindow):
 
     def loadGui(self):
 
-        self.restored = False
         self.pixmap = None
         self.zoom = 100
 
@@ -84,12 +83,9 @@ class MainWindow(QMainWindow):
         self.dock.updateDock()
         self.colorDialog.updateDialogValues()
 
-        if self.restored:
-            self.showCurrentView()
-        else:
-            # Timer allows GUI to render before plot finishes loading
-            QtCore.QTimer.singleShot(0, self.plotIm.generatePixmap)
-            QtCore.QTimer.singleShot(0, self.showCurrentView)
+        # Timer allows GUI to render before plot finishes loading
+        QtCore.QTimer.singleShot(0, self.plotIm.generatePixmap)
+        QtCore.QTimer.singleShot(0, self.showCurrentView)
 
     def event(self, event):
         # use pinch event to update zoom
@@ -371,10 +367,12 @@ class MainWindow(QMainWindow):
     def loadModel(self, reload=False):
         if reload:
             self.statusBar().showMessage("Reloading model...")
+            # save settings (to be reloaded when model is reloaded)
             self.saveSettings()
 
         # create new plot model
         self.model = PlotModel()
+
         # update plot and model settings
         self.updateRelativeBases()
         self.restoreModelSettings()
@@ -772,9 +770,6 @@ class MainWindow(QMainWindow):
                 self.model.activeView = copy.deepcopy(model.currentView)
                 self.model.previousViews = model.previousViews
                 self.model.subsequentViews = model.subsequentViews
-                if os.path.isfile('plot_ids.binary') \
-                   and os.path.isfile('plot.ppm'):
-                    self.restored = True
 
     def resetModels(self):
         self.cellsModel = DomainTableModel(self.model.activeView.cells)

@@ -71,9 +71,9 @@ class PlotModel():
 
         self.version = __VERSION__
 
-        # reset random number seed for coloring
+        # reset random number seed for consistent
+        # coloring when reloading a model
         reset_seed()
-
 
         self.previousViews = []
         self.subsequentViews = []
