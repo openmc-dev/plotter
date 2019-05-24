@@ -380,13 +380,12 @@ class MainWindow(QMainWindow):
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
 
-        # reset OpenMC memory, instances
-        openmc.capi.reset()
-        openmc.capi.finalize()
-        # initialize geometry (for volume calculation)
-        openmc.capi.init(["-c"])
-
         if reload:
+            # reset OpenMC memory, instances
+            openmc.capi.reset()
+            openmc.capi.finalize()
+            # initialize geometry (for volume calculation)
+            openmc.capi.init(["-c"])
             self.plotIm.model = self.model
             self.applyChanges()
 
