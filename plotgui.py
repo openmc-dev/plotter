@@ -474,7 +474,7 @@ class PlotImage(FigureCanvas):
         av = self.model.activeView
         if self.colorbar and property_type == av.colorby:
             clim = av.getColorLimits(property_type)
-            self.colorbar.set_clim(*clim)
+            self.colorbar.mappable.set_clim(*clim)
             self.data_indicator.set_data(clim[:2],
                                          (0.0, 0.0))
             self.colorbar.draw_all()

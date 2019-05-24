@@ -13,7 +13,7 @@ from PySide2.QtWidgets import (QTableView, QItemDelegate,
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
 from PySide2.QtGui import QColor
 
-from plot_colors import random_rgb
+from plot_colors import random_rgb, reset_seed
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = tuple(range(0, 6))
 
@@ -70,6 +70,10 @@ class PlotModel():
         self.ids = None
 
         self.version = __VERSION__
+
+        # reset random number seed for consistent
+        # coloring when reloading a model
+        reset_seed()
 
         self.previousViews = []
         self.subsequentViews = []

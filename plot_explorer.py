@@ -26,6 +26,14 @@ from plotgui import PlotImage, ColorDialog, OptionsDock
 from overlays import ShortcutsOverlay
 
 
+def _openmcReload():
+    # reset OpenMC memory, instances
+    openmc.capi.reset()
+    openmc.capi.finalize()
+    # initialize geometry (for volume calculation)
+    openmc.capi.init(["-c"])
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -34,16 +42,10 @@ class MainWindow(QMainWindow):
 
     def loadGui(self):
 
-        self.restored = False
         self.pixmap = None
         self.zoom = 100
 
-        self.model = PlotModel()
-        self.updateRelativeBases()
-        self.restoreModelSettings()
-
-        self.cellsModel = DomainTableModel(self.model.activeView.cells)
-        self.materialsModel = DomainTableModel(self.model.activeView.materials)
+        self.loadModel()
 
         # Create viewing area
         self.frame = QScrollArea(self)
@@ -89,12 +91,9 @@ class MainWindow(QMainWindow):
         self.dock.updateDock()
         self.colorDialog.updateDialogValues()
 
-        if self.restored:
-            self.showCurrentView()
-        else:
-            # Timer allows GUI to render before plot finishes loading
-            QtCore.QTimer.singleShot(0, self.plotIm.generatePixmap)
-            QtCore.QTimer.singleShot(0, self.showCurrentView)
+        # Timer allows GUI to render before plot finishes loading
+        QtCore.QTimer.singleShot(0, self.plotIm.generatePixmap)
+        QtCore.QTimer.singleShot(0, self.showCurrentView)
 
     def event(self, event):
         # use pinch event to update zoom
@@ -122,6 +121,13 @@ class MainWindow(QMainWindow):
         self.mainMenu = self.menuBar()
 
         # File Menu
+        self.reloadModelAction = QAction("&Reload model...", self)
+        self.reloadModelAction.setShortcut("Ctrl+Shift+R")
+        self.reloadModelAction.setToolTip("Reload current model")
+        self.reloadModelAction.setStatusTip("Reload current model")
+        reload_connector = partial(self.loadModel, reload=True)
+        self.reloadModelAction.triggered.connect(reload_connector)
+
         self.saveImageAction = QAction("&Save Image As...", self)
         self.saveImageAction.setShortcut("Ctrl+Shift+S")
         self.saveImageAction.setToolTip('Save plot image')
@@ -146,6 +152,7 @@ class MainWindow(QMainWindow):
         self.quitAction.triggered.connect(self.close)
 
         self.fileMenu = self.mainMenu.addMenu('&File')
+        self.fileMenu.addAction(self.reloadModelAction)
         self.fileMenu.addAction(self.saveImageAction)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.saveViewAction)
@@ -363,7 +370,30 @@ class MainWindow(QMainWindow):
         self.colorDialogAction.setChecked(self.colorDialog.isActiveWindow())
         self.mainWindowAction.setChecked(self.isActiveWindow())
 
-    # Menu and shared methods:
+    # Menu and shared methods
+
+    def loadModel(self, reload=False):
+        if reload:
+            self.resetModels()
+        else:
+            # create new plot model
+            self.model = PlotModel()
+            self.restoreModelSettings()
+            # update plot and model settings
+            self.updateRelativeBases()
+
+        self.cellsModel = DomainTableModel(self.model.activeView.cells)
+        self.materialsModel = DomainTableModel(self.model.activeView.materials)
+
+        if reload:
+            loader_thread = Thread(target=_openmcReload)
+            loader_thread.start()
+            while loader_thread.is_alive():
+                self.statusBar().showMessage("Reloading model...")
+                app.processEvents()
+
+            self.plotIm.model = self.model
+            self.applyChanges()
 
     def saveImage(self):
         filename, ext = QFileDialog.getSaveFileName(self,
@@ -740,14 +770,10 @@ class MainWindow(QMainWindow):
             with open('plot_settings.pkl', 'rb') as file:
                 model = pickle.load(file)
 
-            if model.defaultView == self.model.defaultView:
-                self.model.currentView = model.currentView
-                self.model.activeView = copy.deepcopy(model.currentView)
-                self.model.previousViews = model.previousViews
-                self.model.subsequentViews = model.subsequentViews
-                if os.path.isfile('plot_ids.binary') \
-                   and os.path.isfile('plot.ppm'):
-                    self.restored = True
+            self.model.currentView = model.currentView
+            self.model.activeView = copy.deepcopy(model.currentView)
+            self.model.previousViews = model.previousViews
+            self.model.subsequentViews = model.subsequentViews
 
     def resetModels(self):
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
@@ -836,6 +862,10 @@ class MainWindow(QMainWindow):
         visible = int(self.colorDialog.isVisible())
         settings.setValue("colorDialog/Visible", visible)
 
+        self.saveSettings()
+
+    def saveSettings(self):
+
         if len(self.model.previousViews) > 10:
             self.model.previousViews = self.model.previousViews[-10:]
         if len(self.model.subsequentViews) > 10:
@@ -867,7 +897,7 @@ if __name__ == '__main__':
                        QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
     app.processEvents()
     # load OpenMC model on another thread
-    loader_thread = Thread(target=openmc.capi.init, args=(['-c'],))
+    loader_thread = Thread(target=_openmcReload)
     loader_thread.start()
     # while thread is working, process app events
     while loader_thread.is_alive():
