@@ -370,27 +370,17 @@ class MainWindow(QMainWindow):
         self.colorDialogAction.setChecked(self.colorDialog.isActiveWindow())
         self.mainWindowAction.setChecked(self.isActiveWindow())
 
-    # Menu and shared methods:
-
-    def loadModel(self, reload=False):
-        loader_thread = Thread(target=self._loadModel, args=(reload,))
-        loader_thread.start()
-        while loader_thread.is_alive():
-            if reload:
-                self.statusBar().showMessage("Reloading model...")
-            app.processEvents()
+    # Menu and shared methods
 
     def loadModel(self, reload=False):
         if reload:
-            # save settings (to be reloaded when model is reloaded)
-            self.saveSettings()
-
-        # create new plot model
-        self.model = PlotModel()
-
-        # update plot and model settings
-        self.updateRelativeBases()
-        self.restoreModelSettings()
+            self.resetModels()
+        else:
+            # create new plot model
+            self.model = PlotModel()
+            self.restoreModelSettings()
+            # update plot and model settings
+            self.updateRelativeBases()
 
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
