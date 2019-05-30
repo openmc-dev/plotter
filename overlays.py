@@ -36,11 +36,12 @@ class ShortcutsOverlay(QWidget):
                             ("Vertical Scroll", "Scroll"),
                             ("Horizontal Scroll", "Alt+Scroll")],
                   "Menus": [("Hide/Show Options Dock", c_key + "+D"),
-                            ("Save View", c_key + "+S"),
-                            ("Open View", c_key + "+O"),
-                            ("Save Plot Image", c_key + "+Shift+S"),
+                            ("Reload Model", "Shift+" + c_key + "+R"),
                             ("Quit", c_key + "+Q"),
-                            ("Display Shortcuts", "?")]}
+                            ("Display Shortcuts", "?")],
+                 "Input/Output" : [("Save View", c_key + "+S"),
+                                   ("Open View", c_key + "+O"),
+                                   ("Save Plot Image", "Shift+" + c_key + "+S")]}
 
     # colors
     header_color = QtGui.QColor(150, 150, 150, 255)
