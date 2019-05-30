@@ -19,7 +19,7 @@ From a directory containing a working OpenMC model run:
 python /path/to/openmc-plotter
 ```
 
-Press `<kbd>Shift</kbd>+?` for a variety of keyboard shortcuts.
+Press `?` to view a variety of keyboard shortcuts.
 
 # Controls/Functionality
 

@@ -30,7 +30,7 @@ class ShortcutsOverlay(QWidget):
                             ("Set XY Basis", "Alt+X"),
                             ("Set YZ Basis", "Alt+Y"),
                             ("Set XZ Basis", "Alt+Z"),
-                        ("Update Plot Origin", "Double-click"),
+                            ("Update Plot Origin", "Double-click"),
                             ("Open Context Menu", "Right-click"),
                             ("When zoomed:", ""),
                             ("Vertical Scroll", "Scroll"),
@@ -39,7 +39,7 @@ class ShortcutsOverlay(QWidget):
                             ("Save View", c_key + "+S"),
                             ("Open View", c_key + "+O"),
                             ("Save Plot Image", c_key + "+Shift+S"),
-                            ("Quit", c_key + "+D"),
+                            ("Quit", c_key + "+Q"),
                             ("Display Shortcuts", "?")]}
 
     # colors
