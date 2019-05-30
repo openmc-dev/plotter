@@ -134,12 +134,12 @@ class MainWindow(QMainWindow):
         self.saveImageAction.setStatusTip('Save plot image')
         self.saveImageAction.triggered.connect(self.saveImage)
 
-        self.saveViewAction = QAction("Save &View Settings...", self)
+        self.saveViewAction = QAction("Save &View...", self)
         self.saveViewAction.setShortcut(QtGui.QKeySequence.Save)
         self.saveViewAction.setStatusTip('Save current view settings')
         self.saveViewAction.triggered.connect(self.saveView)
 
-        self.openAction = QAction("&Open View Settings...", self)
+        self.openAction = QAction("&Open View...", self)
         self.openAction.setShortcut(QtGui.QKeySequence.Open)
         self.openAction.setToolTip('Open saved view settings')
         self.openAction.setStatusTip('Open saved view settings')
@@ -311,7 +311,6 @@ class MainWindow(QMainWindow):
 
         # Window Menu
         self.mainWindowAction = QAction('&Main Window', self)
-        self.mainWindowAction.setShortcut('Alt+W')
         self.mainWindowAction.setCheckable(True)
         self.mainWindowAction.setToolTip('Bring main window to front')
         self.mainWindowAction.setStatusTip('Bring main window to front')
