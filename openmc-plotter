@@ -446,7 +446,6 @@ class MainWindow(QMainWindow):
         if self.model.activeView != self.model.currentView:
             self.statusBar().showMessage('Generating Plot...')
             QApplication.processEvents()
-
             self.model.storeCurrent()
             self.model.subsequentViews = []
             self.plotIm.generatePixmap()
@@ -784,9 +783,9 @@ class MainWindow(QMainWindow):
         self.colorDialog.updateDomainTabs()
 
     def showCurrentView(self):
-        self.plotIm.updatePixmap()
         self.updateScale()
         self.updateRelativeBases()
+        self.plotIm.updatePixmap()
 
         if self.model.previousViews:
             self.undoAction.setDisabled(False)
