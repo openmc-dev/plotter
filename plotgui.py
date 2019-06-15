@@ -498,6 +498,9 @@ class OptionsDock(QDockWidget):
         self.createOptionsBox()
         self.createResolutionBox()
 
+
+
+
         # Create submit button
         self.applyButton = QPushButton("Apply Changes")
         # Mac bug fix
@@ -610,6 +613,10 @@ class OptionsDock(QDockWidget):
         self.colorOptionsButton.setMinimumHeight(self.FM.height() * 1.6)
         self.colorOptionsButton.clicked.connect(self.mw.showColorDialog)
 
+        # Overlap plotting
+        self.overlapCheck = QCheckBox('', self)
+#        self.overlapCheck.stateChanged.connect(lambda: pass)
+
         # Options Form Layout
         self.opLayout = QFormLayout()
         self.opLayout.addRow('Width:', self.widthBox)
@@ -617,6 +624,7 @@ class OptionsDock(QDockWidget):
         self.opLayout.addRow('Basis:', self.basisBox)
         self.opLayout.addRow('Color By:', self.colorbyBox)
         self.opLayout.addRow('Plot alpha:', self.plotAlphaBox)
+        self.opLayout.addRow('Show Overlaps', self.overlapCheck)
         self.opLayout.addRow(self.colorOptionsButton)
         self.opLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
         self.opLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
