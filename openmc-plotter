@@ -450,8 +450,6 @@ class MainWindow(QMainWindow):
                 message = 'Error loading plot settings. Incompatible model.'
             self.statusBar().showMessage(message, 5000)
 
-        return super().event(event)
-
     def applyChanges(self):
         if self.model.activeView != self.model.currentView:
             self.statusBar().showMessage('Generating Plot...')
