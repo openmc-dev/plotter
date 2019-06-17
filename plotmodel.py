@@ -292,7 +292,7 @@ class PlotView(_PlotBase):
         self.highlightAlpha = 0.5
         self.highlightSeed = 1
         self.plotBackground = (50, 50, 50)
-        self.overlap_color = (255, 0 , 0)
+        self.overlap_color = (255, 0, 0)
 
         self.plotAlpha = 1.0
 
