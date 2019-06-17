@@ -131,9 +131,6 @@ class PlotModel():
 
         cv = self.currentView = copy.deepcopy(self.activeView)
         ids = capi_plot.id_map(cv)
-
-
-        print("Creating property map")
         props = capi_plot.property_map(cv)
         # empty image data
         image = np.ones((cv.v_res, cv.h_res, 3), dtype=int)
@@ -162,7 +159,7 @@ class PlotModel():
             if id == _NOT_FOUND:
                 image[self.ids == id] = cv.plotBackground
             elif id == _OVERLAP:
-                image[self.ids == id] = (255, 0, 0)
+                image[self.ids == id] = cv.overlap_color
             else:
                 image[self.ids == id] = domain[str(id)].color
 
@@ -259,6 +256,10 @@ class PlotView(_PlotBase):
         is active
     plotBackground : 3-tuple of int
         RGB color to apply to plot background
+    color_overlaps : bool
+        Indicator of whether or not overlaps will be shown
+    overlap_color : 3-tuple of int
+        RGB color to apply for cell overlap regions
     cells : Dict of DomainView instances
         Dictionary of cell view settings by ID
     materials : Dict of DomainView instances
@@ -291,6 +292,7 @@ class PlotView(_PlotBase):
         self.highlightAlpha = 0.5
         self.highlightSeed = 1
         self.plotBackground = (50, 50, 50)
+        self.overlap_color = (255, 0 , 0)
 
         self.plotAlpha = 1.0
 

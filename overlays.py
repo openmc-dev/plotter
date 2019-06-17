@@ -27,6 +27,7 @@ class ShortcutsOverlay(QWidget):
                             ("Zoom", "Shift+Scroll"),
                             ("Toggle Masking", c_key + "+M"),
                             ("Toggle Highlighting", c_key + "+L"),
+                            ("Toggle Overlap Coloring", c_key + "+P"),
                             ("Set XY Basis", "Alt+X"),
                             ("Set YZ Basis", "Alt+Y"),
                             ("Set XZ Basis", "Alt+Z"),

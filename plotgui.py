@@ -287,7 +287,8 @@ class PlotImage(FigureCanvas):
         self.menu.addAction(self.mw.redoAction)
         self.menu.addSeparator()
 
-        if id != str(_NOT_FOUND) and cv.colorby not in _MODEL_PROPERTIES:
+        if int(id) not in (_NOT_FOUND, _OVERLAP) and \
+           cv.colorby not in _MODEL_PROPERTIES:
 
             # Domain ID
             if domain[id].name:
@@ -334,11 +335,18 @@ class PlotImage(FigureCanvas):
 
             if cv.colorby not in _MODEL_PROPERTIES:
                 self.menu.addSeparator()
-                bgColorAction = self.menu.addAction('Edit Background Color...')
-                bgColorAction.setToolTip('Edit background color')
-                bgColorAction.setStatusTip('Edit plot background color')
-                connector = partial(self.mw.editBackgroundColor, apply=True)
-                bgColorAction.triggered.connect(connector)
+                if int(id) == _NOT_FOUND:
+                    bgColorAction = self.menu.addAction('Edit Background Color...')
+                    bgColorAction.setToolTip('Edit background color')
+                    bgColorAction.setStatusTip('Edit plot background color')
+                    connector = partial(self.mw.editBackgroundColor, apply=True)
+                    bgColorAction.triggered.connect(connector)
+                elif int(id) == _OVERLAP:
+                    olapColorAction = self.menu.addAction('Edit Overlap Color...')
+                    olapColorAction.setToolTip('Edit overlap color')
+                    olapColorAction.setStatusTip('Edit plot overlap color')
+                    connector = partial(self.mw.editOverlapColor, apply=True)
+                    olapColorAction.triggered.connect(connector)
 
         self.menu.addSeparator()
         self.menu.addAction(self.mw.saveImageAction)
@@ -351,11 +359,13 @@ class PlotImage(FigureCanvas):
         if domain_kind.lower() not in ('density', 'temperature'):
             self.menu.addAction(self.mw.maskingAction)
             self.menu.addAction(self.mw.highlightingAct)
+            self.menu.addAction(self.mw.overlapAct)
             self.menu.addSeparator()
         self.menu.addAction(self.mw.dockAction)
 
         self.mw.maskingAction.setChecked(cv.masking)
         self.mw.highlightingAct.setChecked(cv.highlighting)
+        self.mw.overlapAct.setChecked(cv.color_overlaps)
 
         if self.mw.dock.isVisible():
             self.mw.dockAction.setText('Hide &Dock')
@@ -822,6 +832,12 @@ class ColorDialog(QDialog):
         overlap_connector = partial(self.mw.toggleOverlaps)
         self.overlapCheck.stateChanged.connect(overlap_connector)
 
+        self.overlapColorButton = QPushButton()
+        self.overlapColorButton.setCursor(QtCore.Qt.PointingHandCursor)
+        self.overlapColorButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
+        self.overlapColorButton.setFixedHeight(self.FM.height() * 1.5)
+        self.overlapColorButton.clicked.connect(self.mw.editOverlapColor)
+
         self.colorbyBox.currentTextChanged[str].connect(self.mw.editColorBy)
 
         formLayout = QFormLayout()
@@ -838,8 +854,11 @@ class ColorDialog(QDialog):
         formLayout.addRow('Highlight Seed:', self.seedBox)
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Background Color:          ', self.bgButton)
-        formLayout.addRow('Color Plot By:', self.colorbyBox)
+        formLayout.addRow(HorizontalLine())
         formLayout.addRow('Show Overlaps', self.overlapCheck)
+        formLayout.addRow('OVerlap Color', self.overlapColorButton)
+        formLayout.addRow(HorizontalLine())
+        formLayout.addRow('Color Plot By:', self.colorbyBox)
 
         generalLayout = QHBoxLayout()
         innerWidget = QWidget()
@@ -996,6 +1015,7 @@ class ColorDialog(QDialog):
         self.updateColorBy()
         self.updateDomainTabs()
         self.updateOverlap()
+        self.updateOverlapColor()
 
     def updateMasking(self):
         masking = self.model.activeView.masking
@@ -1053,6 +1073,11 @@ class ColorDialog(QDialog):
         color = self.model.activeView.plotBackground
         self.bgButton.setStyleSheet("border-radius: 8px;"
                                     "background-color: rgb%s" % (str(color)))
+
+    def updateOverlapColor(self):
+        color = self.model.activeView.overlap_color
+        self.overlapColorButton.setStyleSheet("border-radius: 8px;"
+                                              "background-color: rgb%s" % (str(color)))
 
     def updateOverlap(self):
         colorby = self.model.activeView.colorby
