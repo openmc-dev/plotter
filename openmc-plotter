@@ -512,6 +512,12 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
+    def toggleOverlaps(self, state, apply=False):
+        self.model.activeView.color_overlaps = bool(state)
+        self.colorDialog.updateOverlap()
+        if apply:
+            self.applyChanges()
+
     def editColorMap(self, colormap_name, property_type, apply=False):
         self.model.activeView.colormaps[property_type] = colormap_name
         self.plotIm.updateColorMap(colormap_name, property_type)

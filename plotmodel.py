@@ -21,6 +21,7 @@ __VERSION__ = "0.1.0"
 
 _VOID_REGION = -1
 _NOT_FOUND = -2
+_OVERLAP = -3
 
 _MODEL_PROPERTIES = ('temperature', 'density')
 _PROPERTY_INDICES = {'temperature': 0, 'density': 1}
@@ -130,6 +131,9 @@ class PlotModel():
 
         cv = self.currentView = copy.deepcopy(self.activeView)
         ids = capi_plot.id_map(cv)
+
+
+        print("Creating property map")
         props = capi_plot.property_map(cv)
         # empty image data
         image = np.ones((cv.v_res, cv.h_res, 3), dtype=int)
@@ -157,6 +161,8 @@ class PlotModel():
         for id in unique_ids:
             if id == _NOT_FOUND:
                 image[self.ids == id] = cv.plotBackground
+            elif id == _OVERLAP:
+                image[self.ids == id] = (255, 0, 0)
             else:
                 image[self.ids == id] = domain[str(id)].color
 

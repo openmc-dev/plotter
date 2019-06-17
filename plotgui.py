@@ -613,10 +613,6 @@ class OptionsDock(QDockWidget):
         self.colorOptionsButton.setMinimumHeight(self.FM.height() * 1.6)
         self.colorOptionsButton.clicked.connect(self.mw.showColorDialog)
 
-        # Overlap plotting
-        self.overlapCheck = QCheckBox('', self)
-#        self.overlapCheck.stateChanged.connect(lambda: pass)
-
         # Options Form Layout
         self.opLayout = QFormLayout()
         self.opLayout.addRow('Width:', self.widthBox)
@@ -624,7 +620,6 @@ class OptionsDock(QDockWidget):
         self.opLayout.addRow('Basis:', self.basisBox)
         self.opLayout.addRow('Color By:', self.colorbyBox)
         self.opLayout.addRow('Plot alpha:', self.plotAlphaBox)
-        self.opLayout.addRow('Show Overlaps', self.overlapCheck)
         self.opLayout.addRow(self.colorOptionsButton)
         self.opLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
         self.opLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
@@ -820,6 +815,11 @@ class ColorDialog(QDialog):
         self.colorbyBox.addItem("temperature")
         self.colorbyBox.addItem("density")
 
+        # Overlap plotting
+        self.overlapCheck = QCheckBox('', self)
+        overlap_connector = partial(self.mw.toggleOverlaps)
+        self.overlapCheck.stateChanged.connect(overlap_connector)
+
         self.colorbyBox.currentTextChanged[str].connect(self.mw.editColorBy)
 
         formLayout = QFormLayout()
@@ -837,6 +837,7 @@ class ColorDialog(QDialog):
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Background Color:          ', self.bgButton)
         formLayout.addRow('Color Plot By:', self.colorbyBox)
+        formLayout.addRow('Show Overlaps', self.overlapCheck)
 
         generalLayout = QHBoxLayout()
         innerWidget = QWidget()
@@ -1050,8 +1051,16 @@ class ColorDialog(QDialog):
         self.bgButton.setStyleSheet("border-radius: 8px;"
                                     "background-color: rgb%s" % (str(color)))
 
+    def updateOverlap(self):
+        colorby = self.model.activeView.colorby
+        overlap_val = self.model.activeView.color_overlaps
+        if colorby in ('cell', 'material'):
+            self.overlapCheck.setChecked(overlap_val)
+
     def updateColorBy(self):
-        self.colorbyBox.setCurrentText(self.model.activeView.colorby)
+        colorby = self.model.activeView.colorby
+        self.colorbyBox.setCurrentText(colorby)
+        self.overlapCheck.setEnabled(colorby in ("cell", "material"))
 
     def updateDomainTabs(self):
         self.cellTable.setModel(self.mw.cellsModel)
