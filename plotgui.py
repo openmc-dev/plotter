@@ -510,9 +510,6 @@ class OptionsDock(QDockWidget):
         self.createOptionsBox()
         self.createResolutionBox()
 
-
-
-
         # Create submit button
         self.applyButton = QPushButton("Apply Changes")
         # Mac bug fix
