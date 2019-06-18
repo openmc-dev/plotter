@@ -5,7 +5,7 @@ from functools import partial
 
 from plot_colors import rgb_normalize, invert_rgb
 from plotmodel import DomainDelegate
-from plotmodel import _NOT_FOUND, _VOID_REGION, _MODEL_PROPERTIES
+from plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
 
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
@@ -198,6 +198,8 @@ class PlotImage(FigureCanvas):
 
             if id == str(_VOID_REGION):
                 domainInfo = ("VOID")
+            elif id == str(_OVERLAP):
+                domainInfo = ("OVERLAP")
             elif id != str(_NOT_FOUND) and domain[id].name:
                 domainInfo = ("{} {}: \"{}\"\t Density: {} g/cc\t"
                               "Temperature: {} K".format(domain_kind,
@@ -285,7 +287,8 @@ class PlotImage(FigureCanvas):
         self.menu.addAction(self.mw.redoAction)
         self.menu.addSeparator()
 
-        if id != str(_NOT_FOUND) and cv.colorby not in _MODEL_PROPERTIES:
+        if int(id) not in (_NOT_FOUND, _OVERLAP) and \
+           cv.colorby not in _MODEL_PROPERTIES:
 
             # Domain ID
             if domain[id].name:
@@ -332,11 +335,18 @@ class PlotImage(FigureCanvas):
 
             if cv.colorby not in _MODEL_PROPERTIES:
                 self.menu.addSeparator()
-                bgColorAction = self.menu.addAction('Edit Background Color...')
-                bgColorAction.setToolTip('Edit background color')
-                bgColorAction.setStatusTip('Edit plot background color')
-                connector = partial(self.mw.editBackgroundColor, apply=True)
-                bgColorAction.triggered.connect(connector)
+                if int(id) == _NOT_FOUND:
+                    bgColorAction = self.menu.addAction('Edit Background Color...')
+                    bgColorAction.setToolTip('Edit background color')
+                    bgColorAction.setStatusTip('Edit plot background color')
+                    connector = partial(self.mw.editBackgroundColor, apply=True)
+                    bgColorAction.triggered.connect(connector)
+                elif int(id) == _OVERLAP:
+                    olapColorAction = self.menu.addAction('Edit Overlap Color...')
+                    olapColorAction.setToolTip('Edit overlap color')
+                    olapColorAction.setStatusTip('Edit plot overlap color')
+                    connector = partial(self.mw.editOverlapColor, apply=True)
+                    olapColorAction.triggered.connect(connector)
 
         self.menu.addSeparator()
         self.menu.addAction(self.mw.saveImageAction)
@@ -349,11 +359,13 @@ class PlotImage(FigureCanvas):
         if domain_kind.lower() not in ('density', 'temperature'):
             self.menu.addAction(self.mw.maskingAction)
             self.menu.addAction(self.mw.highlightingAct)
+            self.menu.addAction(self.mw.overlapAct)
             self.menu.addSeparator()
         self.menu.addAction(self.mw.dockAction)
 
         self.mw.maskingAction.setChecked(cv.masking)
         self.mw.highlightingAct.setChecked(cv.highlighting)
+        self.mw.overlapAct.setChecked(cv.color_overlaps)
 
         if self.mw.dock.isVisible():
             self.mw.dockAction.setText('Hide &Dock')
@@ -812,6 +824,17 @@ class ColorDialog(QDialog):
         self.colorbyBox.addItem("temperature")
         self.colorbyBox.addItem("density")
 
+        # Overlap plotting
+        self.overlapCheck = QCheckBox('', self)
+        overlap_connector = partial(self.mw.toggleOverlaps)
+        self.overlapCheck.stateChanged.connect(overlap_connector)
+
+        self.overlapColorButton = QPushButton()
+        self.overlapColorButton.setCursor(QtCore.Qt.PointingHandCursor)
+        self.overlapColorButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
+        self.overlapColorButton.setFixedHeight(self.FM.height() * 1.5)
+        self.overlapColorButton.clicked.connect(self.mw.editOverlapColor)
+
         self.colorbyBox.currentTextChanged[str].connect(self.mw.editColorBy)
 
         formLayout = QFormLayout()
@@ -828,6 +851,10 @@ class ColorDialog(QDialog):
         formLayout.addRow('Highlight Seed:', self.seedBox)
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Background Color:          ', self.bgButton)
+        formLayout.addRow(HorizontalLine())
+        formLayout.addRow('Show Overlaps:', self.overlapCheck)
+        formLayout.addRow('OVerlap Color:', self.overlapColorButton)
+        formLayout.addRow(HorizontalLine())
         formLayout.addRow('Color Plot By:', self.colorbyBox)
 
         generalLayout = QHBoxLayout()
@@ -984,6 +1011,8 @@ class ColorDialog(QDialog):
         self.updateBackgroundColor()
         self.updateColorBy()
         self.updateDomainTabs()
+        self.updateOverlap()
+        self.updateOverlapColor()
 
     def updateMasking(self):
         masking = self.model.activeView.masking
@@ -1042,8 +1071,21 @@ class ColorDialog(QDialog):
         self.bgButton.setStyleSheet("border-radius: 8px;"
                                     "background-color: rgb%s" % (str(color)))
 
+    def updateOverlapColor(self):
+        color = self.model.activeView.overlap_color
+        self.overlapColorButton.setStyleSheet("border-radius: 8px;"
+                                              "background-color: rgb%s" % (str(color)))
+
+    def updateOverlap(self):
+        colorby = self.model.activeView.colorby
+        overlap_val = self.model.activeView.color_overlaps
+        if colorby in ('cell', 'material'):
+            self.overlapCheck.setChecked(overlap_val)
+
     def updateColorBy(self):
-        self.colorbyBox.setCurrentText(self.model.activeView.colorby)
+        colorby = self.model.activeView.colorby
+        self.colorbyBox.setCurrentText(colorby)
+        self.overlapCheck.setEnabled(colorby in ("cell", "material"))
 
     def updateDomainTabs(self):
         self.cellTable.setModel(self.mw.cellsModel)

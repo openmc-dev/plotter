@@ -42,6 +42,7 @@ Press `?` to view a variety of keyboard shortcuts.
   - Edit&rightarrow;Color By&rightarrow;Material : Change plot settings to be colored by material, apply changes, and reload plot.
   - Edit&rightarrow;Enable Masking : Enable/Disable masking, apply changes, and reload plot.
   - Edit&rightarrow;Enable Highlighting : Enable/Disable highlighting, apply changes, and reload plot.
+  - Edit&rightarrow;Enable Overlap Coloring : Enable/Disable display of geometry overlaps, apply changes, and reload plot.
 
   - View&rightarrow;Hide[Show] Dock : Hide/Show Dock.
   - View&rightarrow;Zoom... : Open dialog to input new zoom value.
@@ -92,12 +93,15 @@ Press `?` to view a variety of keyboard shortcuts.
       - Edit Background Color... : Select a new color for plot background, apply changes, and reload plot image.
 
     See menu bar for other context menu options.
+  - Right-Click on plot overlap region &rightarrow; activate context menu:
+      - Edit Overlap Color... :  Select a new color for overlap regions, apply changes, and reload plot image.
 
   - Right-click on plot cell/material : Activate context menu:
     - Displays cell/material ID and name (if defined).
     - Edit Cell/Material Color... : Select a new color for the selected cell/material, apply changes, and reload plot image.
     - Mask Cell/Material : Mask/Unmask selected cell/material, apply changes, and reload plot image.
     - Highlight Cell/Material : Highlight/Unhighlight selected cell/material, apply changes, and reload plot image.
+
 
     See menu bar for other context menu options.
 
@@ -113,6 +117,8 @@ Press `?` to view a variety of keyboard shortcuts.
   - Highlight Alpha : Set alpha transparency level of non-highlighted color overlay.
   - Highlight Seed : Select seed for randomized colorization of cells/materials when highlighting is enabled.
   - Background Color : Select color of plot background for active plot.
+  - Show Overlaps : Display overlap regions on the plot.
+  - Overlap Color : Customize the displayed color of overlap regions.
   - Color Plot By : Select how the active plot is to be colored.
 
 ### Cells/Materials Tabs:

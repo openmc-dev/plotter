@@ -290,6 +290,16 @@ class MainWindow(QMainWindow):
         self.highlightingAct.toggled.connect(highlight_connector)
         self.editMenu.addAction(self.highlightingAct)
 
+        self.overlapAct = QAction('Enable Overlap Coloring', self)
+        self.overlapAct.setShortcut('Ctrl+P')
+        self.overlapAct.setCheckable(True)
+        self.overlapAct.setToolTip('Toggle overlapping regions')
+        self.overlapAct.setStatusTip('Toggle display of overlapping '
+                                    'regions when enabled')
+        overlap_connector = partial(self.toggleOverlaps, apply=True)
+        self.overlapAct.toggled.connect(overlap_connector)
+        self.editMenu.addAction(self.overlapAct)
+
         # View Menu
         self.dockAction = QAction('Hide &Dock', self)
         self.dockAction.setShortcut("Ctrl+D")
@@ -440,8 +450,6 @@ class MainWindow(QMainWindow):
                 message = 'Error loading plot settings. Incompatible model.'
             self.statusBar().showMessage(message, 5000)
 
-        return super().event(event)
-
     def applyChanges(self):
         if self.model.activeView != self.model.currentView:
             self.statusBar().showMessage('Generating Plot...')
@@ -509,6 +517,12 @@ class MainWindow(QMainWindow):
         self.model.activeView.colorby = domain_kind
         self.dock.updateColorBy()
         self.colorDialog.updateColorBy()
+        if apply:
+            self.applyChanges()
+
+    def toggleOverlaps(self, state, apply=False):
+        self.model.activeView.color_overlaps = bool(state)
+        self.colorDialog.updateOverlap()
         if apply:
             self.applyChanges()
 
@@ -672,6 +686,18 @@ class MainWindow(QMainWindow):
     def editSeed(self, value):
         self.model.activeView.highlightSeed = value
 
+    def editOverlapColor(self, apply=False):
+        current_color = self.model.activeView.overlap_color
+        dlg = QColorDialog(self)
+        dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
+        if dlg.exec_():
+            new_color = dlg.currentColor().getRgb()[:3]
+            self.model.activeView.overlap_color = new_color
+            self.colorDialog.updateOverlapColor()
+
+        if apply:
+            self.applyChanges()
+
     def editBackgroundColor(self, apply=False):
         current_color = self.model.activeView.plotBackground
         dlg = QColorDialog(self)
@@ -767,6 +793,14 @@ class MainWindow(QMainWindow):
 
             with open('plot_settings.pkl', 'rb') as file:
                 model = pickle.load(file)
+
+            # do not replace model if the version is out of date
+            if model.version != self.model.version:
+                print("WARNING: previous plot settings are for a different "
+                      "version of the GUI. They will be ignored.")
+                wrn_msg = "Existing version: {}, Current GUI version: {}"
+                print(wrn_msg.format(model.version, self.model.version))
+                return
 
             self.model.currentView = model.currentView
             self.model.activeView = copy.deepcopy(model.currentView)
