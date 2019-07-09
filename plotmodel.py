@@ -60,12 +60,9 @@ class PlotModel():
     def __init__(self):
         """ Initialize PlotModel class attributes """
 
-        # Read geometry.xml
-        self.geom = openmc.Geometry.from_xml('geometry.xml')
-
         # Retrieve OpenMC Cells/Materials
-        self.modelCells = self.geom.get_all_cells()
-        self.modelMaterials = self.geom.get_all_materials()
+        self.modelCells = openmc.capi.cells
+        self.modelMaterials = openmc.capi.materials
 
         # Cell/Material ID by coordinates
         self.ids = None
@@ -96,7 +93,7 @@ class PlotModel():
             PlotView instance with default view settings
         """
 
-        lower_left, upper_right = self.geom.bounding_box
+        lower_left, upper_right = openmc.capi.global_bounding_box()
 
         # Check for valid bounding_box dimensions
         if -np.inf not in lower_left[:2] and np.inf not in upper_right[:2]:
@@ -161,7 +158,7 @@ class PlotModel():
             elif id == _OVERLAP:
                 image[self.ids == id] = cv.overlap_color
             else:
-                image[self.ids == id] = domain[str(id)].color
+                image[self.ids == id] = domain[id].color
 
         if cv.masking:
             for id, dom in domain.items():
@@ -305,13 +302,14 @@ class PlotView(_PlotBase):
         self.data_indicator_enabled = {prop: False for prop in _MODEL_PROPERTIES}
         self.color_scale_log = {prop: False for prop in _MODEL_PROPERTIES}
 
-        self.cells = self.getDomains('geometry.xml', 'cell')
-        self.materials = self.getDomains('materials.xml', 'material')
+        self.cells = self.getDomains('cell')
+        self.materials = self.getDomains('material')
 
     def __hash__(self):
         return hash(self.__dict__.__str__() + self.__str__())
 
-    def getDomains(self, file, type_):
+    @staticmethod
+    def getDomains(domain_type):
         """ Return dictionary of domain settings.
 
         Retrieve cell or material ID numbers and names from .xml files
@@ -319,9 +317,7 @@ class PlotView(_PlotBase):
 
         Parameters
         ----------
-        file : {'geometry.xml', 'materials.xml'}
-            .xml file from which to retrieve values
-        type_ : {'cell', 'material'}
+        domain_type : {'cell', 'material'}
             Type of domain to retrieve for dictionary
 
         Returns
@@ -330,27 +326,23 @@ class PlotView(_PlotBase):
             Dictionary of cell/material DomainView instances keyed by ID
         """
 
-        doc = ET.parse(file)
-        root = doc.getroot()
+        if domain_type not in ('cell', 'material'):
+            raise ValueError("Domain type, {}, requested is neither "
+                             "'cell' nor 'material'.".format(domain_type))
+
+        capi_domains = None
+        if domain_type == 'cell':
+            capi_domains = openmc.capi.cells
+        elif domain_type == 'material':
+            capi_domains = openmc.capi.cells
 
         domains = {}
-        for dom in root.findall(type_):
-            id = dom.attrib['id']
-            if 'name' in dom.attrib:
-                name = dom.attrib['name']
-            else:
-                name = None
-
-            # set a random color
-            color = random_rgb()
-            masked = False
-            highlighted = False
-            domain = DomainView(id, name, color, masked, highlighted)
-            domains[id] = domain
+        for domain in capi_domains:
+            domains[id] = DomainView(id, "", random_rgb(), False, False)
 
         # always add void to a material domain at the end
-        if 'material' in file:
-            void_id = str(_VOID_REGION)
+        if domain_type == 'material':
+            void_id = _VOID_REGION
             domains[void_id] = DomainView(void_id, "VOID",
                                           (255, 255, 255),
                                           False,
