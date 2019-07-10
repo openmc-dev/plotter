@@ -334,11 +334,12 @@ class PlotView(_PlotBase):
         if domain_type == 'cell':
             capi_domains = openmc.capi.cells
         elif domain_type == 'material':
-            capi_domains = openmc.capi.cells
+            capi_domains = openmc.capi.materials
 
         domains = {}
-        for domain in capi_domains:
-            domains[id] = DomainView(id, "", random_rgb(), False, False)
+        for domain, domain_obj in capi_domains.items():
+            name = domain_obj.name
+            domains[domain] = DomainView(domain, name, random_rgb())
 
         # always add void to a material domain at the end
         if domain_type == 'material':
@@ -390,11 +391,11 @@ class DomainView():
 
     def __repr__(self):
         return ("id: {} \nname: {} \ncolor: {} \
-                \nmask: {} \nhighlight: {}\n\n".format(self.id,
-                                                       self.name,
-                                                       self.color,
-                                                       self.masked,
-                                                       self.highlight))
+                \nmask: {} \nhighlighted: {}\n\n".format(self.id,
+                                                         self.name,
+                                                         self.color,
+                                                         self.masked,
+                                                         self.highlighted))
 
     def __eq__(self, other):
         if isinstance(other, DomainView):
