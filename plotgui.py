@@ -1093,6 +1093,13 @@ class ColorDialog(QDialog):
         self.cellTable.setModel(self.mw.cellsModel)
         self.matTable.setModel(self.mw.materialsModel)
 
+class TallyDialog(QDialog):
+
+    def __init__(self, model, FM, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle('Data Options')
+
 
 class HorizontalLine(QFrame):
     def __init__(self):

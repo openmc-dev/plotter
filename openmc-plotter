@@ -162,6 +162,14 @@ class MainWindow(QMainWindow):
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.quitAction)
 
+        # Data Menu
+        self.openStatePointAction = QAction("&Open statepoint...", self)
+        self.openStatePointAction.setToolTip('Open statepoint file')
+        self.openStatePointAction.triggered.connect(self.openStatePoint)
+
+        self.dataMenu = self.mainMenu.addMenu('&Data')
+        self.dataMenu.addAction(self.openStatePointAction)
+
         # Edit Menu
         self.applyAction = QAction("&Apply Changes", self)
         self.applyAction.setShortcut("Ctrl+Return")
@@ -451,6 +459,19 @@ class MainWindow(QMainWindow):
             else:
                 message = 'Error loading plot settings. Incompatible model.'
             self.statusBar().showMessage(message, 5000)
+
+    def openStatePoint(self):
+        filename, ext = QFileDialog.getOpenFileName(self, "Open StatePoint",
+                                                    ".", "statepoint*.h5")
+        if filename:
+            try:
+                self.model.openStatePoint(filename)
+                message = 'Opened statepoint file: {}'
+            except Exception:
+                message = 'Error opening statepoint file: {}'
+            finally:
+                self.statusBar().showMessage(message.format(filename),
+                                             5000)
 
     def applyChanges(self):
         if self.model.activeView != self.model.currentView:
