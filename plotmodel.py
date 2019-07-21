@@ -72,8 +72,8 @@ class PlotModel():
 
         self.version = __VERSION__
 
-        # default statepoint
-        self.statepoint = None
+        # default statepoint value
+        self._statepoint = None
 
         # reset random number seed for consistent
         # coloring when reloading a model
@@ -86,7 +86,25 @@ class PlotModel():
         self.activeView = copy.deepcopy(self.defaultView)
 
     def openStatePoint(self, filename):
-        self.statepoint = StatePointModel(filename)
+        self.statepoint = StatePointModel(filename, open_file=True)
+
+    @property
+    def statepoint(self):
+        return self._statepoint
+
+    @statepoint.setter
+    def statepoint(self, statepoint):
+        if statepoint is None:
+            self._statepoint = None
+        elif isinstance(statepoint, StatePointModel):
+            self._statepoint = statepoint
+        elif isinstance(statepoint, str):
+            self._statepoint = StatePointModel(statepoint, open_file=True)
+        else:
+            raise AttributeError("Invalid statepoint object")
+
+        if self._statepoint and not self._statepoint.is_open:
+            self._statepoint.open()
 
     def getDefaultView(self):
         """ Generates default PlotView instance for OpenMC geometry

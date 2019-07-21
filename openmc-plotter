@@ -835,6 +835,7 @@ class MainWindow(QMainWindow):
                 print(wrn_msg.format(model.version, self.model.version))
                 return
 
+            self.model.statepoint = self.model.statepoint
             self.model.currentView = model.currentView
             self.model.activeView = copy.deepcopy(model.currentView)
             self.model.previousViews = model.previousViews
@@ -939,6 +940,8 @@ class MainWindow(QMainWindow):
             self.model.subsequentViews = self.model.subsequentViews[-10:]
 
         with open('plot_settings.pkl', 'wb') as file:
+            if self.model.statepoint:
+                self.model.statepoint.close()
             pickle.dump(self.model, file)
 
 
