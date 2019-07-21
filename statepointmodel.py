@@ -13,7 +13,10 @@ class StatePointModel():
             self.open()
 
     def tally_list(self):
-        return [ (tally.id, tally.name, tally) for tally in self._sp.tallies ]
+        if self._sp is None:
+            return []
+        else:
+            return [ (id, tally.name, tally) for id, tally in self._sp.tallies.items() ]
 
     def open(self):
         if self.is_open:

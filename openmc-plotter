@@ -22,7 +22,7 @@ from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QTableWidgetItem, QGestureEvent)
 
 from plotmodel import PlotModel, DomainTableModel
-from plotgui import PlotImage, ColorDialog, OptionsDock
+from plotgui import PlotImage, ColorDialog, TallyDialog, OptionsDock
 
 from overlays import ShortcutsOverlay
 
@@ -72,6 +72,10 @@ class MainWindow(QMainWindow):
         # Color Dialog
         self.colorDialog = ColorDialog(self.model, FM, self)
         self.colorDialog.hide()
+
+        # Tally Dialog
+        self.tallyDialog = TallyDialog(self.model, FM, self)
+        self.tallyDialog.hide()
 
         # Restore Window Settings
         self.restoreWindowSettings()
@@ -169,6 +173,7 @@ class MainWindow(QMainWindow):
 
         self.dataMenu = self.mainMenu.addMenu('&Data')
         self.dataMenu.addAction(self.openStatePointAction)
+        self.updateDataMenu()
 
         # Edit Menu
         self.applyAction = QAction("&Apply Changes", self)
@@ -342,6 +347,12 @@ class MainWindow(QMainWindow):
         self.colorDialogAction.setStatusTip('Bring Color Dialog to front')
         self.colorDialogAction.triggered.connect(self.showColorDialog)
 
+        self.tallyDialogAction = QAction('Tally &Options', self)
+        self.tallyDialogAction.setCheckable(True)
+        self.tallyDialogAction.setToolTip('Bring Tally Dialog to front')
+        self.tallyDialogAction.setStatusTip('Bring Tally Dialog to front')
+        self.tallyDialogAction.triggered.connect(self.showTallyDialog)
+
         # Keyboard Shortcuts Overlay
         self.keyboardShortcutsAction = QAction("&Keyboard Shortcuts...", self)
         self.keyboardShortcutsAction.setShortcut("?")
@@ -352,6 +363,7 @@ class MainWindow(QMainWindow):
         self.windowMenu = self.mainMenu.addMenu('&Window')
         self.windowMenu.addAction(self.mainWindowAction)
         self.windowMenu.addAction(self.colorDialogAction)
+        self.windowMenu.addAction(self.tallyDialogAction)
         self.windowMenu.addAction(self.keyboardShortcutsAction)
         self.windowMenu.aboutToShow.connect(self.updateWindowMenu)
 
@@ -472,6 +484,23 @@ class MainWindow(QMainWindow):
             finally:
                 self.statusBar().showMessage(message.format(filename),
                                              5000)
+        self.updateDataMenu()
+        self.tallyDialog.update()
+
+    def closeStatePoint(self):
+        # remove the statepoint object and update the data menu
+        self.model.statepoint = None
+        self.updateDataMenu()
+        self.tallyDialog.update()
+
+    def updateDataMenu(self):
+        if self.model.statepoint:
+            self.closeStatePointAction = QAction("&Close statepoint", self)
+            self.closeStatePointAction.setToolTip("Close current statepoint")
+            self.closeStatePointAction.triggered.connect(self.closeStatePoint)
+            self.dataMenu.addAction(self.closeStatePointAction)
+        elif hasattr(self, "closeStatePointAction"):
+            self.dataMenu.removeAction(self.closeStatePointAction)
 
     def applyChanges(self):
         if self.model.activeView != self.model.currentView:
@@ -647,6 +676,11 @@ class MainWindow(QMainWindow):
         self.colorDialog.show()
         self.colorDialog.raise_()
         self.colorDialog.activateWindow()
+
+    def showTallyDialog(self):
+        self.tallyDialog.show()
+        self.tallyDialog.raise_()
+        self.tallyDialog.activateWindow()
 
     # Dock methods:
 
@@ -835,7 +869,7 @@ class MainWindow(QMainWindow):
                 print(wrn_msg.format(model.version, self.model.version))
                 return
 
-            self.model.statepoint = self.model.statepoint
+            self.model.statepoint = model.statepoint
             self.model.currentView = model.currentView
             self.model.activeView = copy.deepcopy(model.currentView)
             self.model.previousViews = model.previousViews

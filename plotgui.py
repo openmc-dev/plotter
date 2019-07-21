@@ -1093,12 +1093,69 @@ class ColorDialog(QDialog):
         self.cellTable.setModel(self.mw.cellsModel)
         self.matTable.setModel(self.mw.materialsModel)
 
+
 class TallyDialog(QDialog):
 
     def __init__(self, model, FM, parent=None):
         super().__init__(parent)
 
         self.setWindowTitle('Data Options')
+
+        self.model = model
+        self.FM = FM
+        self.mw = parent
+
+        self.createDialogLayout()
+
+    def createDialogLayout(self):
+
+        self.widget = QWidget()
+        self.widget.setMaximumHeight(800)
+        self.widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.mainLayout = QVBoxLayout()
+        self.mainLayout.addWidget(self.widget)
+        self.setLayout(self.mainLayout)
+
+        self.formLayout = QFormLayout()
+        self.formLayout.setAlignment(QtCore.Qt.AlignHCenter)
+        self.formLayout.setFormAlignment(QtCore.Qt.AlignHCenter)
+        self.formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
+
+        # Tally listing
+        self.tallySelector = QComboBox(self)
+        self.tally_map = {}
+
+        self.formLayout.addRow('Tally:', self.tallySelector)
+
+        self.generalLayout = QHBoxLayout()
+        self.innerWidget = QWidget()
+        self.generalLayout.setAlignment(QtCore.Qt.AlignVCenter)
+        self.innerWidget.setLayout(self.formLayout)
+        self.generalLayout.addStretch(1)
+        self.generalLayout.addWidget(self.innerWidget)
+        self.generalLayout.addStretch(1)
+
+        self.mainLayout.addWidget(self.innerWidget)
+
+        self.update()
+
+    def update(self):
+        if self.model.statepoint:
+            tally_w_name = 'Tally {} "{}"'
+            tally_no_name = 'Tally {}'
+            for idx, tally in enumerate(self.model.statepoint.tally_list()):
+                if tally[1] == "":
+                    self.tallySelector.addItem(tally_no_name.format(tally[0]))
+                else:
+                    self.tallySelector.addItem(tally_w_name.format(tally[0], tally[1]))
+                self.tally_map[idx] = tally[2]
+        else:
+            self.tallySelector.clear()
+            self.tallySelector.setDisabled(True)
+
+
+
 
 
 class HorizontalLine(QFrame):
