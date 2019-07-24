@@ -1119,7 +1119,6 @@ class TallyDialog(QDialog):
 
         self.formLayout = QFormLayout()
         self.formLayout.setAlignment(QtCore.Qt.AlignHCenter)
-        self.formLayout.setAlignment(QtCore.Qt.AlignTop)
         self.formLayout.setFormAlignment(QtCore.Qt.AlignHCenter)
         self.formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
 
@@ -1128,17 +1127,18 @@ class TallyDialog(QDialog):
         self.tally_map = {}
 
         self.formLayout.addRow('Tally:', self.tallySelector)
+        self.formLayout.addRow(HorizontalLine())
+
+        self.innerWidget = QWidget()
+        self.innerWidget.setLayout(self.formLayout)
 
         self.generalLayout = QHBoxLayout()
-        self.innerWidget = QWidget()
         self.generalLayout.setAlignment(QtCore.Qt.AlignVCenter)
-        self.innerWidget.setLayout(self.formLayout)
-        self.generalLayout.addStretch(1)
-        self.generalLayout.addWidget(self.innerWidget)
-        self.generalLayout.addStretch(1)
+        self.generalWidget = QWidget()
+        self.generalWidget.setLayout(self.generalLayout)
+        self.generalLayout.addWidget(self.innerWidget, stretch=1)
 
-        self.mainLayout.addWidget(self.innerWidget)
-        self.mainLayout.addWidget(HorizontalLine())
+        self.mainLayout.addWidget(self.generalWidget)
 
         self.update()
 
