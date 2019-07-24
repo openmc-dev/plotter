@@ -307,8 +307,8 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.width = width
         self.height = height
 
-        self.h_res = 600
-        self.v_res = 600
+        self.h_res = 1000
+        self.v_res = 1000
         self.aspectLock = True
 
         self.basis = 'xy'
