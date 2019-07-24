@@ -6,6 +6,7 @@ from functools import partial
 import os
 from pathlib import Path
 import pickle
+import signal
 import sys
 from threading import Thread
 import time
@@ -946,4 +947,13 @@ if __name__ == '__main__':
     mainWindow.loadGui()
     mainWindow.show()
     splash.close()
+
+    # connect interrupt signal to close call
+    signal.signal(signal.SIGINT, lambda *args: mainWindow.close())
+    # create timer that interrupts the Qt event loop
+    # to check for a signal
+    timer = QtCore.QTimer()
+    timer.start(500)
+    timer.timeout.connect(lambda: None)
+
     sys.exit(app.exec_())
