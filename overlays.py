@@ -21,7 +21,7 @@ class ShortcutsOverlay(QWidget):
                               ("Density", "Alt+D")],
                   "Views": [("Apply Changes", c_key + "+Enter"),
                             ("Undo", c_key + "+Z"),
-                            ("Redo", "Shift+Ctrl+Z"),
+                            ("Redo", "Shift+" + c_key+ "+Z"),
                             ("Restore Default Plot", c_key + "+R"),
                             ("Zoom", "Alt+Shift+Z"),
                             ("Zoom", "Shift+Scroll"),
