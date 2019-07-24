@@ -7,9 +7,9 @@ class StatePointModel():
     def __init__(self, filename, open_file=False):
         self.filename = filename
         self._sp = None
+        self.is_open = False
 
-        self.is_open = open_file
-        if self.is_open:
+        if open_file:
             self.open()
 
     def tally_list(self):

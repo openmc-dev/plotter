@@ -1119,6 +1119,7 @@ class TallyDialog(QDialog):
 
         self.formLayout = QFormLayout()
         self.formLayout.setAlignment(QtCore.Qt.AlignHCenter)
+        self.formLayout.setAlignment(QtCore.Qt.AlignTop)
         self.formLayout.setFormAlignment(QtCore.Qt.AlignHCenter)
         self.formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
 
@@ -1137,6 +1138,7 @@ class TallyDialog(QDialog):
         self.generalLayout.addStretch(1)
 
         self.mainLayout.addWidget(self.innerWidget)
+        self.mainLayout.addWidget(HorizontalLine())
 
         self.update()
 
@@ -1144,6 +1146,7 @@ class TallyDialog(QDialog):
         if self.model.statepoint:
             tally_w_name = 'Tally {} "{}"'
             tally_no_name = 'Tally {}'
+            self.tallySelector.setEnabled(True)
             for idx, tally in enumerate(self.model.statepoint.tally_list()):
                 if tally[1] == "":
                     self.tallySelector.addItem(tally_no_name.format(tally[0]))
@@ -1153,10 +1156,6 @@ class TallyDialog(QDialog):
         else:
             self.tallySelector.clear()
             self.tallySelector.setDisabled(True)
-
-
-
-
 
 class HorizontalLine(QFrame):
     def __init__(self):

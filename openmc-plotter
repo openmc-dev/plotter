@@ -15,9 +15,9 @@ import openmc.lib
 from PySide2 import QtCore, QtGui
 from PySide2.QtGui import QKeyEvent
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
-                               QScrollArea, QMenu, QAction, QFileDialog,
-                               QColorDialog, QInputDialog, QSplashScreen,
-                               QWidget, QPushButton, QListWidget,
+                               QScrollArea, QMenu, QMessageBox, QAction,
+                               QFileDialog, QColorDialog, QInputDialog,
+                               QSplashScreen, QWidget, QPushButton, QListWidget,
                                QListWidgetItem, QTableWidget, QVBoxLayout,
                                QTableWidgetItem, QGestureEvent)
 
@@ -473,23 +473,34 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(message, 5000)
 
     def openStatePoint(self):
+        # check for an alread-open statepoint
+        if self.model.statepoint:
+            msg_box = QMessageBox()
+            msg_box.setText("Please close the current statepoint file before "
+                            "opening a new one.")
+            msg_box.setIcon(QMessageBox.Information)
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.exec_()
+            return
         filename, ext = QFileDialog.getOpenFileName(self, "Open StatePoint",
                                                     ".", "statepoint*.h5")
         if filename:
             try:
                 self.model.openStatePoint(filename)
                 message = 'Opened statepoint file: {}'
-            except Exception:
+            except:
                 message = 'Error opening statepoint file: {}'
             finally:
-                self.statusBar().showMessage(message.format(filename),
-                                             5000)
-        self.updateDataMenu()
-        self.tallyDialog.update()
+                self.statusBar().showMessage(message.format(filename), 5000)
+            self.updateDataMenu()
+            self.tallyDialog.update()
 
     def closeStatePoint(self):
         # remove the statepoint object and update the data menu
+        filename = self.model.statepoint.filename
         self.model.statepoint = None
+        msg = "Closed statepoint file {}".format(filename)
+        self.statusBar().showMessage(msg)
         self.updateDataMenu()
         self.tallyDialog.update()
 
