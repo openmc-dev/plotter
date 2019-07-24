@@ -1104,6 +1104,7 @@ class TallyDialog(QDialog):
         self.model = model
         self.FM = FM
         self.mw = parent
+        self.tally_map = {}
 
         self.createDialogLayout()
 
@@ -1111,6 +1112,7 @@ class TallyDialog(QDialog):
 
         self.widget = QWidget()
         self.widget.setMaximumHeight(800)
+        self.widget.setMinimumWidth(300)
         self.widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self.mainLayout = QVBoxLayout()
@@ -1124,7 +1126,7 @@ class TallyDialog(QDialog):
 
         # Tally listing
         self.tallySelector = QComboBox(self)
-        self.tally_map = {}
+        self.tallySelector.currentTextChanged[str].connect(self.selectTally)
 
         self.formLayout.addRow('Tally:', self.tallySelector)
         self.formLayout.addRow(HorizontalLine())
@@ -1147,15 +1149,34 @@ class TallyDialog(QDialog):
             tally_w_name = 'Tally {} "{}"'
             tally_no_name = 'Tally {}'
             self.tallySelector.setEnabled(True)
-            for idx, tally in enumerate(self.model.statepoint.tally_list()):
-                if tally[1] == "":
-                    self.tallySelector.addItem(tally_no_name.format(tally[0]))
+            for idx, tally in enumerate(self.model.statepoint.tallies.values()):
+                if tally.name == "":
+                    self.tallySelector.addItem(tally_no_name.format(tally.id))
                 else:
-                    self.tallySelector.addItem(tally_w_name.format(tally[0], tally[1]))
-                self.tally_map[idx] = tally[2]
+                    self.tallySelector.addItem(tally_w_name.format(tally.id, tally.name))
+                self.tally_map[idx] = tally
         else:
             self.tallySelector.clear()
             self.tallySelector.setDisabled(True)
+
+    def selectTally(self, tally_label):
+        if self.model.statepoint:
+            tally_id = int(tally_label.split()[1])
+            tally = self.model.statepoint.tallies[tally_id]
+
+            # reset form layout
+            for i in reversed(range(self.formLayout.count())):
+                self.formLayout.itemAt(i).widget().setParent(None)
+
+            # always re-add the tally selector
+            self.formLayout.addRow(self.tallySelector)
+            self.formLayout.addRow(HorizontalLine())
+
+            # get the tally filters
+            for filter in tally.filters:
+                ql = QLabel()
+                ql.setText(str(type(filter)))
+                self.formLayout.addRow(ql)
 
 class HorizontalLine(QFrame):
     def __init__(self):

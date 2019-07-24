@@ -12,11 +12,12 @@ class StatePointModel():
         if open_file:
             self.open()
 
-    def tally_list(self):
-        if self._sp is None:
-            return []
+    @property
+    def tallies(self):
+        if self.is_open:
+            return self._sp.tallies
         else:
-            return [ (id, tally.name, tally) for id, tally in self._sp.tallies.items() ]
+            return {}
 
     def open(self):
         if self.is_open:
