@@ -20,6 +20,7 @@ from matplotlib import image as mpimage
 from matplotlib import lines as mlines
 from matplotlib import cm as mcolormaps
 from matplotlib.colors import SymLogNorm, NoNorm
+import openmc
 
 if is_pyqt5():
     from matplotlib.backends.backend_qt5agg import (
@@ -1126,7 +1127,7 @@ class TallyDialog(QDialog):
 
         # Tally listing
         self.tallySelector = QComboBox(self)
-        self.tallySelector.currentTextChanged[str].connect(self.selectTally)
+        self.tallySelector.currentTextChanged[str].connect(self.mw.editSelectedTally)
 
         self.formLayout.addRow('Tally:', self.tallySelector)
         self.formLayout.addRow(HorizontalLine())
@@ -1174,9 +1175,19 @@ class TallyDialog(QDialog):
 
             # get the tally filters
             for filter in tally.filters:
-                ql = QLabel()
-                ql.setText(str(type(filter)))
-                self.formLayout.addRow(ql)
+                if isinstance(filter, openmc.filter.CellFilter):
+                    self.formLayout.addRow(self.cellFilterForm(filter))
+                else:
+                    ql = QLabel()
+                    ql.setText(str(type(filter)))
+                    self.formLayout.addRow(ql)
+
+    @staticmethod
+    def cellFilterForm(filter):
+        l = QLabel()
+        l.setText("I'm a cell filter")
+        return l
+
 
 class HorizontalLine(QFrame):
     def __init__(self):

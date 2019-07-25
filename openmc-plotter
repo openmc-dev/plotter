@@ -784,6 +784,11 @@ class MainWindow(QMainWindow):
         self.colorDialog.updateDialogValues()
         self.applyChanges()
 
+    # Tally dialog methods
+
+    def editSelectedTally(self, event):
+        self.tallyDialog.selectTally(event)
+
     # Plot image methods
 
     def editPlotOrigin(self, xOr, yOr, zOr=None, apply=False):
