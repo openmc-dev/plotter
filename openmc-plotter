@@ -767,7 +767,7 @@ class MainWindow(QMainWindow):
         else:
             domain = self.model.activeView.materials
 
-        domain[id].highlighted = bool(state)
+        domain[id].highlight = bool(state)
         self.applyChanges()
 
     # Helper methods:

@@ -320,7 +320,7 @@ class PlotImage(FigureCanvas):
 
             highlightAction = self.menu.addAction('Highlight {}'.format(domain_kind))
             highlightAction.setCheckable(True)
-            highlightAction.setChecked(domain[id].highlighted)
+            highlightAction.setChecked(domain[id].highlight)
             highlightAction.setDisabled(not cv.highlighting)
             highlightAction.setToolTip('Toggle {} highlight'.format(domain_kind))
             highlightAction.setStatusTip('Toggle {} highlight'.format(domain_kind))

@@ -167,7 +167,7 @@ class PlotModel():
 
         if cv.highlighting:
             for id, dom in domain.items():
-                if dom.highlighted:
+                if dom.highlight:
                     image[self.ids == int(id)] = cv.highlightBackground
 
         # set model image
@@ -330,14 +330,14 @@ class PlotView(_PlotBase):
             raise ValueError("Domain type, {}, requested is neither "
                              "'cell' nor 'material'.".format(domain_type))
 
-        capi_domains = None
+        capi_domain = None
         if domain_type == 'cell':
-            capi_domains = openmc.capi.cells
+            capi_domain = openmc.capi.cells
         elif domain_type == 'material':
-            capi_domains = openmc.capi.materials
+            capi_domain = openmc.capi.materials
 
         domains = {}
-        for domain, domain_obj in capi_domains.items():
+        for domain, domain_obj in capi_domain.items():
             name = domain_obj.name
             domains[domain] = DomainView(domain, name, random_rgb())
 
@@ -375,27 +375,27 @@ class DomainView():
     masked : bool
         Indication of whether cell/material should be masked
         (defaults to False)
-    highlighted : bool
+    highlight : bool
         Indication of whether cell/material should be highlighted
         (defaults to False)
     """
 
-    def __init__(self, id, name, color=None, masked=False, highlighted=False):
+    def __init__(self, id, name, color=None, masked=False, highlight=False):
         """ Initialize DomainView instance """
 
         self.id = id
         self.name = name
         self.color = color
         self.masked = masked
-        self.highlighted = highlighted
+        self.highlight = highlight
 
     def __repr__(self):
         return ("id: {} \nname: {} \ncolor: {} \
-                \nmask: {} \nhighlighted: {}\n\n".format(self.id,
+                \nmask: {} \nhighlight: {}\n\n".format(self.id,
                                                          self.name,
                                                          self.color,
                                                          self.masked,
-                                                         self.highlighted))
+                                                         self.highlight))
 
     def __eq__(self, other):
         if isinstance(other, DomainView):
@@ -463,7 +463,7 @@ class DomainTableModel(QAbstractTableModel):
             if column == MASK:
                 return Qt.Checked if domain.masked else Qt.Unchecked
             elif column == HIGHLIGHT:
-                return Qt.Checked if domain.highlighted else Qt.Unchecked
+                return Qt.Checked if domain.highlight else Qt.Unchecked
 
         return None
 
@@ -518,7 +518,7 @@ class DomainTableModel(QAbstractTableModel):
                 domain.masked = True if value == Qt.Checked else False
         elif column == HIGHLIGHT:
             if role == Qt.CheckStateRole:
-                domain.highlighted = True if value == Qt.Checked else False
+                domain.highlight = True if value == Qt.Checked else False
 
         self.dataChanged.emit(index, index)
         return True
