@@ -21,6 +21,8 @@ from matplotlib import lines as mlines
 from matplotlib import cm as mcolormaps
 from matplotlib.colors import SymLogNorm, NoNorm
 import openmc
+from openmc.filter import (UniverseFilter, MaterialFilter, CellFilter,
+                           SurfaceFilter, MeshFilter, MeshSurfaceFilter)
 
 if is_pyqt5():
     from matplotlib.backends.backend_qt5agg import (
@@ -29,6 +31,9 @@ else:
     from matplotlib.backends.backend_qt5agg import (
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
+
+_SPATIAL_FILTERS = [UniverseFilter, MaterialFilter, CellFilter,
+                    SurfaceFilter, MeshFilter, MeshSurfaceFilter]
 
 class PlotImage(FigureCanvas):
 
@@ -1150,6 +1155,7 @@ class TallyDialog(QDialog):
             tally_w_name = 'Tally {} "{}"'
             tally_no_name = 'Tally {}'
             self.tallySelector.setEnabled(True)
+            self.tallySelector.addItem("None")
             for idx, tally in enumerate(self.model.statepoint.tallies.values()):
                 if tally.name == "":
                     self.tallySelector.addItem(tally_no_name.format(tally.id))
@@ -1175,8 +1181,10 @@ class TallyDialog(QDialog):
 
             # get the tally filters
             for filter in tally.filters:
-                if isinstance(filter, openmc.filter.CellFilter):
+                if isinstance(filter, CellFilter):
                     self.formLayout.addRow(self.cellFilterForm(filter))
+                elif isinstance(filter, UniverseFilter):
+                    self.formLayout.addRow(self.universeFilterForm(filter))
                 else:
                     ql = QLabel()
                     ql.setText(str(type(filter)))
@@ -1184,8 +1192,26 @@ class TallyDialog(QDialog):
 
     @staticmethod
     def cellFilterForm(filter):
-        l = QLabel()
-        l.setText("I'm a cell filter")
+        l = QCheckBox()
+        txt = "{}. Cell Filter (IDs: {})"
+        ids = map(str, filter.bins)
+        l.setText(txt.format(filter.id, ", ".join(ids)))
+        return l
+
+    @staticmethod
+    def universeFilterForm(filter):
+        l = QCheckBox()
+        txt = "{}. Universe Filter (IDs: {})"
+        ids = map(str, filter.bins)
+        l.setText(txt.format(filter.id, ", ".join(ids)))
+        return l
+
+    @staticmethod
+    def surfaceFilterForm(filter):
+        l = QCheckBox()
+        txt = "{}. Universe Filter (IDs: {})"
+        ids = map(str, filter.bins)
+        l.setText(txt.format(filter.id, ", ".join(cells)))
         return l
 
 
