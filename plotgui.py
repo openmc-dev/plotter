@@ -145,11 +145,11 @@ class PlotImage(FigureCanvas):
         # check that the position is in the axes view
         if 0 <= yPos < self.model.currentView.v_res \
            and 0 <= xPos and xPos < self.model.currentView.h_res:
-            id = "{}".format(self.model.ids[yPos][xPos])
+            id = self.model.ids[yPos][xPos]
             temp = "{:g}".format(self.model.properties[yPos][xPos][0])
             density = "{:g}".format(self.model.properties[yPos][xPos][1])
         else:
-            id = str(_NOT_FOUND)
+            id = _NOT_FOUND
             density = str(_NOT_FOUND)
             temp = str(_NOT_FOUND)
 
@@ -196,18 +196,18 @@ class PlotImage(FigureCanvas):
             temperature = properties['temperature']
             density = properties['density']
 
-            if id == str(_VOID_REGION):
+            if id == _VOID_REGION:
                 domainInfo = ("VOID")
-            elif id == str(_OVERLAP):
+            elif id == _OVERLAP:
                 domainInfo = ("OVERLAP")
-            elif id != str(_NOT_FOUND) and domain[id].name:
+            elif id != _NOT_FOUND and domain[id].name:
                 domainInfo = ("{} {}: \"{}\"\t Density: {} g/cc\t"
                               "Temperature: {} K".format(domain_kind,
                                                          id,
                                                          domain[id].name,
                                                          density,
                                                          temperature))
-            elif id != str(_NOT_FOUND):
+            elif id != _NOT_FOUND:
                 domainInfo = ("{} {}\t Density: {} g/cc\t"
                               "Temperature: {} K".format(domain_kind,
                                                          id,
@@ -320,7 +320,7 @@ class PlotImage(FigureCanvas):
 
             highlightAction = self.menu.addAction('Highlight {}'.format(domain_kind))
             highlightAction.setCheckable(True)
-            highlightAction.setChecked(domain[id].highlighted)
+            highlightAction.setChecked(domain[id].highlight)
             highlightAction.setDisabled(not cv.highlighting)
             highlightAction.setToolTip('Toggle {} highlight'.format(domain_kind))
             highlightAction.setStatusTip('Toggle {} highlight'.format(domain_kind))
