@@ -499,6 +499,8 @@ class MainWindow(QMainWindow):
         # remove the statepoint object and update the data menu
         filename = self.model.statepoint.filename
         self.model.statepoint = None
+        self.model.selected_tally = None
+        self.model.applied_filters = None
         msg = "Closed statepoint file {}".format(filename)
         self.statusBar().showMessage(msg)
         self.updateDataMenu()
@@ -788,6 +790,9 @@ class MainWindow(QMainWindow):
 
     def editSelectedTally(self, event):
         self.tallyDialog.selectTally(event)
+
+    def updateFilters(self, state):
+        self.tallyDialog.updateFilters()
 
     # Plot image methods
 

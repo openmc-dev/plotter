@@ -24,6 +24,9 @@ import openmc
 from openmc.filter import (UniverseFilter, MaterialFilter, CellFilter,
                            SurfaceFilter, MeshFilter, MeshSurfaceFilter)
 
+
+import numpy as np
+
 if is_pyqt5():
     from matplotlib.backends.backend_qt5agg import (
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
@@ -448,6 +451,26 @@ class PlotImage(FigureCanvas):
         axis_label_str = "{} (cm)"
         self.ax.set_xlabel(axis_label_str.format(cv.basis[0]))
         self.ax.set_ylabel(axis_label_str.format(cv.basis[1]))
+
+
+        # draw tally
+
+        if self.model.selectedTally is not None:
+            tally_id = self.model.selectedTally
+            tally = self.model.statepoint.tallies[tally_id]
+            # get active cell filter
+            filter = tally.find_filter(CellFilter)
+            if filter.id in self.model.appliedFilters:
+                # get the cell IDs
+                cell_ids = filter.bins
+                # get the tally data
+                tally_data = tally.get_values(scores=['total',],
+                                              value = 'mean',
+                                              nuclides = ['total'])
+                tally_image = np.zeros(self.model.ids.shape)
+                for idx, cell_id in enumerate(cell_ids):
+                    tally_image[self.model.ids == cell_id] = tally_data[idx][0][0]
+                self.ax.imshow(tally_image)
 
         self.draw()
 
@@ -1111,6 +1134,7 @@ class TallyDialog(QDialog):
         self.FM = FM
         self.mw = parent
         self.tally_map = {}
+        self.filter_map = {}
 
         self.createDialogLayout()
 
@@ -1167,10 +1191,10 @@ class TallyDialog(QDialog):
             self.tallySelector.setDisabled(True)
 
     def selectTally(self, tally_label):
-        if self.model.statepoint:
+        if self.model.statepoint and tally_label != "None":
             tally_id = int(tally_label.split()[1])
             tally = self.model.statepoint.tallies[tally_id]
-
+            self.model.selectedTally = tally_id
             # reset form layout
             for i in reversed(range(self.formLayout.count())):
                 self.formLayout.itemAt(i).widget().setParent(None)
@@ -1182,13 +1206,24 @@ class TallyDialog(QDialog):
             # get the tally filters
             for filter in tally.filters:
                 if isinstance(filter, CellFilter):
-                    self.formLayout.addRow(self.cellFilterForm(filter))
+                    ql = self.cellFilterForm(filter)
+                    self.formLayout.addRow(ql)
                 elif isinstance(filter, UniverseFilter):
-                    self.formLayout.addRow(self.universeFilterForm(filter))
+                    ql = self.universeFilterForm(filter)
+                    self.formLayout.addRow(ql)
                 else:
-                    ql = QLabel()
+                    ql = QCheckBox()
                     ql.setText(str(type(filter)))
                     self.formLayout.addRow(ql)
+                ql.toggled.connect(self.mw.updateFilters)
+                self.filter_map[filter.id] = ql
+
+    def updateFilters(self):
+        applied_filters = []
+        for filter_id, filter_box in self.filter_map.items():
+            if filter_box.isChecked():
+                applied_filters.append(filter_id)
+        self.model.appliedFilters = tuple(applied_filters)
 
     @staticmethod
     def cellFilterForm(filter):

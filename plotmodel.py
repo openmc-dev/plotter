@@ -45,6 +45,10 @@ class PlotModel():
             The current RGB image data
         statepoint : StatePointModel
             Simulation data model used to display tally results
+        selectedTally : int
+            ID of the currently selected tally
+        applied_filters : tuple of ints
+            IDs of the applied filters for the displayed tally
         previousViews : list of PlotView instances
             List of previously created plot view settings used to undo
             changes made in plot explorer
@@ -74,6 +78,9 @@ class PlotModel():
 
         # default statepoint value
         self._statepoint = None
+        # default tally/filter info
+        self.selectedTally = None
+        self.appliedFilters = ()
 
         # reset random number seed for consistent
         # coloring when reloading a model
