@@ -470,7 +470,7 @@ class PlotImage(FigureCanvas):
                 tally_image = np.zeros(self.model.ids.shape)
                 for idx, cell_id in enumerate(cell_ids):
                     tally_image[self.model.ids == cell_id] = tally_data[idx][0][0]
-                self.ax.imshow(tally_image)
+                self.ax.imshow(tally_image, alpha = 0.1)
 
         self.draw()
 
@@ -517,6 +517,134 @@ class PlotImage(FigureCanvas):
                                          (0.0, 0.0))
             self.colorbar.draw_all()
             self.draw()
+
+class TallyDock(QDockWidget):
+
+    def __init__(self,model, FM, parent=None):
+        super().__init__(parent)
+
+        self.model = model
+        self.FM = FM
+        self.mw = parent
+        self.tally_map = {}
+        self.filter_map = {}
+
+        self.createDialogLayout()
+
+        self.mainWidget = QWidget()
+        self.mainWidget.setLayout(self.mainLayout)
+        self.setWidget(self.mainWidget)
+
+    def createDialogLayout(self):
+
+        self.widget = QWidget()
+        self.widget.setMaximumHeight(800)
+        self.widget.setMinimumWidth(300)
+        self.widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        self.mainLayout = QVBoxLayout()
+        self.mainLayout.addWidget(self.widget)
+        self.setLayout(self.mainLayout)
+
+        self.formLayout = QFormLayout()
+        self.formLayout.setAlignment(QtCore.Qt.AlignHCenter)
+        self.formLayout.setFormAlignment(QtCore.Qt.AlignHCenter)
+        self.formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
+
+        # Tally listing
+        self.tallySelector = QComboBox(self)
+        self.tallySelector.currentTextChanged[str].connect(self.mw.editSelectedTally)
+
+        self.formLayout.addRow('Tally:', self.tallySelector)
+        self.formLayout.addRow(HorizontalLine())
+
+        self.innerWidget = QWidget()
+        self.innerWidget.setLayout(self.formLayout)
+
+        self.generalLayout = QHBoxLayout()
+        self.generalLayout.setAlignment(QtCore.Qt.AlignVCenter)
+        self.generalWidget = QWidget()
+        self.generalWidget.setLayout(self.generalLayout)
+        self.generalLayout.addWidget(self.innerWidget, stretch=1)
+
+        self.mainLayout.addWidget(self.generalWidget)
+
+        self.update()
+
+    def update(self):
+        if self.model.statepoint:
+            tally_w_name = 'Tally {} "{}"'
+            tally_no_name = 'Tally {}'
+            self.tallySelector.setEnabled(True)
+            self.tallySelector.addItem("None")
+            for idx, tally in enumerate(self.model.statepoint.tallies.values()):
+                if tally.name == "":
+                    self.tallySelector.addItem(tally_no_name.format(tally.id))
+                else:
+                    self.tallySelector.addItem(tally_w_name.format(tally.id, tally.name))
+                self.tally_map[idx] = tally
+        else:
+            self.tallySelector.clear()
+            self.tallySelector.setDisabled(True)
+
+    def selectTally(self, tally_label):
+        if self.model.statepoint and tally_label != "None":
+            tally_id = int(tally_label.split()[1])
+            tally = self.model.statepoint.tallies[tally_id]
+            self.model.selectedTally = tally_id
+            # reset form layout
+            for i in reversed(range(self.formLayout.count())):
+                self.formLayout.itemAt(i).widget().setParent(None)
+
+            # always re-add the tally selector
+            self.formLayout.addRow(self.tallySelector)
+            self.formLayout.addRow(HorizontalLine())
+
+            # get the tally filters
+            for filter in tally.filters:
+                if isinstance(filter, CellFilter):
+                    ql = self.cellFilterForm(filter)
+                    self.formLayout.addRow(ql)
+                elif isinstance(filter, UniverseFilter):
+                    ql = self.universeFilterForm(filter)
+                    self.formLayout.addRow(ql)
+                else:
+                    ql = QCheckBox()
+                    ql.setText(str(type(filter)))
+                    self.formLayout.addRow(ql)
+                ql.toggled.connect(self.mw.updateFilters)
+                self.filter_map[filter.id] = ql
+
+    def updateFilters(self):
+        applied_filters = []
+        for filter_id, filter_box in self.filter_map.items():
+            if filter_box.isChecked():
+                applied_filters.append(filter_id)
+        self.model.appliedFilters = tuple(applied_filters)
+
+    @staticmethod
+    def cellFilterForm(filter):
+        l = QCheckBox()
+        txt = "{}. Cell Filter (IDs: {})"
+        ids = map(str, filter.bins)
+        l.setText(txt.format(filter.id, ", ".join(ids)))
+        return l
+
+    @staticmethod
+    def universeFilterForm(filter):
+        l = QCheckBox()
+        txt = "{}. Universe Filter (IDs: {})"
+        ids = map(str, filter.bins)
+        l.setText(txt.format(filter.id, ", ".join(ids)))
+        return l
+
+    @staticmethod
+    def surfaceFilterForm(filter):
+        l = QCheckBox()
+        txt = "{}. Universe Filter (IDs: {})"
+        ids = map(str, filter.bins)
+        l.setText(txt.format(filter.id, ", ".join(cells)))
+        return l
 
 
 class OptionsDock(QDockWidget):
@@ -1121,134 +1249,6 @@ class ColorDialog(QDialog):
     def updateDomainTabs(self):
         self.cellTable.setModel(self.mw.cellsModel)
         self.matTable.setModel(self.mw.materialsModel)
-
-
-class TallyDialog(QDialog):
-
-    def __init__(self, model, FM, parent=None):
-        super().__init__(parent)
-
-        self.setWindowTitle('Data Options')
-
-        self.model = model
-        self.FM = FM
-        self.mw = parent
-        self.tally_map = {}
-        self.filter_map = {}
-
-        self.createDialogLayout()
-
-    def createDialogLayout(self):
-
-        self.widget = QWidget()
-        self.widget.setMaximumHeight(800)
-        self.widget.setMinimumWidth(300)
-        self.widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
-        self.mainLayout = QVBoxLayout()
-        self.mainLayout.addWidget(self.widget)
-        self.setLayout(self.mainLayout)
-
-        self.formLayout = QFormLayout()
-        self.formLayout.setAlignment(QtCore.Qt.AlignHCenter)
-        self.formLayout.setFormAlignment(QtCore.Qt.AlignHCenter)
-        self.formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
-
-        # Tally listing
-        self.tallySelector = QComboBox(self)
-        self.tallySelector.currentTextChanged[str].connect(self.mw.editSelectedTally)
-
-        self.formLayout.addRow('Tally:', self.tallySelector)
-        self.formLayout.addRow(HorizontalLine())
-
-        self.innerWidget = QWidget()
-        self.innerWidget.setLayout(self.formLayout)
-
-        self.generalLayout = QHBoxLayout()
-        self.generalLayout.setAlignment(QtCore.Qt.AlignVCenter)
-        self.generalWidget = QWidget()
-        self.generalWidget.setLayout(self.generalLayout)
-        self.generalLayout.addWidget(self.innerWidget, stretch=1)
-
-        self.mainLayout.addWidget(self.generalWidget)
-
-        self.update()
-
-    def update(self):
-        if self.model.statepoint:
-            tally_w_name = 'Tally {} "{}"'
-            tally_no_name = 'Tally {}'
-            self.tallySelector.setEnabled(True)
-            self.tallySelector.addItem("None")
-            for idx, tally in enumerate(self.model.statepoint.tallies.values()):
-                if tally.name == "":
-                    self.tallySelector.addItem(tally_no_name.format(tally.id))
-                else:
-                    self.tallySelector.addItem(tally_w_name.format(tally.id, tally.name))
-                self.tally_map[idx] = tally
-        else:
-            self.tallySelector.clear()
-            self.tallySelector.setDisabled(True)
-
-    def selectTally(self, tally_label):
-        if self.model.statepoint and tally_label != "None":
-            tally_id = int(tally_label.split()[1])
-            tally = self.model.statepoint.tallies[tally_id]
-            self.model.selectedTally = tally_id
-            # reset form layout
-            for i in reversed(range(self.formLayout.count())):
-                self.formLayout.itemAt(i).widget().setParent(None)
-
-            # always re-add the tally selector
-            self.formLayout.addRow(self.tallySelector)
-            self.formLayout.addRow(HorizontalLine())
-
-            # get the tally filters
-            for filter in tally.filters:
-                if isinstance(filter, CellFilter):
-                    ql = self.cellFilterForm(filter)
-                    self.formLayout.addRow(ql)
-                elif isinstance(filter, UniverseFilter):
-                    ql = self.universeFilterForm(filter)
-                    self.formLayout.addRow(ql)
-                else:
-                    ql = QCheckBox()
-                    ql.setText(str(type(filter)))
-                    self.formLayout.addRow(ql)
-                ql.toggled.connect(self.mw.updateFilters)
-                self.filter_map[filter.id] = ql
-
-    def updateFilters(self):
-        applied_filters = []
-        for filter_id, filter_box in self.filter_map.items():
-            if filter_box.isChecked():
-                applied_filters.append(filter_id)
-        self.model.appliedFilters = tuple(applied_filters)
-
-    @staticmethod
-    def cellFilterForm(filter):
-        l = QCheckBox()
-        txt = "{}. Cell Filter (IDs: {})"
-        ids = map(str, filter.bins)
-        l.setText(txt.format(filter.id, ", ".join(ids)))
-        return l
-
-    @staticmethod
-    def universeFilterForm(filter):
-        l = QCheckBox()
-        txt = "{}. Universe Filter (IDs: {})"
-        ids = map(str, filter.bins)
-        l.setText(txt.format(filter.id, ", ".join(ids)))
-        return l
-
-    @staticmethod
-    def surfaceFilterForm(filter):
-        l = QCheckBox()
-        txt = "{}. Universe Filter (IDs: {})"
-        ids = map(str, filter.bins)
-        l.setText(txt.format(filter.id, ", ".join(cells)))
-        return l
-
 
 class HorizontalLine(QFrame):
     def __init__(self):

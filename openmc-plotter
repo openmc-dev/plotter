@@ -22,7 +22,7 @@ from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QTableWidgetItem, QGestureEvent)
 
 from plotmodel import PlotModel, DomainTableModel
-from plotgui import PlotImage, ColorDialog, TallyDialog, OptionsDock
+from plotgui import PlotImage, ColorDialog, OptionsDock, TallyDock
 
 from overlays import ShortcutsOverlay
 
@@ -69,13 +69,14 @@ class MainWindow(QMainWindow):
         self.dock.setObjectName("OptionsDock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
 
-        # Color Dialog
+        # Tally Dock
+        self.tallyDock = TallyDock(self.model, FM, self)
+        self.tallyDock.setObjectName("TallyDock")
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.tallyDock)
+
+        # Color DialogtallyDock
         self.colorDialog = ColorDialog(self.model, FM, self)
         self.colorDialog.hide()
-
-        # Tally Dialog
-        self.tallyDialog = TallyDialog(self.model, FM, self)
-        self.tallyDialog.hide()
 
         # Restore Window Settings
         self.restoreWindowSettings()
@@ -322,6 +323,12 @@ class MainWindow(QMainWindow):
         self.dockAction.setStatusTip('Toggle dock visibility')
         self.dockAction.triggered.connect(self.toggleDockView)
 
+        self.tallyDockAction = QAction('Tally &Dock', self)
+        self.tallyDockAction.setShortcut("Ctrl+T")
+        self.tallyDockAction.setToolTip('Toggle tally dock visibility')
+        self.tallyDockAction.setStatusTip('Toggle tally dock visibility')
+        self.tallyDockAction.triggered.connect(self.toggleTallyDockView)
+
         self.zoomAction = QAction('&Zoom...', self)
         self.zoomAction.setShortcut('Alt+Shift+Z')
         self.zoomAction.setToolTip('Edit zoom factor')
@@ -330,6 +337,7 @@ class MainWindow(QMainWindow):
 
         self.viewMenu = self.mainMenu.addMenu('&View')
         self.viewMenu.addAction(self.dockAction)
+        self.viewMenu.addAction(self.tallyDockAction)
         self.viewMenu.addSeparator()
         self.viewMenu.addAction(self.zoomAction)
         self.viewMenu.aboutToShow.connect(self.updateViewMenu)
@@ -347,12 +355,6 @@ class MainWindow(QMainWindow):
         self.colorDialogAction.setStatusTip('Bring Color Dialog to front')
         self.colorDialogAction.triggered.connect(self.showColorDialog)
 
-        self.tallyDialogAction = QAction('Tally &Options', self)
-        self.tallyDialogAction.setCheckable(True)
-        self.tallyDialogAction.setToolTip('Bring Tally Dialog to front')
-        self.tallyDialogAction.setStatusTip('Bring Tally Dialog to front')
-        self.tallyDialogAction.triggered.connect(self.showTallyDialog)
-
         # Keyboard Shortcuts Overlay
         self.keyboardShortcutsAction = QAction("&Keyboard Shortcuts...", self)
         self.keyboardShortcutsAction.setShortcut("?")
@@ -363,7 +365,6 @@ class MainWindow(QMainWindow):
         self.windowMenu = self.mainMenu.addMenu('&Window')
         self.windowMenu.addAction(self.mainWindowAction)
         self.windowMenu.addAction(self.colorDialogAction)
-        self.windowMenu.addAction(self.tallyDialogAction)
         self.windowMenu.addAction(self.keyboardShortcutsAction)
         self.windowMenu.aboutToShow.connect(self.updateWindowMenu)
 
@@ -493,7 +494,7 @@ class MainWindow(QMainWindow):
             finally:
                 self.statusBar().showMessage(message.format(filename), 5000)
             self.updateDataMenu()
-            self.tallyDialog.update()
+            self.tallyDock.update()
 
     def closeStatePoint(self):
         # remove the statepoint object and update the data menu
@@ -504,7 +505,7 @@ class MainWindow(QMainWindow):
         msg = "Closed statepoint file {}".format(filename)
         self.statusBar().showMessage(msg)
         self.updateDataMenu()
-        self.tallyDialog.update()
+        self.tallyDock.update()
 
     def updateDataMenu(self):
         if self.model.statepoint:
@@ -670,6 +671,18 @@ class MainWindow(QMainWindow):
         self.resizePixmap()
         self.showMainWindow()
 
+    def toggleTallyDockView(self):
+        if self.tallyDock.isVisible():
+            self.tallyDock.hide()
+            if not self.isMaximized() and not self.tallyDock.isFloating():
+                self.resize(self.width() - self.tallyDock.width(), self.height())
+        else:
+            self.tallyDock.setVisible(True)
+            if not self.isMaximized() and not self.tallyDock.isFloating():
+                self.resize(self.width() + self.tallyDock.width(), self.height())
+        self.resizePixmap()
+        self.showMainWindow()
+
     def editZoomAct(self):
         percent, ok = QInputDialog.getInt(self, "Edit Zoom", "Zoom Percent:",
                                           self.dock.zoomBox.value(), 25, 2000)
@@ -689,11 +702,6 @@ class MainWindow(QMainWindow):
         self.colorDialog.show()
         self.colorDialog.raise_()
         self.colorDialog.activateWindow()
-
-    def showTallyDialog(self):
-        self.tallyDialog.show()
-        self.tallyDialog.raise_()
-        self.tallyDialog.activateWindow()
 
     # Dock methods:
 
@@ -789,10 +797,11 @@ class MainWindow(QMainWindow):
     # Tally dialog methods
 
     def editSelectedTally(self, event):
-        self.tallyDialog.selectTally(event)
+        if hasattr(self, 'tallyDock'):
+            self.tallyDock.selectTally(event)
 
     def updateFilters(self, state):
-        self.tallyDialog.updateFilters()
+        self.tallyDock.updateFilters()
 
     # Plot image methods
 
