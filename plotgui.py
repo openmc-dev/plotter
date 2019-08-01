@@ -518,58 +518,63 @@ class PlotImage(FigureCanvas):
             self.colorbar.draw_all()
             self.draw()
 
-class TallyDock(QDockWidget):
 
-    def __init__(self,model, FM, parent=None):
+class PlotterDock(QDockWidget):
+
+    def __init__(self, model, FM, parent=None):
         super().__init__(parent)
 
         self.model = model
         self.FM = FM
         self.mw = parent
+
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea |
+                             QtCore.Qt.RightDockWidgetArea)
+
+
+class TallyDock(PlotterDock):
+
+    def __init__(self, model, FM, parent=None):
+        super().__init__(model, FM, parent)
+
         self.tally_map = {}
         self.filter_map = {}
 
-        self.createDialogLayout()
+        self.createTallySelectionLayout()
 
-        self.mainWidget = QWidget()
-        self.mainWidget.setLayout(self.mainLayout)
-        self.setWidget(self.mainWidget)
-
-    def createDialogLayout(self):
+        self.dockLayout = QVBoxLayout()
 
         self.widget = QWidget()
-        self.widget.setMaximumHeight(800)
-        self.widget.setMinimumWidth(300)
-        self.widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.widget.setLayout(self.dockLayout)
+        self.setWidget(self.widget)
 
-        self.mainLayout = QVBoxLayout()
-        self.mainLayout.addWidget(self.widget)
-        self.setLayout(self.mainLayout)
+        # Create submit button
+        self.applyButton = QPushButton("ApplyChanges")
+        self.applyButton.setMinimumHeight(self.FM.height() * 1.6)
+        self.applyButton.clicked.connect(self.mw.applyChanges)
+
+        self.dockLayout.addWidget(self.tallyGroupBox)
+        self.dockLayout.addWidget(self.applyButton)
+        self.dockLayout.addStretch()
+
+        self.update()
+
+    def createTallySelectionLayout(self):
 
         self.formLayout = QFormLayout()
-        self.formLayout.setAlignment(QtCore.Qt.AlignHCenter)
-        self.formLayout.setFormAlignment(QtCore.Qt.AlignHCenter)
-        self.formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
 
         # Tally listing
         self.tallySelector = QComboBox(self)
         self.tallySelector.currentTextChanged[str].connect(self.mw.editSelectedTally)
 
-        self.formLayout.addRow('Tally:', self.tallySelector)
-        self.formLayout.addRow(HorizontalLine())
+        self.formLayout.addRow(self.tallySelector)
+        self.formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
+        self.formLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
-        self.innerWidget = QWidget()
-        self.innerWidget.setLayout(self.formLayout)
-
-        self.generalLayout = QHBoxLayout()
-        self.generalLayout.setAlignment(QtCore.Qt.AlignVCenter)
-        self.generalWidget = QWidget()
-        self.generalWidget.setLayout(self.generalLayout)
-        self.generalLayout.addWidget(self.innerWidget, stretch=1)
-
-        self.mainLayout.addWidget(self.generalWidget)
-
-        self.update()
+        # tally group box
+        self.tallyGroupBox = QGroupBox('Tally')
+        self.tallyGroupBox.setLayout(self.formLayout)
 
     def update(self):
         if self.model.statepoint:
@@ -586,6 +591,7 @@ class TallyDock(QDockWidget):
         else:
             self.tallySelector.clear()
             self.tallySelector.setDisabled(True)
+            self.hide()
 
     def selectTally(self, tally_label):
         if self.model.statepoint and tally_label != "None":
@@ -646,10 +652,9 @@ class TallyDock(QDockWidget):
         l.setText(txt.format(filter.id, ", ".join(cells)))
         return l
 
-
-class OptionsDock(QDockWidget):
+class OptionsDock(PlotterDock):
     def __init__(self, model, FM, parent=None):
-        super().__init__(parent)
+        super().__init__(model, FM, parent)
 
         self.model = model
         self.FM = FM
