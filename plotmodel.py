@@ -371,6 +371,23 @@ class PlotView(_PlotBase):
             return self.data_minmax[property]
 
 
+    def adopt_plotbase(self, view):
+        """
+        Applies only the geometric aspects of a view to the current view
+
+        Parameters
+        ----------
+
+        view : PlotView
+            View to take parameters from
+        """
+        self.origin = view.origin
+        self.width = view.width
+        self.height = view.height
+        self.h_res = self.h_res
+        self.v_res = self.v_res
+        self.basis = view.basis
+
 class DomainView():
     """ Represents view settings for OpenMC cell or material.
 

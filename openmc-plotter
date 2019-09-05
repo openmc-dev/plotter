@@ -499,11 +499,7 @@ class MainWindow(QMainWindow):
             QApplication.processEvents()
 
             self.model.storeCurrent()
-            self.model.activeView = copy.deepcopy(self.model.defaultView)
-
-            # keep domain infomration from current view
-            self.model.activeView.cells = self.model.currentView.cells
-            self.model.activeView.materials = self.model.currentView.materials
+            self.model.activeView.adopt_plotbase(self.model.defaultView)
 
             self.plotIm.generatePixmap()
             self.resetModels()
