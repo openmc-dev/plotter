@@ -113,12 +113,13 @@ class PlotModel():
         return default
 
     def resetColors(self):
+        av = self.activeView
+
         reset_seed()
-        cv = self.activeView
-        for cell in cv.cells.values():
+        for cell in av.cells.values():
             cell.color = random_rgb()
 
-        for material in cv.materials.values():
+        for material in av.materials.values():
             material.color = random_rgb()
 
     def generatePlot(self):
