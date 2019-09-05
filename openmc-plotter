@@ -500,6 +500,11 @@ class MainWindow(QMainWindow):
 
             self.model.storeCurrent()
             self.model.activeView = copy.deepcopy(self.model.defaultView)
+
+            # keep domain infomration from current view
+            self.model.activeView.cells = self.model.currentView.cells
+            self.model.activeView.materials = self.model.currentView.materials
+
             self.plotIm.generatePixmap()
             self.resetModels()
             self.showCurrentView()
