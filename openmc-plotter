@@ -856,7 +856,7 @@ class MainWindow(QMainWindow):
         self.zBasis = 3 - (self.xBasis + self.yBasis)
 
     def adjustWindow(self):
-        self.screen = app.desktop().screenGeometry()
+        self.screen = app.primaryScreen().size()
         self.setMaximumSize(self.screen.width(), self.screen.height())
 
     def onRatioChange(self):
