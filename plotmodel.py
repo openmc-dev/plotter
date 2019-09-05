@@ -112,6 +112,15 @@ class PlotModel():
         default = PlotView([xcenter, ycenter, zcenter], width, height)
         return default
 
+    def resetColors(self):
+        reset_seed()
+        cv = self.activeView
+        for cell in cv.cells.values():
+            cell.color = random_rgb()
+
+        for material in cv.materials.values():
+            material.color = random_rgb()
+
     def generatePlot(self):
         """ Spawn thread from which to generate new plot image """
 

@@ -712,6 +712,11 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
+    def resetColors(self):
+        self.model.resetColors()
+        self.colorDialog.updateDialogValues()
+        self.applyChanges()
+
     # Plot image methods
 
     def editPlotOrigin(self, xOr, yOr, zOr=None, apply=False):
