@@ -113,14 +113,9 @@ class PlotModel():
         return default
 
     def resetColors(self):
-        av = self.activeView
-
-        reset_seed()
-        for cell in av.cells.values():
-            cell.color = random_rgb()
-
-        for material in av.materials.values():
-            material.color = random_rgb()
+        """ Reset colors to those generated in the default view """
+        self.activeView.cells = self.defaultView.cells
+        self.activeView.materials = self.defaultView.materials
 
     def generatePlot(self):
         """ Spawn thread from which to generate new plot image """
