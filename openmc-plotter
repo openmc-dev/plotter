@@ -500,7 +500,6 @@ class MainWindow(QMainWindow):
 
             self.model.storeCurrent()
             self.model.activeView.adopt_plotbase(self.model.defaultView)
-
             self.plotIm.generatePixmap()
             self.resetModels()
             self.showCurrentView()
