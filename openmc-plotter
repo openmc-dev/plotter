@@ -790,8 +790,13 @@ class MainWindow(QMainWindow):
                                                QtCore.QSize(400, 500)))
         self.colorDialog.move(settings.value("colorDialog/Position",
                                              QtCore.QPoint(600, 200)))
-        is_visible = settings.value("colorDialog/Visible")
-        is_visible = bool(is_visible)
+        is_visible = settings.value("colorDialog/Visible", 0)
+        # some versions of PySide will return None rather than the default value
+        if is_visible is None:
+            is_visible = False
+        else:
+            is_visible = bool(int(is_visible))
+
         self.colorDialog.setVisible(is_visible)
 
     def restoreModelSettings(self):
