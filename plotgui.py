@@ -837,6 +837,10 @@ class ColorDialog(QDialog):
 
         self.colorbyBox.currentTextChanged[str].connect(self.mw.editColorBy)
 
+        self.colorResetButton = QPushButton("&Reset Colors")
+        self.colorResetButton.setCursor(QtCore.Qt.PointingHandCursor)
+        self.colorResetButton.clicked.connect(self.mw.resetColors)
+
         formLayout = QFormLayout()
         formLayout.setAlignment(QtCore.Qt.AlignHCenter)
         formLayout.setFormAlignment(QtCore.Qt.AlignHCenter)
@@ -856,6 +860,7 @@ class ColorDialog(QDialog):
         formLayout.addRow('OVerlap Color:', self.overlapColorButton)
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Color Plot By:', self.colorbyBox)
+        formLayout.addRow(self.colorResetButton, None)
 
         generalLayout = QHBoxLayout()
         innerWidget = QWidget()

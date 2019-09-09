@@ -499,7 +499,7 @@ class MainWindow(QMainWindow):
             QApplication.processEvents()
 
             self.model.storeCurrent()
-            self.model.activeView = copy.deepcopy(self.model.defaultView)
+            self.model.activeView.adopt_plotbase(self.model.defaultView)
             self.plotIm.generatePixmap()
             self.resetModels()
             self.showCurrentView()
@@ -712,6 +712,11 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
+    def resetColors(self):
+        self.model.resetColors()
+        self.colorDialog.updateDialogValues()
+        self.applyChanges()
+
     # Plot image methods
 
     def editPlotOrigin(self, xOr, yOr, zOr=None, apply=False):
@@ -786,7 +791,12 @@ class MainWindow(QMainWindow):
         self.colorDialog.move(settings.value("colorDialog/Position",
                                              QtCore.QPoint(600, 200)))
         is_visible = settings.value("colorDialog/Visible", 0)
-        is_visible = bool(int(is_visible))
+        # some versions of PySide will return None rather than the default value
+        if is_visible is None:
+            is_visible = False
+        else:
+            is_visible = bool(int(is_visible))
+
         self.colorDialog.setVisible(is_visible)
 
     def restoreModelSettings(self):
@@ -844,7 +854,7 @@ class MainWindow(QMainWindow):
         self.zBasis = 3 - (self.xBasis + self.yBasis)
 
     def adjustWindow(self):
-        self.screen = app.desktop().screenGeometry()
+        self.screen = app.primaryScreen().size()
         self.setMaximumSize(self.screen.width(), self.screen.height())
 
     def onRatioChange(self):
