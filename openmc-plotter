@@ -905,6 +905,8 @@ class MainWindow(QMainWindow):
         visible = int(self.colorDialog.isVisible())
         settings.setValue("colorDialog/Visible", visible)
 
+        openmc.capi.finalize()
+
         self.saveSettings()
 
     def saveSettings(self):
