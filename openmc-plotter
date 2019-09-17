@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 import copy
 from functools import partial
@@ -12,6 +11,7 @@ from threading import Thread
 import time
 
 import openmc
+import openmc.lib
 from PySide2 import QtCore, QtGui
 from PySide2.QtGui import QKeyEvent
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
@@ -29,15 +29,15 @@ from overlays import ShortcutsOverlay
 
 def _openmcReload():
     # reset OpenMC memory, instances
-    openmc.capi.reset()
-    openmc.capi.finalize()
+    openmc.lib.reset()
+    openmc.lib.finalize()
     # initialize geometry (for volume calculation)
-    openmc.capi.init(["-c"])
+    openmc.lib.init(["-c"])
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
-        super(MainWindow, self).__init__()
+        super().__init__()
 
         self.setWindowTitle('OpenMC Plot Explorer')
 
@@ -905,7 +905,7 @@ class MainWindow(QMainWindow):
         visible = int(self.colorDialog.isVisible())
         settings.setValue("colorDialog/Visible", visible)
 
-        openmc.capi.finalize()
+        openmc.lib.finalize()
 
         self.saveSettings()
 
