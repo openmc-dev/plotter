@@ -1,6 +1,3 @@
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
-
 from functools import partial
 
 from plot_colors import rgb_normalize, invert_rgb
@@ -495,7 +492,7 @@ class PlotImage(FigureCanvas):
 
 class OptionsDock(QDockWidget):
     def __init__(self, model, FM, parent=None):
-        super(OptionsDock, self).__init__(parent)
+        super().__init__(parent)
 
         self.model = model
         self.FM = FM
@@ -743,7 +740,7 @@ class OptionsDock(QDockWidget):
 class ColorDialog(QDialog):
 
     def __init__(self, model, FM, parent=None):
-        super(ColorDialog, self).__init__(parent)
+        super().__init__(parent)
 
         self.setWindowTitle('Color Options')
 
@@ -1099,6 +1096,6 @@ class ColorDialog(QDialog):
 
 class HorizontalLine(QFrame):
     def __init__(self):
-        super(HorizontalLine, self).__init__()
+        super().__init__()
         self.setFrameShape(QFrame.HLine)
         self.setFrameShadow(QFrame.Sunken)

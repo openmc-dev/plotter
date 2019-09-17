@@ -4,8 +4,7 @@ import threading
 from ast import literal_eval
 
 import openmc
-import openmc.capi.plot as capi_plot
-from openmc.capi.plot import _PlotBase
+import openmc.lib
 import numpy as np
 import xml.etree.ElementTree as ET
 from PySide2.QtWidgets import (QTableView, QItemDelegate,
@@ -61,8 +60,8 @@ class PlotModel():
         """ Initialize PlotModel class attributes """
 
         # Retrieve OpenMC Cells/Materials
-        self.modelCells = openmc.capi.cells
-        self.modelMaterials = openmc.capi.materials
+        self.modelCells = openmc.lib.cells
+        self.modelMaterials = openmc.lib.materials
 
         # Cell/Material ID by coordinates
         self.ids = None
@@ -93,7 +92,7 @@ class PlotModel():
             PlotView instance with default view settings
         """
 
-        lower_left, upper_right = openmc.capi.global_bounding_box()
+        lower_left, upper_right = openmc.lib.global_bounding_box()
 
         # Check for valid bounding_box dimensions
         if -np.inf not in lower_left[:2] and np.inf not in upper_right[:2]:
@@ -132,8 +131,8 @@ class PlotModel():
         """
 
         cv = self.currentView = copy.deepcopy(self.activeView)
-        ids = capi_plot.id_map(cv)
-        props = capi_plot.property_map(cv)
+        ids = openmc.lib.id_map(cv)
+        props = openmc.lib.property_map(cv)
         # empty image data
         image = np.ones((cv.v_res, cv.h_res, 3), dtype=int)
 
@@ -212,7 +211,7 @@ class PlotModel():
         self.previousViews.append(copy.deepcopy(self.currentView))
 
 
-class PlotView(_PlotBase):
+class PlotView(openmc.lib.plot._PlotBase):
     """ View settings for OpenMC plot.
 
     Parameters
@@ -273,7 +272,7 @@ class PlotView(_PlotBase):
     def __init__(self, origin, width, height):
         """ Initialize PlotView attributes """
 
-        super(capi_plot._PlotBase, self).__init__()
+        super().__init__()
 
         self.level = -1
         self.origin = origin
@@ -335,14 +334,14 @@ class PlotView(_PlotBase):
             raise ValueError("Domain type, {}, requested is neither "
                              "'cell' nor 'material'.".format(domain_type))
 
-        capi_domain = None
+        lib_domain = None
         if domain_type == 'cell':
-            capi_domain = openmc.capi.cells
+            lib_domain = openmc.lib.cells
         elif domain_type == 'material':
-            capi_domain = openmc.capi.materials
+            lib_domain = openmc.lib.materials
 
         domains = {}
-        for domain, domain_obj in capi_domain.items():
+        for domain, domain_obj in lib_domain.items():
             name = domain_obj.name
             domains[domain] = DomainView(domain, name, random_rgb())
 
@@ -428,7 +427,7 @@ class DomainTableModel(QAbstractTableModel):
     """ Abstract Table Model of cell/material view attributes """
 
     def __init__(self, domains):
-        super(DomainTableModel, self).__init__()
+        super().__init__()
         self.domains = [dom for dom in domains.values()]
 
     def rowCount(self, index=QModelIndex()):
@@ -548,7 +547,7 @@ class DomainTableModel(QAbstractTableModel):
 
 class DomainDelegate(QItemDelegate):
     def __init__(self, parent=None):
-        super(DomainDelegate, self).__init__(parent)
+        super().__init__(parent)
 
     def sizeHint(self, option, index):
 
