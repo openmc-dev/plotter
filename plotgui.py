@@ -465,12 +465,15 @@ class PlotImage(FigureCanvas):
                 cell_ids = filter.bins
                 # get the tally data
                 tally_data = tally.get_values(scores=['total',],
-                                              value = 'mean',
-                                              nuclides = ['total'])
-                tally_image = np.zeros(self.model.ids.shape)
+                                              value = 'mean')
+                                              #nuclides = ['total'])
+                tally_image = np.full(self.model.ids.shape, -1)
                 for idx, cell_id in enumerate(cell_ids):
                     tally_image[self.model.ids == cell_id] = tally_data[idx][0][0]
-                self.ax.imshow(tally_image, alpha = 0.1)
+                tally_image = np.ma.masked_where(tally_image < 0.0, tally_image)
+                self.ax.imshow(tally_image,
+                               alpha = 1.0,
+                               extent=data_bounds)
 
         self.draw()
 
