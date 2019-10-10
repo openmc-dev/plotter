@@ -171,13 +171,16 @@ class PlotModel():
         # empty image data
         image = np.ones((cv.v_res, cv.h_res, 3), dtype=int)
 
+        self.cell_ids = ids[:, :, 0]
+        self.mat_ids = ids[:, :, 1]
+
         # set model ids based on domain
         if cv.colorby == 'cell':
-            self.ids = ids[:, :, 0]
+            self.ids = self.cell_ids
             domain = cv.cells
             source = self.modelCells
         else:
-            self.ids = ids[:, :, 1]
+            self.ids = self.mat_ids
             domain = cv.materials
             source = self.modelMaterials
 
