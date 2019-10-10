@@ -470,10 +470,17 @@ class PlotImage(FigureCanvas):
                 tally_image = np.full(self.model.ids.shape, -1)
                 for idx, cell_id in enumerate(cell_ids):
                     tally_image[self.model.cell_ids == cell_id] = tally_data[idx][0][0]
-                tally_image = np.ma.masked_where(tally_image < 0.0, tally_image)
-                self.ax.imshow(tally_image,
-                               alpha = 1.0,
-                               extent=data_bounds)
+                tally_image_masked = np.ma.masked_where(tally_image < 0.0, tally_image)
+                self.tally_image = self.ax.imshow(tally_image_masked,
+                                                  alpha = 1.0,
+                                                  extent=data_bounds)
+                # add colorbar
+                self.tally_colorbar = self.figure.colorbar(self.tally_image,
+                                                           anchor=(1.0, 0.0))
+                self.tally_colorbar.set_label('Units',
+                                              rotation=-90,
+                                              va='bottom',
+                                              ha='right')
 
         self.draw()
 
