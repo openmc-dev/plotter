@@ -454,35 +454,68 @@ class PlotImage(FigureCanvas):
 
 
         # draw tally
-
         if self.model.selectedTally is not None:
-            tally_id = self.model.selectedTally
-            tally = self.model.statepoint.tallies[tally_id]
-            # get active cell filter
-            filter = tally.find_filter(CellFilter)
-            if filter.id in self.model.appliedFilters:
-                # get the cell IDs
-                cell_ids = filter.bins
-                # get the tally data
-                tally_data = tally.get_values(scores=['total',],
-                                              value = 'mean')
-                                              #nuclides = ['total'])
-                tally_image = np.full(self.model.ids.shape, -1)
-                for idx, cell_id in enumerate(cell_ids):
-                    tally_image[self.model.cell_ids == cell_id] = tally_data[idx][0][0]
-                tally_image_masked = np.ma.masked_where(tally_image < 0.0, tally_image)
-                self.tally_image = self.ax.imshow(tally_image_masked,
-                                                  alpha = 1.0,
-                                                  extent=data_bounds)
-                # add colorbar
-                self.tally_colorbar = self.figure.colorbar(self.tally_image,
-                                                           anchor=(1.0, 0.0))
-                self.tally_colorbar.set_label('Units',
-                                              rotation=-90,
-                                              va='bottom',
-                                              ha='right')
+            image_data, data_min, data_max = self.create_tally_image(self.model.selectedTally,
+                                                 self.model.appliedFilters[0])
+
+            self.tally_image = self.ax.imshow(image_data,
+                                              alpha = 1.0,
+                                              extent=data_bounds)
+            # add colorbar
+            self.tally_colorbar = self.figure.colorbar(self.tally_image,
+                                                       anchor=(1.0, 0.0))
+            self.tally_colorbar.mappable.set_clim(data_min, data_max)
+            self.tally_colorbar.set_label('Units',
+                                          rotation=-90,
+                                          va='bottom',
+                                          ha='right')
 
         self.draw()
+
+    def create_tally_image(self, tally_id, filter_id, scores=('total',)):
+
+        supported_spatial_filters = (openmc.filter.CellFilter,
+                                     openmc.filter.UniverseFilter,
+                                     openmc.filter.MaterialFilter,
+                                     openmc.filter.MeshFilter)
+
+        # get the filter object by its ID
+        filter = self.model.statepoint.filters[filter_id]
+        filter_type = type(filter)
+        if filter_type not in supported_spatial_filters:
+            raise NotImplementedError("'{}' is not supported yet.".format(type(filter)))
+
+        tally = self.model.statepoint.tallies[tally_id]
+
+        image_data = np.full(self.model.ids.shape, -1.0)
+
+        if filter_type == openmc.filter.CellFilter:
+            bins = filter.bins
+
+            tally_data = tally.get_values(scores=scores, value='mean')
+
+            for bin_idx, bin in enumerate(bins):
+                image_data[self.model.cell_ids == bin] = tally_data[bin_idx][0][0]
+
+            data_min = np.min(tally_data)
+            data_max = np.max(tally_data)
+
+        elif filter_type == openmc.filter.MaterialFilter:
+
+            bins = filter.bins
+
+            tally_data = tally.get_values(scores=scores, value='mean')
+
+            for bin_idx, bin in enumerate(bins):
+                image_data[self.model.mat_ids == bin] = tally_data[bin_idx][0][0]
+
+            data_min = np.min(tally_data)
+            data_max = np.max(tally_data)
+
+        # mask invalid values from the array
+        image_data = np.ma.masked_where(image_data < 0.0, image_data)
+
+        return image_data, data_min, data_max
 
     def updateColorbarScale(self):
         self.updatePixmap()

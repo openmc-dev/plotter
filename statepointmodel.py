@@ -19,6 +19,13 @@ class StatePointModel():
         else:
             return {}
 
+    @property
+    def filters(self):
+        if self.is_open:
+            return self._sp.filters
+        else:
+            return {}
+
     def open(self):
         if self.is_open:
             return
