@@ -81,6 +81,7 @@ class PlotModel():
         # default tally/filter info
         self.selectedTally = None
         self.appliedFilters = ()
+        self.appliedScores = ()
 
         # reset random number seed for consistent
         # coloring when reloading a model

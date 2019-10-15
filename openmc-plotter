@@ -501,7 +501,7 @@ class MainWindow(QMainWindow):
         filename = self.model.statepoint.filename
         self.model.statepoint = None
         self.model.selected_tally = None
-        self.model.applied_filters = None
+
         msg = "Closed statepoint file {}".format(filename)
         self.statusBar().showMessage(msg)
         self.updateDataMenu()
@@ -800,8 +800,8 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'tallyDock'):
             self.tallyDock.selectTally(event)
 
-    def updateFilters(self, state):
-        self.tallyDock.updateFilters()
+    def updateScores(self, state):
+        self.tallyDock.updateScores()
 
     # Plot image methods
 

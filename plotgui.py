@@ -12,7 +12,8 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QRubberBand, QMenu, QAction, QMenuBar,
                                QFileDialog, QDialog, QTabWidget, QGridLayout,
                                QToolButton, QColorDialog, QFrame, QDockWidget,
-                               QTableView, QItemDelegate, QHeaderView, QSlider)
+                               QTableView, QItemDelegate, QHeaderView, QSlider,
+                               QTextEdit)
 import matplotlib.pyplot as plt
 from matplotlib.backends.qt_compat import is_pyqt5
 from matplotlib.figure import Figure
@@ -456,7 +457,7 @@ class PlotImage(FigureCanvas):
         # draw tally
         if self.model.selectedTally is not None:
             image_data, data_min, data_max = self.create_tally_image(self.model.selectedTally,
-                                                 self.model.appliedFilters[0])
+                                                                     self.model.appliedScores)
 
             self.tally_image = self.ax.imshow(image_data,
                                               alpha = 1.0,
@@ -472,20 +473,23 @@ class PlotImage(FigureCanvas):
 
         self.draw()
 
-    def create_tally_image(self, tally_id, filter_id, scores=('total',)):
+    def create_tally_image(self, tally_id, scores=('total',)):
 
         supported_spatial_filters = (openmc.filter.CellFilter,
                                      openmc.filter.UniverseFilter,
                                      openmc.filter.MaterialFilter,
                                      openmc.filter.MeshFilter)
 
-        # get the filter object by its ID
-        filter = self.model.statepoint.filters[filter_id]
+        tally = self.model.statepoint.tallies[tally_id]
+
+        # find a spatial filter
+        for filter in tally.filters:
+            if filter in supported_spatial_filters:
+                break
+
         filter_type = type(filter)
         if filter_type not in supported_spatial_filters:
             raise NotImplementedError("'{}' is not supported yet.".format(type(filter)))
-
-        tally = self.model.statepoint.tallies[tally_id]
 
         image_data = np.full(self.model.ids.shape, -1.0)
 
@@ -511,6 +515,11 @@ class PlotImage(FigureCanvas):
 
             data_min = np.min(tally_data)
             data_max = np.max(tally_data)
+
+        elif filter_type == openmc.filter.UniverseFilter:
+            raise NotImplementedError("Universe filter not yet supported.")
+        elif filter_type == openmc.filter.MeshFilter:
+            pass
 
         # mask invalid values from the array
         image_data = np.ma.masked_where(image_data < 0.0, image_data)
@@ -583,6 +592,7 @@ class TallyDock(PlotterDock):
 
         self.tally_map = {}
         self.filter_map = {}
+        self.score_map = {}
 
         self.createTallySelectionLayout()
 
@@ -649,27 +659,41 @@ class TallyDock(PlotterDock):
             self.formLayout.addRow(self.tallySelector)
             self.formLayout.addRow(HorizontalLine())
 
-            # get the tally filters
+            self.formLayout.addRow(QLabel("Filters:"))
+            description = ''
+            filter_types = set()
             for filter in tally.filters:
-                if isinstance(filter, CellFilter):
-                    ql = self.cellFilterForm(filter)
-                    self.formLayout.addRow(ql)
-                elif isinstance(filter, UniverseFilter):
-                    ql = self.universeFilterForm(filter)
-                    self.formLayout.addRow(ql)
-                else:
-                    ql = QCheckBox()
-                    ql.setText(str(type(filter)))
-                    self.formLayout.addRow(ql)
-                ql.toggled.connect(self.mw.updateFilters)
-                self.filter_map[filter.id] = ql
+                description += str(filter)
+                filter_types.add(type(filter))
 
-    def updateFilters(self):
-        applied_filters = []
-        for filter_id, filter_box in self.filter_map.items():
-            if filter_box.isChecked():
-                applied_filters.append(filter_id)
-        self.model.appliedFilters = tuple(applied_filters)
+            spatial_filters = bool(len(filter_types.intersection(_SPATIAL_FILTERS)))
+            if not spatial_filters:
+                description += "(No Spatial Filters)"
+
+            self.filter_description = QLabel()
+            self.filter_description.setText(description)
+            self.formLayout.addRow(self.filter_description)
+
+            self.formLayout.addRow(HorizontalLine())
+            # get the tally filters
+            self.formLayout.addRow(QLabel("Scores:"))
+            self.score_map.clear()
+            for score in tally.scores:
+                ql = QCheckBox()
+                ql.setText(score.capitalize())
+                ql.toggled.connect(self.mw.updateScores)
+                ql.setEnabled(spatial_filters) # disable if no spatial filters present
+                self.score_map[score] = ql
+
+            for score in sorted(self.score_map.keys()):
+                self.formLayout.addRow(self.score_map[score])
+
+    def updateScores(self):
+        applied_scores = []
+        for score, score_box in self.score_map.items():
+            if score_box.isChecked():
+                applied_scores.append(score)
+        self.model.appliedScores = tuple(applied_scores)
 
     @staticmethod
     def cellFilterForm(filter):
