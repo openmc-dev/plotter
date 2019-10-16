@@ -568,9 +568,6 @@ class PlotImage(FigureCanvas):
             for bin_idx, bin in enumerate(bins):
                 image_data[self.model.cell_ids == bin] = tally_data[bin_idx][0][0]
 
-            data_min = np.min(tally_data)
-            data_max = np.max(tally_data)
-
         elif filter_type == openmc.filter.MaterialFilter:
 
             bins = filter.bins
@@ -580,8 +577,54 @@ class PlotImage(FigureCanvas):
             for bin_idx, bin in enumerate(bins):
                 image_data[self.model.mat_ids == bin] = tally_data[bin_idx][0][0]
 
-            data_min = np.min(tally_data)
-            data_max = np.max(tally_data)
+        elif filter_type == openmc.filter.MeshFilter:
+            cv = self.model.currentView
+
+            mesh = tally.find_filter(openmc.MeshFilter).mesh
+            nx, ny, nz = mesh.dimension
+
+
+            if cv.basis == 'xy':
+                h_ind = 0
+                v_ind = 1
+                ax = 2
+            elif cv.basis == 'yz':
+                h_ind = 1
+                v_ind = 2
+                ax = 0
+            else:
+                h_ind = 0
+                v_ind = 2
+                ax = 1
+
+            # get the slice of the mesh on our coordinate
+            k = (cv.origin[ax] - mesh.lower_left[ax]) // mesh.width[ax]
+
+            mesh_data = tally.get_pandas_dataframe(nuclides=False)
+
+            mesh_data = mesh_data[mesh_data['score'] == 'flux']
+
+            mesh_data = mesh_data['mean'].values.reshape(mesh.dimension)
+
+            image_data = mesh_data[:,:,int(k)]
+
+            deltas = (mesh.upper_right - mesh.lower_left) / mesh.dimension
+            di = deltas[h_ind]
+            dj = deltas[v_ind]
+            min_i = int(((cv.origin[h_ind] - cv.width / 2.0) - mesh.lower_left[h_ind]) // di)
+            min_i = max(min_i, 0)
+            max_i = int(((cv.origin[h_ind] + cv.width / 2.0) - mesh.lower_left[h_ind]) // di)
+            max_i = min(max_i, image_data.shape[h_ind])
+            min_j = int(((cv.origin[v_ind] - cv.height / 2.0) - mesh.lower_left[v_ind]) // dj)
+            min_j = max(min_j, 0)
+            max_j = int(((cv.origin[v_ind] + cv.height / 2.0) - mesh.lower_left[v_ind]) // dj)
+            max_j = min(max_j, image_data.shape[v_ind])
+            print(min_i, max_i, min_j, max_j)
+
+            mask = np.zeros(image_data.shape, dtype=bool)
+            mask[min_i:max_i, min_j:max_j] = True
+            image_data = image_data[min_i:max_i, min_j:max_j]
+            image_data.transpose()
 
         elif filter_type == openmc.filter.UniverseFilter:
             # get the statepoint summary
@@ -607,6 +650,9 @@ class PlotImage(FigureCanvas):
 
         # mask invalid values from the array
         image_data = np.ma.masked_where(image_data < 0.0, image_data)
+
+        data_min = np.min(image_data)
+        data_max = np.max(image_data)
 
         return image_data, data_min, data_max
 
