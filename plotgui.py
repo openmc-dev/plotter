@@ -517,7 +517,24 @@ class PlotImage(FigureCanvas):
             data_max = np.max(tally_data)
 
         elif filter_type == openmc.filter.UniverseFilter:
-            raise NotImplementedError("Universe filter not yet supported.")
+            # get the statepoint summary
+            universes = self.model.statepoint.universes
+
+            # set data min/max for the filter as a whole
+            tally_data = tally.get_values(scores=scores, filters=[openmc.UniverseFilter,], filter_bins=[tuple(filter.bins),], value='mean')
+            data_min = np.min(tally_data)
+            data_max = np.max(tally_data)
+
+            # set image data cell for each universe in the filter
+            for fbin in filter.bins:
+                tally_val = tally.get_values(scores=scores, filters=[openmc.UniverseFilter,], filter_bins=[(fbin,),])
+                tally_val.shape = (1,)
+                tally_val = tally_val[0]
+
+                univ_cells = self.model.statepoint.universes[fbin].cells
+                for cell in univ_cells:
+                    image_data[self.model.cell_ids == cell] = tally_val
+
         elif filter_type == openmc.filter.MeshFilter:
             pass
 
