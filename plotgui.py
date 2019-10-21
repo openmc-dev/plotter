@@ -647,7 +647,12 @@ class TallyDock(PlotterDock):
             self.hide()
 
     def selectTally(self, tally_label):
-        if self.model.statepoint and tally_label != "None":
+        if not self.model.statepoint:
+            return
+
+        if tally_label == "None":
+            self.model.selectedTally = None
+        else:
             tally_id = int(tally_label.split()[1])
             tally = self.model.statepoint.tallies[tally_id]
             self.model.selectedTally = tally_id
