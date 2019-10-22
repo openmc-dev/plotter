@@ -601,7 +601,6 @@ class PlotterDock(QDockWidget):
         self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea |
                              QtCore.Qt.RightDockWidgetArea)
 
-
 class TallyDock(PlotterDock):
 
     def __init__(self, model, FM, parent=None):
@@ -628,6 +627,10 @@ class TallyDock(PlotterDock):
         self.dockLayout.addWidget(self.applyButton)
         self.dockLayout.addStretch()
 
+        self.tallyColorForm = ColorForm(self.model, 'tally')
+
+        self.dockLayout.addWidget(HorizontalLine())
+        self.dockLayout.addWidget(self.tallyColorForm)
         self.update()
 
     def createTallySelectionLayout(self):
@@ -645,23 +648,6 @@ class TallyDock(PlotterDock):
         # tally group box
         self.tallyGroupBox = QGroupBox('Tally')
         self.tallyGroupBox.setLayout(self.formLayout)
-
-    def update(self):
-        if self.model.statepoint:
-            tally_w_name = 'Tally {} "{}"'
-            tally_no_name = 'Tally {}'
-            self.tallySelector.setEnabled(True)
-            self.tallySelector.addItem("None")
-            for idx, tally in enumerate(self.model.statepoint.tallies.values()):
-                if tally.name == "":
-                    self.tallySelector.addItem(tally_no_name.format(tally.id))
-                else:
-                    self.tallySelector.addItem(tally_w_name.format(tally.id, tally.name))
-                self.tally_map[idx] = tally
-        else:
-            self.tallySelector.clear()
-            self.tallySelector.setDisabled(True)
-            self.hide()
 
     def selectTally(self, tally_label):
         if not self.model.statepoint:
@@ -740,6 +726,33 @@ class TallyDock(PlotterDock):
         ids = map(str, filter.bins)
         l.setText(txt.format(filter.id, ", ".join(cells)))
         return l
+
+    def updateColormap(self):
+        cmaps = self.model.activeView.colormaps
+        for key, val in cmaps.items():
+            idx = self.tabs[key].colormapBox.findText(val,
+                                                      QtCore.Qt.MatchFixedString)
+            if idx >= 0:
+                self.tabs[key].colormapBox.setCurrentIndex(idx)
+
+    def update(self):
+        if self.model.statepoint:
+            tally_w_name = 'Tally {} "{}"'
+            tally_no_name = 'Tally {}'
+            self.tallySelector.setEnabled(True)
+            self.tallySelector.addItem("None")
+            for idx, tally in enumerate(self.model.statepoint.tallies.values()):
+                if tally.name == "":
+                    self.tallySelector.addItem(tally_no_name.format(tally.id))
+                else:
+                    self.tallySelector.addItem(tally_w_name.format(tally.id, tally.name))
+                self.tally_map[idx] = tally
+        else:
+            self.tallySelector.clear()
+            self.tallySelector.setDisabled(True)
+            self.hide()
+
+        # self.updateColormap()
 
 class OptionsDock(PlotterDock):
     def __init__(self, model, FM, parent=None):
@@ -988,6 +1001,67 @@ class OptionsDock(PlotterDock):
         self.mw.resizeEvent(event)
 
 
+class ColorForm(QWidget):
+    """
+    Class for handling a field with a colormap, alpha, and visibility
+
+    Attributes
+    ----------
+
+    model : PlotModel instance
+        The model instance used when updating information on the form.
+    colormapBox : QComboBox instance
+        Holds the string of the matplotlib colorbar being used
+    visibilityBox : QCheckBox instance
+        Indicator for whether or not the field should be visible
+    alphaBox : QDoubleSpinBox instance
+        Holds the alpha value for the displayed field data
+    """
+    def __init__(self, model, field, colormaps=None):
+        """
+        """
+        super().__init__()
+
+        self.model = model
+        self.field = field
+
+        self.layout = QFormLayout()
+
+        self.colormapBox = QComboBox()
+        # populate with colormaps
+        if colormaps is None:
+            colormaps = sorted(m for m in mcolormaps.datad if not m.endswith("_r"))
+        for colormap in colormaps:
+            self.colormapBox.addItem(colormap)
+
+        # self.colormapBox.currentTextChanged[str].connect(connector)
+
+        self.layout.addRow("Colormap: ", self.colormapBox)
+
+        self.visibilityBox = QCheckBox()
+        self.layout.addRow("Visible:", self.visibilityBox)
+
+        self.alphaBox = QDoubleSpinBox()
+        self.alphaBox.setDecimals(9)
+        self.alphaBox.setRange(-99999, 99999)
+        self.layout.addRow("Alpha: ", self.alphaBox)
+
+
+        self.setLayout(self.layout)
+
+    def update(self):
+        av = self.model.activeView
+
+        cmap = av.model.tallyDataColormap
+
+        idx = self.colormapBox.findText(cmap, QtCore.Qt.MatchFixedString)
+        self.colormapBox.setCurrentIndex(idx)
+
+        self.visibilityBox.setChecked(self.model.tallyDataVisible)
+
+        self.alphaBox.setValue(self.model.tallyDataAlpha)
+
+
 class ColorDialog(QDialog):
 
     def __init__(self, model, FM, parent=None):
@@ -1143,33 +1217,6 @@ class ColorDialog(QDialog):
 
         return domainTab
 
-    def updateDataIndicatorVisibility(self):
-        av = self.model.activeView
-        for key, val in av.data_indicator_enabled.items():
-            self.tabs[key].dataIndicatorCheckBox.setChecked(val)
-
-    def updateColorMaps(self):
-        cmaps = self.model.activeView.colormaps
-        for key, val in cmaps.items():
-            idx = self.tabs[key].colormapBox.findText(val,
-                                                      QtCore.Qt.MatchFixedString)
-            if idx >= 0:
-                self.tabs[key].colormapBox.setCurrentIndex(idx)
-
-    def updateColorMinMax(self):
-        minmax = self.model.activeView.user_minmax
-        for key, val in minmax.items():
-            self.tabs[key].minBox.setValue(val[0])
-            self.tabs[key].maxBox.setValue(val[1])
-        custom_minmax = self.model.activeView.use_custom_minmax
-        for key, val, in custom_minmax.items():
-            self.tabs[key].minMaxCheckBox.setChecked(val)
-
-    def updateColorbarScale(self):
-        av = self.model.activeView
-        for key, val in av.color_scale_log.items():
-            self.tabs[key].colorBarScaleCheckBox.setChecked(val)
-
     def createPropertyTab(self, property_kind):
         propertyTab = QWidget()
         propertyTab.property_kind = property_kind
@@ -1233,6 +1280,33 @@ class ColorDialog(QDialog):
         propertyTab.setLayout(formLayout)
 
         return propertyTab
+
+    def updateDataIndicatorVisibility(self):
+        av = self.model.activeView
+        for key, val in av.data_indicator_enabled.items():
+            self.tabs[key].dataIndicatorCheckBox.setChecked(val)
+
+    def updateColorMaps(self):
+        cmaps = self.model.activeView.colormaps
+        for key, val in cmaps.items():
+            idx = self.tabs[key].colormapBox.findText(val,
+                                                      QtCore.Qt.MatchFixedString)
+            if idx >= 0:
+                self.tabs[key].colormapBox.setCurrentIndex(idx)
+
+    def updateColorMinMax(self):
+        minmax = self.model.activeView.user_minmax
+        for key, val in minmax.items():
+            self.tabs[key].minBox.setValue(val[0])
+            self.tabs[key].maxBox.setValue(val[1])
+        custom_minmax = self.model.activeView.use_custom_minmax
+        for key, val, in custom_minmax.items():
+            self.tabs[key].minMaxCheckBox.setChecked(val)
+
+    def updateColorbarScale(self):
+        av = self.model.activeView
+        for key, val in av.color_scale_log.items():
+            self.tabs[key].colorBarScaleCheckBox.setChecked(val)
 
     def createButtonBox(self):
 
