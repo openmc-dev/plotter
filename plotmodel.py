@@ -306,13 +306,18 @@ class PlotView(openmc.lib.plot._PlotBase):
         Dictionary of material view settings by ID
     plotAlpha: float between 0 and 1
         Alpha value of the geometry plot
-
+    tallyDataColormap : str
+        Name of the colormap used for tally data
     tallyDataVisible : bool
         Indicator for whether or not the tally data is visible
     tallyDataAlpha : float
         Value of the tally image alpha
-    tallyDataColormap : str
-        Name of the colormap used for tally data
+    tallyDataMin : float
+        Minimum scale value for tally data
+    tallyDataMax : float
+        Minimum scale value for tally data
+    tallyDataLogScale : bool
+        Indicator of logarithmic scale for tally data
     """
 
     def __init__(self, origin, width, height):
@@ -348,7 +353,10 @@ class PlotView(openmc.lib.plot._PlotBase):
         # tally viz defaults
         self.tallyDataColormap = 'spectral'
         self.tallyDataVisible = True
-        self.TallyDataAlpha = 1.0
+        self.tallyDataAlpha = 1.0
+        self.tallyDataMin = -np.inf
+        self.tallyDataMax = np.inf
+        self.tallyDataLogScale = False
 
         # set defaults for color dialog
         self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}

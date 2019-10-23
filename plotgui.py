@@ -1042,24 +1042,38 @@ class ColorForm(QWidget):
         self.layout.addRow("Visible:", self.visibilityBox)
 
         self.alphaBox = QDoubleSpinBox()
-        self.alphaBox.setDecimals(9)
-        self.alphaBox.setRange(-99999, 99999)
+        self.alphaBox.setDecimals(2)
         self.layout.addRow("Alpha: ", self.alphaBox)
 
+        self.minBox = QDoubleSpinBox()
+        self.minBox.setMinimum(0.0)
+        self.minBox.setMaximum(1.0E9)
+        self.layout.addRow("Min: ", self.minBox)
+        self.maxBox = QDoubleSpinBox()
+        self.maxBox.setMinimum(0.0)
+        self.maxBox.setMaximum(1.0E9)
+        self.layout.addRow("Max: ", self.maxBox)
+
+        self.scaleBox = QCheckBox()
+        self.layout.addRow("Log Scale: ", self.scaleBox)
 
         self.setLayout(self.layout)
+
+        self.update()
 
     def update(self):
         av = self.model.activeView
 
-        cmap = av.model.tallyDataColormap
+        cmap = av.tallyDataColormap
 
         idx = self.colormapBox.findText(cmap, QtCore.Qt.MatchFixedString)
         self.colormapBox.setCurrentIndex(idx)
 
-        self.visibilityBox.setChecked(self.model.tallyDataVisible)
-
-        self.alphaBox.setValue(self.model.tallyDataAlpha)
+        self.visibilityBox.setChecked(av.tallyDataVisible)
+        self.alphaBox.setValue(av.tallyDataAlpha)
+        self.minBox.setValue(av.tallyDataMin)
+        self.maxBox.setValue(av.tallyDataMax)
+        self.scaleBox.setChecked(av.tallyDataLogScale)
 
 
 class ColorDialog(QDialog):
