@@ -126,8 +126,7 @@ class PlotImage(FigureCanvas):
         self.resize(self.parent.width() * z,
                     self.parent.height() * z)
 
-    def getIDinfo(self, event):
-
+    def getDataIndices(self, event):
         cv = self.model.currentView
 
         x, y = self.mouseEventCoords(event.pos())
@@ -148,6 +147,29 @@ class PlotImage(FigureCanvas):
         xPos = int((x - x0 + 0.01) / factor[0])
         # flip y-axis
         yPos = cv.v_res - int((y - y0 + 0.01) / factor[1])
+
+        return xPos, yPos
+
+    def getTallyInfo(self, event):
+        xPos, yPos = self.getDataIndices(event)
+
+        if not self.model.selectedTally:
+            return -1, None
+
+        tally_id = self.model.selectedTally
+
+        # check that the position is in the axes view
+        if 0 <= yPos < self.model.currentView.v_res \
+           and 0 <= xPos and xPos < self.model.currentView.h_res:
+            value = self.model.tally_data[yPos][xPos]
+        else:
+            value = None
+
+        return tally_id, value
+
+    def getIDinfo(self, event):
+
+        xPos, yPos = self.getDataIndices(event)
 
         # check that the position is in the axes view
         if 0 <= yPos < self.model.currentView.v_res \
@@ -192,6 +214,10 @@ class PlotImage(FigureCanvas):
 
         # Show Cell/Material ID, Name in status bar
         id, properties, domain, domain_kind = self.getIDinfo(event)
+
+        domainInfo = ""
+        tallyInfo = ""
+
         if self.parent.underMouse():
 
             if domain_kind.lower() in _MODEL_PROPERTIES:
@@ -222,11 +248,14 @@ class PlotImage(FigureCanvas):
                                                          temperature))
             else:
                 domainInfo = ""
+
+            if self.model.selectedTally:
+                tid, value = self.getTallyInfo(event)
+                tallyInfo = "Tally {}: {}".format(tid, value)
         else:
-            domainInfo = ""
             self.updateDataIndicatorValue(0.0)
 
-        self.mw.statusBar().showMessage(" " + domainInfo)
+        self.mw.statusBar().showMessage(" " + domainInfo + "      " + tallyInfo)
 
         # Update rubber band and values if mouse button held down
         if event.buttons() == QtCore.Qt.LeftButton:
@@ -427,7 +456,7 @@ class PlotImage(FigureCanvas):
                                                        alpha=cv.plotAlpha)
 
             # add colorbar
-            self.colorbar = self.figure.colorbar(self.image,
+            self.colorbar = self.fOigure.colorbar(self.image,
                                                  anchor=(1.0, 0.0))
             self.colorbar.set_label(cmap_label,
                                     rotation=-90,
