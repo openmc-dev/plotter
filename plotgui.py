@@ -151,9 +151,10 @@ class PlotImage(FigureCanvas):
         return xPos, yPos
 
     def getTallyInfo(self, event):
-        xPos, yPos = self.getDataIndices(event)
+        cv = self.model. currentView
 
-        if not self.model.selectedTally:
+        xPos, yPos = self.getDataIndices(event)
+        if not self.model.selectedTally or not cv.tallyDataVisible:
             return -1, None
 
         tally_id = self.model.selectedTally
@@ -251,7 +252,8 @@ class PlotImage(FigureCanvas):
 
             if self.model.selectedTally:
                 tid, value = self.getTallyInfo(event)
-                tallyInfo = "Tally {}: {}".format(tid, value)
+                if value is not None:
+                    tallyInfo = "Tally {}: {:.5E}".format(tid, value)
         else:
             self.updateDataIndicatorValue(0.0)
 
@@ -507,6 +509,8 @@ class PlotImage(FigureCanvas):
                 data_min = cv.tallyDataMin
                 data_max = cv.tallyDataMax
 
+            self.mw.updateTallyMinMax()
+
             self.tally_colorbar.mappable.set_clim(data_min, data_max)
             self.tally_colorbar.set_label('Units',
                                           rotation=-90,
@@ -691,6 +695,9 @@ class TallyDock(PlotterDock):
         # tally group box
         self.tallyGroupBox = QGroupBox('Tally')
         self.tallyGroupBox.setLayout(self.formLayout)
+
+    def updateMinMax(self):
+        self.tallyColorForm.updateMinMax()
 
     def selectTally(self, tally_label):
         if not self.model.statepoint:
@@ -1106,8 +1113,8 @@ class ColorForm(QWidget):
         self.minBox.valueChanged.connect(min_connector)
 
         self.maxBox = QDoubleSpinBox()
-        # self.maxBox.setMinimum(0.0)
-        # self.maxBox.setMaximum(1.0E9)
+        self.maxBox.setMinimum(0.0)
+        self.maxBox.setMaximum(1.0E9)
         max_connector = partial(self.mw.editTallyDataMax)
         self.maxBox.valueChanged.connect(max_connector)
 
@@ -1140,6 +1147,11 @@ class ColorForm(QWidget):
     def updateTallyVisibility(self):
         cv = self.model.currentView
         self.visibilityBox.setChecked(cv.tallyDataVisible)
+
+    def updateMinMax(self):
+        cv = self.model.currentView
+        self.minBox.setValue(cv.tallyDataMin)
+        self.maxBox.setValue(cv.tallyDataMax)
 
     def update(self):
         cv = self.model.currentView

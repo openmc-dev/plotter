@@ -525,7 +525,6 @@ class MainWindow(QMainWindow):
             self.plotIm.generatePixmap()
             self.resetModels()
             self.showCurrentView()
-
         else:
             self.statusBar().showMessage('No changes to apply.', 3000)
 
@@ -844,6 +843,9 @@ class MainWindow(QMainWindow):
         av.tallyDataColormap = cmap
         if apply:
             self.applyChanges()
+
+    def updateTallyMinMax(self):
+        self.tallyDock.updateMinMax()
 
     # Plot image methods
 
