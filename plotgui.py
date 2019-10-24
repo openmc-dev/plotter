@@ -455,16 +455,29 @@ class PlotImage(FigureCanvas):
 
 
         # draw tally
-        if self.model.selectedTally is not None:
+        if self.model.selectedTally is not None and cv.tallyDataVisible:
             image_data, data_min, data_max = self.create_tally_image(self.model.selectedTally,
                                                                      self.model.appliedScores)
 
+            self.model.tally_data = image_data
+
+            norm = SymLogNorm(1E-2) if cv.tallyDataLogScale else None
             self.tally_image = self.ax.imshow(image_data,
-                                              alpha = 1.0,
+                                              alpha = cv.tallyDataAlpha,
+                                              cmap = cv.tallyDataColormap,
+                                              norm = norm,
                                               extent=data_bounds)
             # add colorbar
             self.tally_colorbar = self.figure.colorbar(self.tally_image,
                                                        anchor=(1.0, 0.0))
+
+            if not cv.tallyDataUserMinMax:
+                cv.tallyDataMin = data_min
+                cv.tallyDataMax = data_max
+            else:
+                data_min = cv.tallyDataMin
+                data_max = cv.tallyDataMax
+
             self.tally_colorbar.mappable.set_clim(data_min, data_max)
             self.tally_colorbar.set_label('Units',
                                           rotation=-90,
@@ -624,13 +637,14 @@ class TallyDock(PlotterDock):
         self.applyButton.clicked.connect(self.mw.applyChanges)
 
         self.dockLayout.addWidget(self.tallyGroupBox)
-        self.dockLayout.addWidget(self.applyButton)
         self.dockLayout.addStretch()
 
-        self.tallyColorForm = ColorForm(self.model, 'tally')
+        self.tallyColorForm = ColorForm(self.model, self.mw, 'tally')
 
         self.dockLayout.addWidget(HorizontalLine())
         self.dockLayout.addWidget(self.tallyColorForm)
+        self.dockLayout.addWidget(HorizontalLine())
+        self.dockLayout.addWidget(self.applyButton)
         self.update()
 
     def createTallySelectionLayout(self):
@@ -736,6 +750,9 @@ class TallyDock(PlotterDock):
                 self.tabs[key].colormapBox.setCurrentIndex(idx)
 
     def update(self):
+
+        self.tallyColorForm.update()
+
         if self.model.statepoint:
             tally_w_name = 'Tally {} "{}"'
             tally_no_name = 'Tally {}'
@@ -750,9 +767,6 @@ class TallyDock(PlotterDock):
         else:
             self.tallySelector.clear()
             self.tallySelector.setDisabled(True)
-            self.hide()
-
-        # self.updateColormap()
 
 class OptionsDock(PlotterDock):
     def __init__(self, model, FM, parent=None):
@@ -796,10 +810,12 @@ class OptionsDock(PlotterDock):
         self.dockLayout.addWidget(self.originGroupBox)
         self.dockLayout.addWidget(self.optionsGroupBox)
         self.dockLayout.addWidget(self.resGroupBox)
-        self.dockLayout.addWidget(self.applyButton)
-        self.dockLayout.addStretch()
         self.dockLayout.addWidget(HorizontalLine())
         self.dockLayout.addWidget(self.zoomWidget)
+        self.dockLayout.addWidget(HorizontalLine())
+        self.dockLayout.addStretch()
+        self.dockLayout.addWidget(self.applyButton)
+        self.dockLayout.addWidget(HorizontalLine())
 
         self.optionsWidget = QWidget()
         self.optionsWidget.setLayout(self.dockLayout)
@@ -1017,12 +1033,13 @@ class ColorForm(QWidget):
     alphaBox : QDoubleSpinBox instance
         Holds the alpha value for the displayed field data
     """
-    def __init__(self, model, field, colormaps=None):
+    def __init__(self, model, mw, field, colormaps=None):
         """
         """
         super().__init__()
 
         self.model = model
+        self.mw = mw
         self.field = field
 
         self.layout = QFormLayout()
@@ -1034,46 +1051,81 @@ class ColorForm(QWidget):
         for colormap in colormaps:
             self.colormapBox.addItem(colormap)
 
-        # self.colormapBox.currentTextChanged[str].connect(connector)
+        cmap_connector = partial(self.mw.editTallyDataColormap)
+        self.colormapBox.currentTextChanged[str].connect(cmap_connector)
 
         self.layout.addRow("Colormap: ", self.colormapBox)
 
         self.visibilityBox = QCheckBox()
-        self.layout.addRow("Visible:", self.visibilityBox)
+
+        visible_connector = partial(self.mw.toggleTallyVisibility)
+        self.visibilityBox.stateChanged.connect(visible_connector)
 
         self.alphaBox = QDoubleSpinBox()
         self.alphaBox.setDecimals(2)
-        self.layout.addRow("Alpha: ", self.alphaBox)
+        alpha_connector = partial(self.mw.editTallyAlpha)
+        self.alphaBox.valueChanged.connect(alpha_connector)
+
+        self.userMinMaxBox = QCheckBox()
+        minmax_connector = partial(self.mw.toggleTallyDataUserMinMax)
+        self.userMinMaxBox.stateChanged.connect(minmax_connector)
 
         self.minBox = QDoubleSpinBox()
         self.minBox.setMinimum(0.0)
         self.minBox.setMaximum(1.0E9)
-        self.layout.addRow("Min: ", self.minBox)
+        min_connector = partial(self.mw.editTallyDataMin)
+        self.minBox.valueChanged.connect(min_connector)
+
         self.maxBox = QDoubleSpinBox()
-        self.maxBox.setMinimum(0.0)
-        self.maxBox.setMaximum(1.0E9)
-        self.layout.addRow("Max: ", self.maxBox)
+        # self.maxBox.setMinimum(0.0)
+        # self.maxBox.setMaximum(1.0E9)
+        max_connector = partial(self.mw.editTallyDataMax)
+        self.maxBox.valueChanged.connect(max_connector)
 
         self.scaleBox = QCheckBox()
+        scale_connector = partial(self.mw.toggleTallyLogScale)
+        self.scaleBox.stateChanged.connect(scale_connector)
+
+        # add widgets to form
+        self.layout.addRow("Visible:", self.visibilityBox)
+        self.layout.addRow("Alpha: ", self.alphaBox)
+        self.layout.addRow("Custom Min/Max: ", self.userMinMaxBox)
+        self.layout.addRow("Min: ", self.minBox)
+        self.layout.addRow("Max: ", self.maxBox)
         self.layout.addRow("Log Scale: ", self.scaleBox)
 
         self.setLayout(self.layout)
 
         self.update()
 
+    def updateMinMax(self):
+        cv = self.model.currentView
+
+        if cv.tallyDataUserMinMax:
+            self.minBox.setEnabled(True)
+            self.maxBox.setEnabled(True)
+        else:
+            self.minBox.setEnabled(False)
+            self.maxBox.setEnabled(False)
+
+    def updateTallyVisibility(self):
+        cv = self.model.currentView
+        self.visibilityBox.setChecked(cv.tallyDataVisible)
+
     def update(self):
-        av = self.model.activeView
+        cv = self.model.currentView
 
-        cmap = av.tallyDataColormap
-
+        cmap = cv.tallyDataColormap
         idx = self.colormapBox.findText(cmap, QtCore.Qt.MatchFixedString)
         self.colormapBox.setCurrentIndex(idx)
 
-        self.visibilityBox.setChecked(av.tallyDataVisible)
-        self.alphaBox.setValue(av.tallyDataAlpha)
-        self.minBox.setValue(av.tallyDataMin)
-        self.maxBox.setValue(av.tallyDataMax)
-        self.scaleBox.setChecked(av.tallyDataLogScale)
+        self.alphaBox.setValue(cv.tallyDataAlpha)
+        self.visibilityBox.setChecked(cv.tallyDataVisible)
+        self.userMinMaxBox.setChecked(cv.tallyDataUserMinMax)
+
+        # self.updateMinMax()
+
+        self.scaleBox.setChecked(cv.tallyDataLogScale)
 
 
 class ColorDialog(QDialog):

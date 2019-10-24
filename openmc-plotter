@@ -794,7 +794,7 @@ class MainWindow(QMainWindow):
         self.colorDialog.updateDialogValues()
         self.applyChanges()
 
-    # Tally dialog methods
+    # Tally dock methods
 
     def editSelectedTally(self, event):
         if hasattr(self, 'tallyDock'):
@@ -802,6 +802,48 @@ class MainWindow(QMainWindow):
 
     def updateScores(self, state):
         self.tallyDock.updateScores()
+
+    def toggleTallyVisibility(self, state, apply=False):
+        av = self.model.activeView
+        av.tallyDataVisible = bool(state)
+        if apply:
+            self.applyChanges()
+
+    def toggleTallyLogScale(self, state, apply=False):
+        av = self.model.activeView
+        av.tallyDataLogScale = bool(state)
+        if apply:
+            self.applyChanges()
+
+    def editTallyAlpha(self, value, apply=False):
+        av = self.model.activeView
+        av.tallyDataAlpha = value
+        if apply:
+            self.applyChanges()
+
+    def toggleTallyDataUserMinMax(self, state, apply=False):
+        av = self.model.activeView
+        av.tallyDataUserMinMax = bool(state)
+        if apply:
+            self.applyChanges()
+
+    def editTallyDataMin(self, value, apply=False):
+        av = self.model.activeView
+        av.tallyDataMin = value
+        if apply:
+            self.applyChanges()
+
+    def editTallyDataMax(self, value, apply=False):
+        av = self.model.activeView
+        av.tallyDataMax = value
+        if apply:
+            self.applyChanges()
+
+    def editTallyDataColormap(self, cmap, apply=False):
+        av = self.model.activeView
+        av.tallyDataColormap = cmap
+        if apply:
+            self.applyChanges()
 
     # Plot image methods
 

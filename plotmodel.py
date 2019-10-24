@@ -217,6 +217,8 @@ class PlotModel():
         self.image = image
         # set model properties
         self.properties = props
+        # tally data
+        self.tally_data = None
 
         self.properties[self.properties < 0.0] = np.nan
 
@@ -354,6 +356,7 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.tallyDataColormap = 'spectral'
         self.tallyDataVisible = True
         self.tallyDataAlpha = 1.0
+        self.tallyDataUserMinMax = False
         self.tallyDataMin = -np.inf
         self.tallyDataMax = np.inf
         self.tallyDataLogScale = False
