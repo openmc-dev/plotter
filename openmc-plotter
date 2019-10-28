@@ -802,6 +802,9 @@ class MainWindow(QMainWindow):
     def updateScores(self, state):
         self.tallyDock.updateScores()
 
+    def updateNuclides(self, state):
+        self.tallyDock.updateNuclides()
+
     def toggleTallyVisibility(self, state, apply=False):
         av = self.model.activeView
         av.tallyDataVisible = bool(state)

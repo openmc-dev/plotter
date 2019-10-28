@@ -82,6 +82,7 @@ class PlotModel():
         self.selectedTally = None
         self.appliedFilters = ()
         self.appliedScores = ()
+        self.appliedNuclides = ()
 
         # reset random number seed for consistent
         # coloring when reloading a model

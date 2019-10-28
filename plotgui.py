@@ -13,7 +13,7 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QFileDialog, QDialog, QTabWidget, QGridLayout,
                                QToolButton, QColorDialog, QFrame, QDockWidget,
                                QTableView, QItemDelegate, QHeaderView, QSlider,
-                               QTextEdit)
+                               QTextEdit, QListWidget, QListWidgetItem)
 import matplotlib.pyplot as plt
 from matplotlib.backends.qt_compat import is_pyqt5
 from matplotlib.figure import Figure
@@ -154,6 +154,10 @@ class PlotImage(FigureCanvas):
         cv = self.model. currentView
 
         xPos, yPos = self.getDataIndices(event)
+
+        if self.model.tally_data is None:
+            return -1, None
+
         if not self.model.selectedTally or not cv.tallyDataVisible:
             return -1, None
 
@@ -486,9 +490,11 @@ class PlotImage(FigureCanvas):
 
 
         # draw tally
-        if self.model.selectedTally is not None and cv.tallyDataVisible:
+        if self.model.selectedTally is not None and cv.tallyDataVisible \
+            and self.model.appliedScores and self.model.appliedNuclides:
             image_data, data_min, data_max = self.create_tally_image(self.model.selectedTally,
-                                                                     self.model.appliedScores)
+                                                                     self.model.appliedScores,
+                                                                     self.model.appliedNuclides)
 
             self.model.tally_data = image_data
 
@@ -519,8 +525,7 @@ class PlotImage(FigureCanvas):
 
         self.draw()
 
-    def create_tally_image(self, tally_id, scores=('total',)):
-
+    def create_tally_image(self, tally_id, scores=[], nuclides=[]):
         supported_spatial_filters = (openmc.filter.CellFilter,
                                      openmc.filter.UniverseFilter,
                                      openmc.filter.MaterialFilter,
@@ -542,7 +547,7 @@ class PlotImage(FigureCanvas):
         if filter_type == openmc.filter.CellFilter:
             bins = filter.bins
 
-            tally_data = tally.get_values(scores=scores, value='mean')
+            tally_data = tally.get_values(scores=scores, nuclides=nuclides, value='mean')
 
             for bin_idx, bin in enumerate(bins):
                 image_data[self.model.cell_ids == bin] = tally_data[bin_idx][0][0]
@@ -554,7 +559,7 @@ class PlotImage(FigureCanvas):
 
             bins = filter.bins
 
-            tally_data = tally.get_values(scores=scores, value='mean')
+            tally_data = tally.get_values(scores=scores, nuclides=nuclides, value='mean')
 
             for bin_idx, bin in enumerate(bins):
                 image_data[self.model.mat_ids == bin] = tally_data[bin_idx][0][0]
@@ -567,13 +572,13 @@ class PlotImage(FigureCanvas):
             universes = self.model.statepoint.universes
 
             # set data min/max for the filter as a whole
-            tally_data = tally.get_values(scores=scores, filters=[openmc.UniverseFilter,], filter_bins=[tuple(filter.bins),], value='mean')
+            tally_data = tally.get_values(scores=scores, nuclides=nuclides, filters=[openmc.UniverseFilter,], filter_bins=[tuple(filter.bins),], value='mean')
             data_min = np.min(tally_data)
             data_max = np.max(tally_data)
 
             # set image data cell for each universe in the filter
             for fbin in filter.bins:
-                tally_val = tally.get_values(scores=scores, filters=[openmc.UniverseFilter,], filter_bins=[(fbin,),])
+                tally_val = tally.get_values(scores=scores, nuclides=nuclides, filters=[openmc.UniverseFilter,], filter_bins=[(fbin,),])
                 tally_val.shape = (1,)
                 tally_val = tally_val[0]
 
@@ -655,6 +660,7 @@ class TallyDock(PlotterDock):
         self.tally_map = {}
         self.filter_map = {}
         self.score_map = {}
+        self.nuclide_map = {}
 
         self.createTallySelectionLayout()
 
@@ -733,25 +739,61 @@ class TallyDock(PlotterDock):
             self.formLayout.addRow(self.filter_description)
 
             self.formLayout.addRow(HorizontalLine())
-            # get the tally filters
+
+            # list for tally scores
             self.formLayout.addRow(QLabel("Scores:"))
+
+            self.scoresListWidget = QListWidget()
+            self.scoresListWidget.setSortingEnabled(True)
+            self.scoresListWidget.itemClicked.connect(self.mw.updateScores)
             self.score_map.clear()
             for score in tally.scores:
-                ql = QCheckBox()
+                ql = QListWidgetItem()
                 ql.setText(score.capitalize())
-                ql.toggled.connect(self.mw.updateScores)
-                ql.setEnabled(spatial_filters) # disable if no spatial filters present
+                ql.setCheckState(QtCore.Qt.Unchecked)
+                if not spatial_filters:
+                    ql.setFlags(QtCore.Qt.ItemIsUserCheckable)
+                else:
+                    ql.setFlags(ql.flags() | QtCore.Qt.ItemIsUserCheckable)
+                    ql.setFlags(ql.flags() & ~QtCore.Qt.ItemIsSelectable)
                 self.score_map[score] = ql
+                self.scoresListWidget.addItem(ql)
+            self.formLayout.addRow(self.scoresListWidget)
 
-            for score in sorted(self.score_map.keys()):
-                self.formLayout.addRow(self.score_map[score])
+            self.formLayout.addRow(HorizontalLine())
+            self.formLayout.addRow(QLabel("Nuclides:"))
+
+            # list for nuclides
+            self.nuclideListWidget = QListWidget()
+            self.nuclideListWidget.setSortingEnabled(True)
+            self.nuclideListWidget.itemClicked.connect(self.mw.updateNuclides)
+            self.nuclide_map.clear()
+            for nuclide in tally.nuclides:
+                ql = QListWidgetItem()
+                ql.setText(nuclide.capitalize())
+                ql.setCheckState(QtCore.Qt.Unchecked)
+                if not spatial_filters:
+                    ql.setFlags(QtCore.Qt.ItemIsUserCheckable)
+                else:
+                    ql.setFlags(ql.flags() | QtCore.Qt.ItemIsUserCheckable)
+                    ql.setFlags(ql.flags() & ~QtCore.Qt.ItemIsSelectable)
+                self.nuclide_map[nuclide] = ql
+                self.nuclideListWidget.addItem(ql)
+            self.formLayout.addRow(self.nuclideListWidget)
 
     def updateScores(self):
         applied_scores = []
         for score, score_box in self.score_map.items():
-            if score_box.isChecked():
+            if score_box.checkState() == QtCore.Qt.CheckState.Checked:
                 applied_scores.append(score)
         self.model.appliedScores = tuple(applied_scores)
+
+    def updateNuclides(self):
+        applied_nuclides = []
+        for nuclide, nuclide_box in self.nuclide_map.items():
+            if nuclide_box.checkState() == QtCore.Qt.CheckState.Checked:
+                applied_nuclides.append(nuclide)
+        self.model.appliedNuclides = tuple(applied_nuclides)
 
     @staticmethod
     def cellFilterForm(filter):
