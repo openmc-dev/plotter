@@ -490,6 +490,7 @@ class MainWindow(QMainWindow):
                 self.model.openStatePoint(filename)
                 message = 'Opened statepoint file: {}'
             except:
+
                 message = 'Error opening statepoint file: {}'
             finally:
                 self.statusBar().showMessage(message.format(filename), 5000)
@@ -500,11 +501,12 @@ class MainWindow(QMainWindow):
         # remove the statepoint object and update the data menu
         filename = self.model.statepoint.filename
         self.model.statepoint = None
-        self.model.selected_tally = None
+        self.model.selectedTally = None
 
         msg = "Closed statepoint file {}".format(filename)
         self.statusBar().showMessage(msg)
         self.updateDataMenu()
+        self.tallyDock.selectTally()
         self.tallyDock.update()
 
     def updateDataMenu(self):

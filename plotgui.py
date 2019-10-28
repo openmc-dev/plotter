@@ -689,6 +689,9 @@ class TallyDock(PlotterDock):
 
         self.tallyColorForm = ColorForm(self.model, self.mw, 'tally')
 
+        self.scoresListWidget = QListWidget()
+        self.nuclideListWidget = QListWidget()
+
         self.dockLayout.addWidget(HorizontalLine())
         self.dockLayout.addWidget(self.tallyColorForm)
         self.dockLayout.addWidget(HorizontalLine())
@@ -714,23 +717,21 @@ class TallyDock(PlotterDock):
     def updateMinMax(self):
         self.tallyColorForm.updateMinMax()
 
-    def selectTally(self, tally_label):
-        if not self.model.statepoint:
-            return
+    def selectTally(self, tally_label=None):
+        # reset form layout
+        for i in reversed(range(self.formLayout.count())):
+            self.formLayout.itemAt(i).widget().setParent(None)
+        # always re-add the tally selector
+        self.formLayout.addRow(self.tallySelector)
+        self.formLayout.addRow(HorizontalLine())
 
-        if tally_label == "None":
+        if tally_label is None or tally_label == "None" or tally_label == "":
             self.model.selectedTally = None
         else:
             tally_id = int(tally_label.split()[1])
             tally = self.model.statepoint.tallies[tally_id]
             self.model.selectedTally = tally_id
-            # reset form layout
-            for i in reversed(range(self.formLayout.count())):
-                self.formLayout.itemAt(i).widget().setParent(None)
 
-            # always re-add the tally selector
-            self.formLayout.addRow(self.tallySelector)
-            self.formLayout.addRow(HorizontalLine())
 
             self.formLayout.addRow(QLabel("Filters:"))
             description = ''
@@ -752,10 +753,11 @@ class TallyDock(PlotterDock):
             # list for tally scores
             self.formLayout.addRow(QLabel("Scores:"))
 
-            self.scoresListWidget = QListWidget()
+
             self.scoresListWidget.setSortingEnabled(True)
             self.scoresListWidget.itemClicked.connect(self.mw.updateScores)
             self.score_map.clear()
+            self.scoresListWidget.clear()
             for score in tally.scores:
                 ql = QListWidgetItem()
                 ql.setText(score.capitalize())
@@ -773,10 +775,10 @@ class TallyDock(PlotterDock):
             self.formLayout.addRow(QLabel("Nuclides:"))
 
             # list for nuclides
-            self.nuclideListWidget = QListWidget()
             self.nuclideListWidget.setSortingEnabled(True)
             self.nuclideListWidget.itemClicked.connect(self.mw.updateNuclides)
             self.nuclide_map.clear()
+            self.nuclideListWidget.clear()
             for nuclide in tally.nuclides:
                 ql = QListWidgetItem()
                 ql.setText(nuclide.capitalize())
