@@ -32,6 +32,7 @@ def _openmcReload():
     openmc.lib.reset()
     openmc.lib.finalize()
     # initialize geometry (for volume calculation)
+    openmc.lib.settings.output_summary = False
     openmc.lib.init(["-c"])
 
 
