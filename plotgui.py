@@ -462,7 +462,7 @@ class PlotImage(FigureCanvas):
                                                        alpha=cv.plotAlpha)
 
             # add colorbar
-            self.colorbar = self.fOigure.colorbar(self.image,
+            self.colorbar = self.figure.colorbar(self.image,
                                                  anchor=(1.0, 0.0))
             self.colorbar.set_label(cmap_label,
                                     rotation=-90,
@@ -490,8 +490,15 @@ class PlotImage(FigureCanvas):
 
 
         # draw tally
-        if self.model.selectedTally is not None and cv.tallyDataVisible \
-            and self.model.appliedScores and self.model.appliedNuclides:
+        tally_selected =  self.model.selectedTally is not None
+        tally_visible = self.model.currentView.tallyDataVisible
+        nuclides_and_scores_selected = bool(self.model.appliedNuclides)
+        nuclides_and_scores_selected &= bool(self.model.appliedScores)
+
+        if tally_selected and tally_visible and not nuclides_and_scores_selected:
+            return "No tallies or scores selected!"
+
+        if tally_selected and tally_visible and nuclides_and_scores_selected:
             image_data, data_min, data_max = self.create_tally_image(self.model.selectedTally,
                                                                      self.model.appliedScores,
                                                                      self.model.appliedNuclides)
@@ -524,6 +531,8 @@ class PlotImage(FigureCanvas):
                                           ha='right')
 
         self.draw()
+
+        return "Done"
 
     def create_tally_image(self, tally_id, scores=[], nuclides=[]):
         supported_spatial_filters = (openmc.filter.CellFilter,

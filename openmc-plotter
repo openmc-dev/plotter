@@ -964,7 +964,7 @@ class MainWindow(QMainWindow):
     def showCurrentView(self):
         self.updateScale()
         self.updateRelativeBases()
-        self.plotIm.updatePixmap()
+        msg = self.plotIm.updatePixmap()
 
         if self.model.previousViews:
             self.undoAction.setDisabled(False)
@@ -973,7 +973,7 @@ class MainWindow(QMainWindow):
         else:
             self.redoAction.setDisabled(True)
 
-        self.statusBar().showMessage('Done', 1000)
+        self.statusBar().showMessage(msg, 1000)
         self.adjustWindow()
 
     def updateScale(self):
