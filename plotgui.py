@@ -544,6 +544,8 @@ class PlotImage(FigureCanvas):
 
         tally = self.model.statepoint.tallies[tally_id]
         tally_value = cv.tallyValue
+        # convert tally value to OpenMC format
+        tally_value = tally_value.lower().replace(".","").replace(" ", "_")
 
         # find a spatial filter
         for filter in tally.filters:
@@ -757,8 +759,9 @@ class TallyDock(PlotterDock):
             self.formLayout.addRow(HorizontalLine())
 
             # value selection
+            self.formLayout.addRow(QLabel("Value:"))
             self.valueBox = QComboBox(self)
-            self.values = ('mean', 'std_dev', 'sum', 'sum_sq')
+            self.values = ('Mean', 'Std. Dev.', 'Sum', 'Sum Sq.')
             for value in self.values:
                 self.valueBox.addItem(value)
             self.formLayout.addRow(self.valueBox)
