@@ -321,6 +321,8 @@ class PlotView(openmc.lib.plot._PlotBase):
         Minimum scale value for tally data
     tallyDataLogScale : bool
         Indicator of logarithmic scale for tally data
+    tallyValue : str
+        Indicator for what type of value is displayed in plots.
     """
 
     def __init__(self, origin, width, height):
@@ -361,6 +363,7 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.tallyDataMin = -np.inf
         self.tallyDataMax = np.inf
         self.tallyDataLogScale = False
+        self.tallyValue = None
 
         # set defaults for color dialog
         self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}

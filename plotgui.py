@@ -540,23 +540,28 @@ class PlotImage(FigureCanvas):
                                      openmc.filter.MaterialFilter,
                                      openmc.filter.MeshFilter)
 
+        cv = self.model.currentView
+
         tally = self.model.statepoint.tallies[tally_id]
+        tally_value = cv.tallyValue
 
         # find a spatial filter
         for filter in tally.filters:
-            if filter in supported_spatial_filters:
+            if type(filter) in supported_spatial_filters:
                 break
 
         filter_type = type(filter)
+
         if filter_type not in supported_spatial_filters:
             raise NotImplementedError("'{}' is not supported yet.".format(type(filter)))
 
         image_data = np.full(self.model.ids.shape, -1.0)
 
+
         if filter_type == openmc.filter.CellFilter:
             bins = filter.bins
 
-            tally_data = tally.get_values(scores=scores, nuclides=nuclides, value='mean')
+            tally_data = tally.get_values(scores=scores, nuclides=nuclides, value=tally_value)
 
             for bin_idx, bin in enumerate(bins):
                 image_data[self.model.cell_ids == bin] = tally_data[bin_idx][0][0]
@@ -568,7 +573,7 @@ class PlotImage(FigureCanvas):
 
             bins = filter.bins
 
-            tally_data = tally.get_values(scores=scores, nuclides=nuclides, value='mean')
+            tally_data = tally.get_values(scores=scores, nuclides=nuclides, value=tally_value)
 
             for bin_idx, bin in enumerate(bins):
                 image_data[self.model.mat_ids == bin] = tally_data[bin_idx][0][0]
@@ -581,7 +586,7 @@ class PlotImage(FigureCanvas):
             universes = self.model.statepoint.universes
 
             # set data min/max for the filter as a whole
-            tally_data = tally.get_values(scores=scores, nuclides=nuclides, filters=[openmc.UniverseFilter,], filter_bins=[tuple(filter.bins),], value='mean')
+            tally_data = tally.get_values(scores=scores, nuclides=nuclides, filters=[openmc.UniverseFilter,], filter_bins=[tuple(filter.bins),], value=tally_value)
             data_min = np.min(tally_data)
             data_max = np.max(tally_data)
 
@@ -718,6 +723,7 @@ class TallyDock(PlotterDock):
         self.tallyColorForm.updateMinMax()
 
     def selectTally(self, tally_label=None):
+        av = self.model.activeView
         # reset form layout
         for i in reversed(range(self.formLayout.count())):
             self.formLayout.itemAt(i).widget().setParent(None)
@@ -727,11 +733,11 @@ class TallyDock(PlotterDock):
 
         if tally_label is None or tally_label == "None" or tally_label == "":
             self.model.selectedTally = None
+            av.tallyValue = None
         else:
             tally_id = int(tally_label.split()[1])
             tally = self.model.statepoint.tallies[tally_id]
             self.model.selectedTally = tally_id
-
 
             self.formLayout.addRow(QLabel("Filters:"))
             description = ''
@@ -750,10 +756,21 @@ class TallyDock(PlotterDock):
 
             self.formLayout.addRow(HorizontalLine())
 
+            # value selection
+            self.valueBox = QComboBox(self)
+            self.values = ('mean', 'std_dev', 'sum', 'sum_sq')
+            for value in self.values:
+                self.valueBox.addItem(value)
+            self.formLayout.addRow(self.valueBox)
+            self.valueBox.currentTextChanged[str].connect(self.mw.editTallyValue)
+            # set to mean by default
+            if self.model.activeView.tallyValue is None:
+                av.tallyValue = self.values[0]
+
+            self.formLayout.addRow(HorizontalLine())
+
             # list for tally scores
             self.formLayout.addRow(QLabel("Scores:"))
-
-
             self.scoresListWidget.setSortingEnabled(True)
             self.scoresListWidget.itemClicked.connect(self.mw.updateScores)
             self.score_map.clear()
@@ -1174,6 +1191,7 @@ class ColorForm(QWidget):
         self.scaleBox = QCheckBox()
         scale_connector = partial(self.mw.toggleTallyLogScale)
         self.scaleBox.stateChanged.connect(scale_connector)
+
 
         # add widgets to form
         self.layout.addRow("Visible:", self.visibilityBox)

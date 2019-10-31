@@ -801,6 +801,11 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'tallyDock'):
             self.tallyDock.selectTally(event)
 
+    def editTallyValue(self, event):
+        av = self.model.activeView
+        if hasattr(self, 'tallyDock'):
+            av.tallyValue = event
+
     def updateScores(self, state):
         self.tallyDock.updateScores()
 
