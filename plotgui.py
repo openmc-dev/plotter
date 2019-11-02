@@ -783,16 +783,19 @@ class TallyDock(PlotterDock):
         self.filterTree.setColumnCount(1)
 
         for filter in filters:
-            if isinstance(filter, MeshFilter):
-                continue
 
             filter_label = str(type(filter)).split(".")[-1][:-2]
             filter_item = QTreeWidgetItem(self.filterTree, [filter_label,])
+
+            if isinstance(filter, MeshFilter):
+                continue
+            # make checkable
             if not spatial_filters:
                 filter_item.setFlags(QtCore.Qt.ItemIsUserCheckable)
             else:
                 filter_item.setFlags(filter_item.flags() | QtCore.Qt.ItemIsTristate | QtCore.Qt.ItemIsUserCheckable)
             filter_item.setCheckState(0, QtCore.Qt.Unchecked)
+
 
             for bin in filter.bins:
                 item = QTreeWidgetItem(filter_item, [str(bin),])
