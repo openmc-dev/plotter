@@ -13,7 +13,7 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QFileDialog, QDialog, QTabWidget, QGridLayout,
                                QToolButton, QColorDialog, QFrame, QDockWidget,
                                QTableView, QItemDelegate, QHeaderView, QSlider,
-                               QTextEdit, QListWidget, QListWidgetItem)
+                               QTextEdit, QListWidget, QListWidgetItem, QTreeWidget, QTreeWidgetItem)
 import matplotlib.pyplot as plt
 from matplotlib.backends.qt_compat import is_pyqt5
 from matplotlib.figure import Figure
@@ -162,6 +162,8 @@ class PlotImage(FigureCanvas):
             return -1, None
 
         tally_id = self.model.selectedTally
+
+        return -1, None
 
         # check that the position is in the axes view
         if 0 <= yPos < self.model.currentView.v_res \
@@ -583,7 +585,6 @@ class PlotImage(FigureCanvas):
             mesh = tally.find_filter(openmc.MeshFilter).mesh
             nx, ny, nz = mesh.dimension
 
-
             if cv.basis == 'xy':
                 h_ind = 0
                 v_ind = 1
@@ -770,6 +771,37 @@ class TallyDock(PlotterDock):
     def updateMinMax(self):
         self.tallyColorForm.updateMinMax()
 
+    def create_filter_tree(self, spatial_filters):
+        tally = self.model.statepoint.tallies[self.model.selectedTally]
+        filters = tally.filters
+
+        # create a tree for the filters
+        self.filterTree = QTreeWidget()
+        header = QTreeWidgetItem(["Filters"])
+        self.filterTree.setHeaderItem(header)
+        self.filterTree.setItemHidden(header, True)
+        self.filterTree.setColumnCount(1)
+
+        for filter in filters:
+            if isinstance(filter, MeshFilter):
+                continue
+
+            filter_label = str(type(filter)).split(".")[-1][:-2]
+            filter_item = QTreeWidgetItem(self.filterTree, [filter_label,])
+            if not spatial_filters:
+                filter_item.setFlags(QtCore.Qt.ItemIsUserCheckable)
+            else:
+                filter_item.setFlags(filter_item.flags() | QtCore.Qt.ItemIsTristate | QtCore.Qt.ItemIsUserCheckable)
+            filter_item.setCheckState(0, QtCore.Qt.Unchecked)
+
+            for bin in filter.bins:
+                item = QTreeWidgetItem(filter_item, [str(bin),])
+                if not spatial_filters:
+                    item.setFlags(QtCore.Qt.ItemIsUserCheckable)
+                else:
+                    item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
+                item.setCheckState(0, QtCore.Qt.Unchecked)
+
     def selectTally(self, tally_label=None):
         av = self.model.activeView
         # reset form layout
@@ -787,20 +819,21 @@ class TallyDock(PlotterDock):
             tally = self.model.statepoint.tallies[tally_id]
             self.model.selectedTally = tally_id
 
-            self.formLayout.addRow(QLabel("Filters:"))
-            description = ''
             filter_types = set()
             for filter in tally.filters:
-                description += str(filter)
                 filter_types.add(type(filter))
-
             spatial_filters = bool(len(filter_types.intersection(_SPATIAL_FILTERS)))
-            if not spatial_filters:
-                description += "(No Spatial Filters)"
 
-            self.filter_description = QLabel()
-            self.filter_description.setText(description)
-            self.formLayout.addRow(self.filter_description)
+            self.formLayout.addRow(QLabel("Filters:"))
+
+            if not spatial_filters:
+                self.filter_description = QLabel("(No Spatial Filters)")
+                self.formLayout.addRow(self.filter_description)
+
+            self.create_filter_tree(spatial_filters)
+
+            self.formLayout.addRow(self.filterTree)
+
 
             self.formLayout.addRow(HorizontalLine())
 
