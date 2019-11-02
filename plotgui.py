@@ -160,11 +160,15 @@ class PlotImage(FigureCanvas):
 
         tally_id = self.model.selectedTally
 
-        return -1, None
+        # don't look up mesh filter data (for now)
+        tally = self.model.statepoint.tallies[tally_id]
+        filters = tally.filters
+        if any(isinstance(filter, openmc.MeshFilter) for filter in filters):
+            return -1, None
 
         # check that the position is in the axes view
-        if 0 <= yPos < self.model.currentView.v_res \
-           and 0 <= xPos and xPos < self.model.currentView.h_res:
+        if 0 <= yPos < self.model.currentView.v_res and \
+           0 <= xPos < self.model.currentView.h_res:
             value = self.model.tally_data[yPos][xPos]
         else:
             value = None
