@@ -363,7 +363,7 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.tallyDataVisible = True
         self.tallyDataAlpha = 1.0
         self.tallyDataUserMinMax = False
-        self.tallyDataMin = -np.inf
+        self.tallyDataMin = 0.0
         self.tallyDataMax = np.inf
         self.tallyDataLogScale = False
         self.tallyValue = None

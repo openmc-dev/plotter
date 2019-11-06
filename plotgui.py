@@ -209,11 +209,8 @@ class PlotImage(FigureCanvas):
         return id, properties, domain, domain_kind
 
     def mouseDoubleClickEvent(self, event):
-
         xCenter, yCenter = self.getPlotCoords(event.pos())
         self.mw.editPlotOrigin(xCenter, yCenter, apply=True)
-
-#        FigureCanvas.mouseDoubleClickEvent(self, event)
 
     def mouseMoveEvent(self, event):
 
