@@ -309,6 +309,8 @@ class PlotView(openmc.lib.plot._PlotBase):
         Dictionary of material view settings by ID
     plotAlpha: float between 0 and 1
         Alpha value of the geometry plot
+    plotVisibility : bool
+        Controls visibility of geometry
     tallyDataColormap : str
         Name of the colormap used for tally data
     tallyDataVisible : bool
@@ -352,6 +354,7 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.overlap_color = (255, 0, 0)
 
         self.plotAlpha = 1.0
+        self.plotVisibility = True
 
         self.colormaps = {'temperature': 'Oranges', 'density': 'Greys'}
 

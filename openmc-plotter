@@ -713,6 +713,9 @@ class MainWindow(QMainWindow):
         self.model.activeView.plotAlpha = value
         self.dock.updatePlotAlpha()
 
+    def editPlotVisibility(self, value):
+        self.model.activeView.plotVisibility = bool(value)
+
     def editWidth(self, value):
         self.model.activeView.width = value
         self.onRatioChange()

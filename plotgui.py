@@ -443,10 +443,14 @@ class PlotImage(FigureCanvas):
         if not hasattr(self.model, 'image'):
             self.model.generatePlot()
 
+        alpha = cv.plotAlpha
+        if not cv.plotVisibility:
+            alpha = 0.0
+
         if cv.colorby in ('material', 'cell'):
             self.image = self.figure.subplots().imshow(self.model.image,
                                                        extent=data_bounds,
-                                                       alpha=cv.plotAlpha)
+                                                       alpha=alpha)
         else:
             cmap = cv.colormaps[cv.colorby]
             if cv.colorby == 'temperature':
@@ -562,21 +566,42 @@ class PlotImage(FigureCanvas):
 
         image_data = np.full(self.model.ids.shape, -1.0)
 
+        filter_bins = []
+        for filter in tally.filters:
+            filter_check_state = self.mw.tallyDock.filter_map[filter].checkState(0)
+            if filter_check_state != QtCore.Qt.Unchecked:
+                selected_bins = []
+                for bin in filter.bins:
+                    bin_check_state = self.mw.tallyDock.bin_map[(filter,bin)].checkState(0)
+                    if bin_check_state == QtCore.Qt.Checked:
+                        selected_bins.append(bin)
+                filter_bins.append(tuple(selected_bins))
+            else:
+                filter_bins.append(tuple())
+
+        filter_types = tuple(type(filter) for filter in tally.filters)
 
         if filter_type == openmc.filter.CellFilter:
-            bins = filter.bins
+            tally_data = tally.get_values(scores=scores,
+                                          nuclides=nuclides,
+                                          value=tally_value,
+                                          filters=filter_types,
+                                          filter_bins=filter_bins)
 
-            tally_data = tally.get_values(scores=scores, nuclides=nuclides, value=tally_value)
+            bins = filter_bins[tally.filters.index(filter)]
 
             for bin_idx, bin in enumerate(bins):
                 image_data[self.model.cell_ids == bin] = tally_data[bin_idx][0][0]
 
         elif filter_type == openmc.filter.MaterialFilter:
 
-            bins = filter.bins
+            tally_data = tally.get_values(scores=scores,
+                                          nuclides=nuclides,
+                                          value=tally_value,
+                                          filters=filter_types,
+                                          filter_bins=filter_bins)
 
-            tally_data = tally.get_values(scores=scores, nuclides=nuclides, value=tally_value)
-
+            bins = filter_bins[tally.filters.index(filter)]
             for bin_idx, bin in enumerate(bins):
                 image_data[self.model.mat_ids == bin] = tally_data[bin_idx][0][0]
 

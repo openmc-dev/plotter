@@ -151,6 +151,10 @@ class OptionsDock(PlotterDock):
         self.plotAlphaBox.setRange(0.0, 1.0)
         self.plotAlphaBox.valueChanged.connect(self.mw.editPlotAlpha)
 
+        # Visibility
+        self.visibilityBox = QCheckBox(self)
+        self.visibilityBox.stateChanged.connect(self.mw.editPlotVisibility)
+
         # Basis
         self.basisBox = QComboBox(self)
         self.basisBox.addItem("xy")
@@ -170,6 +174,7 @@ class OptionsDock(PlotterDock):
         self.opLayout.addRow('Basis:', self.basisBox)
         self.opLayout.addRow('Color By:', self.colorbyBox)
         self.opLayout.addRow('Plot alpha:', self.plotAlphaBox)
+        self.opLayout.addRow('Visible:', self.visibilityBox)
         self.opLayout.addRow(self.colorOptionsButton)
         self.opLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
         self.opLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
@@ -217,6 +222,7 @@ class OptionsDock(PlotterDock):
         self.updateHeight()
         self.updateColorBy()
         self.updatePlotAlpha()
+        self.updatePlotVisibility()
         self.updateBasis()
         self.updateAspectLock()
         self.updateHRes()
@@ -238,6 +244,9 @@ class OptionsDock(PlotterDock):
 
     def updatePlotAlpha(self):
         self.plotAlphaBox.setValue(self.model.activeView.plotAlpha)
+
+    def updatePlotVisibility(self):
+        self.visibilityBox.setChecked(self.model.activeView.plotVisibility)
 
     def updateBasis(self):
         self.basisBox.setCurrentText(self.model.activeView.basis)
@@ -348,10 +357,13 @@ class TallyDock(PlotterDock):
         self.filterTree.setItemHidden(header, True)
         self.filterTree.setColumnCount(1)
 
-        for filter in filters:
+        self.filter_map = {}
+        self.bin_map = {}
 
+        for filter in filters:
             filter_label = str(type(filter)).split(".")[-1][:-2]
             filter_item = QTreeWidgetItem(self.filterTree, [filter_label,])
+            self.filter_map[filter] = filter_item
 
             if isinstance(filter, MeshFilter):
                 continue
@@ -362,7 +374,6 @@ class TallyDock(PlotterDock):
                 filter_item.setFlags(filter_item.flags() | QtCore.Qt.ItemIsTristate | QtCore.Qt.ItemIsUserCheckable)
             filter_item.setCheckState(0, QtCore.Qt.Unchecked)
 
-
             for bin in filter.bins:
                 item = QTreeWidgetItem(filter_item, [str(bin),])
                 if not spatial_filters:
@@ -370,6 +381,7 @@ class TallyDock(PlotterDock):
                 else:
                     item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
                 item.setCheckState(0, QtCore.Qt.Unchecked)
+                self.bin_map[(filter, bin)] = item
 
     def selectTally(self, tally_label=None):
         av = self.model.activeView
