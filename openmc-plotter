@@ -711,7 +711,6 @@ class MainWindow(QMainWindow):
 
     def editPlotAlpha(self, value):
         self.model.activeView.plotAlpha = value
-        self.dock.updatePlotAlpha()
 
     def editPlotVisibility(self, value):
         self.model.activeView.plotVisibility = bool(value)
