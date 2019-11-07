@@ -33,12 +33,12 @@ reactions = ('absorption', 'elastic', 'fission',
              '(n,nt)', '(n,nHe-3)', '(n,nd2a)',
              '(n,nt2a)', '(n,n4n)', '(n,2np)',
              '(n,3np)', '(n,n2p)', '(n,n*X*)',
-             '(n,nc)', '(n,gamma)', '(n,p)',
-             '(n,d)', '(n,t)', '(n,3He)',
-             '(n,a)', '(n,2a)', '(n,3a)',
-             '(n,2p)', '(n,pa)', '(n,t2a)',
-             '(n,d2a)', '(n,pd)', '(n,pt)',
-             '(n,da)')
+             '(n,nc)', '(n,gamma)', '(n,elastic)',
+             '(n,p)', '(n,d)', '(n,t)',
+             '(n,3He)', '(n,a)', '(n,2a)',
+             '(n,3a)', '(n,2p)', '(n,pa)',
+             '(n,t2a)', '(n,d2a)', '(n,pd)',
+             '(n,pt)', '(n,da)')
 productions = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
                'nu-scatter', 'H1-production', 'H2-production',
                'H3-production', 'He3-production', 'He4-production')

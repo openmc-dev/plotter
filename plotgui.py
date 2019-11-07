@@ -558,7 +558,6 @@ class PlotImage(FigureCanvas):
             try:
                 unit = score_units[score.lower()]
             except KeyError:
-                print("Error")
                 msg_box = QMessageBox()
                 msg_box.setText("Could not find unit for score '{}'".format(score))
                 msg_box.setIcon(QMessageBox.Information)
@@ -569,7 +568,6 @@ class PlotImage(FigureCanvas):
             units.add(unit)
 
         if len(units) != 1:
-            print("Error")
             msg_box = QMessageBox()
             unit_str = " ".join(units)
             msg = "The scores selected have incompatible units:\n"
