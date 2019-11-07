@@ -8,7 +8,7 @@ from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QApplication, QGroupBox, QFormLayout, QLabel,
                                QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox,
-                               QSizePolicy, QSpacerItem, QMainWindow, QCheckBox,
+                               QSizePolicy, QSpacerItem, QMessageBox, QMainWindow, QCheckBox,
                                QRubberBand, QMenu, QAction, QMenuBar,
                                QFileDialog, QDialog, QTabWidget, QGridLayout,
                                QToolButton, QColorDialog, QFrame, QDockWidget,
@@ -32,7 +32,7 @@ else:
     from matplotlib.backends.backend_qt5agg import (
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
-from docks import TallyDock, OptionsDock
+from docks import TallyDock, OptionsDock, score_units
 from common_widgets import HorizontalLine
 
 
@@ -503,13 +503,18 @@ class PlotImage(FigureCanvas):
             return "No tallies or scores selected!"
 
         if tally_selected and tally_visible and nuclides_and_scores_selected:
-            image_data, data_min, data_max = self.create_tally_image(self.model.selectedTally,
-                                                                     self.model.appliedScores,
-                                                                     self.model.appliedNuclides)
+            image_data, data_min, data_max, units = self.create_tally_image(self.model.selectedTally,
+                                                                            self.model.appliedScores,
+                                                                            self.model.appliedNuclides)
+
+            if image_data is None:
+                self.draw()
+                return "Done"
 
             self.model.tally_data = image_data
 
             norm = SymLogNorm(1E-2) if cv.tallyDataLogScale else None
+
             self.tally_image = self.ax.imshow(image_data,
                                               alpha = cv.tallyDataAlpha,
                                               cmap = cv.tallyDataColormap,
@@ -518,6 +523,7 @@ class PlotImage(FigureCanvas):
             # add colorbar
             self.tally_colorbar = self.figure.colorbar(self.tally_image,
                                                        anchor=(1.0, 0.0))
+
 
             if not cv.tallyDataUserMinMax:
                 cv.tallyDataMin = data_min
@@ -529,7 +535,7 @@ class PlotImage(FigureCanvas):
             self.mw.updateTallyMinMax()
 
             self.tally_colorbar.mappable.set_clim(data_min, data_max)
-            self.tally_colorbar.set_label('Units',
+            self.tally_colorbar.set_label(units,
                                           rotation=-90,
                                           va='bottom',
                                           ha='right')
@@ -545,6 +551,38 @@ class PlotImage(FigureCanvas):
                                      openmc.filter.MeshFilter)
 
         cv = self.model.currentView
+
+        # check score units
+        units = set()
+        for score in scores:
+            try:
+                unit = score_units[score.lower()]
+            except KeyError:
+                print("Error")
+                msg_box = QMessageBox()
+                msg_box.setText("Could not find unit for score '{}'".format(score))
+                msg_box.setIcon(QMessageBox.Information)
+                msg_box.setStandardButtons(QMessageBox.Ok)
+                msg_box.exec_()
+                return (None, None, None, None)
+
+            units.add(unit)
+
+        if len(units) != 1:
+            print("Error")
+            msg_box = QMessageBox()
+            unit_str = " ".join(units)
+            msg = "The scores selected have incompatible units:\n"
+            for unit in units:
+                msg += "  - {}\n".format(unit)
+            msg_box.setText(msg)
+            msg_box.setIcon(QMessageBox.Information)
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.exec_()
+            return (None, None, None, None)
+
+        units_out = list(units)[0]
+
 
         tally = self.model.statepoint.tallies[tally_id]
         tally_value = cv.tallyValue
@@ -678,7 +716,7 @@ class PlotImage(FigureCanvas):
         data_min = np.min(image_data)
         data_max = np.max(image_data)
 
-        return image_data, data_min, data_max
+        return image_data, data_min, data_max, units_out
 
     def updateColorbarScale(self):
         self.updatePixmap()

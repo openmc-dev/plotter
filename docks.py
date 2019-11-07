@@ -19,6 +19,45 @@ from common_widgets import HorizontalLine
 _SPATIAL_FILTERS = (UniverseFilter, MaterialFilter, CellFilter,
                     SurfaceFilter, MeshFilter, MeshSurfaceFilter)
 
+
+reaction_units = 'Reactions per Source Particle'
+flux_units = 'Particle-cm per Source Particle'
+production_units = 'Particles Produced per Source Particle'
+deposition_units = 'eV per Source Particle'
+
+reactions = ('absorption', 'elastic', 'fission',
+             'scatter', 'total', '(n,2nd)',
+             '(n,2n)', '(n,3n)', '(n,na)',
+             '(n,n3a)', '(n,2na)', '(n,np)',
+             '(n,n2a)', '(n,2n2a)', '(n,nd)',
+             '(n,nt)', '(n,nHe-3)', '(n,nd2a)',
+             '(n,nt2a)', '(n,n4n)', '(n,2np)',
+             '(n,3np)', '(n,n2p)', '(n,n*X*)',
+             '(n,nc)', '(n,gamma)', '(n,p)',
+             '(n,d)', '(n,t)', '(n,3He)',
+             '(n,a)', '(n,2a)', '(n,3a)',
+             '(n,2p)', '(n,pa)', '(n,t2a)',
+             '(n,d2a)', '(n,pd)', '(n,pt)',
+             '(n,da)')
+productions = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
+               'nu-scatter', 'H1-production', 'H2-production',
+               'H3-production', 'He3-production', 'He4-production')
+
+score_units = {}
+score_units.update({ reaction : reaction_units for reaction in reactions })
+score_units.update({ production : production_units for production in productions })
+score_units['flux'] = 'Particle-cm/Particle'
+score_units['current'] = 'Particles per source Particle'
+score_units['events'] = 'Events per Source Particle'
+score_units['inverse-velocity'] = 'Particle-seconds per Source Particle'
+score_units['heating'] = deposition_units
+score_units['heating-local'] = deposition_units
+score_units['kappa-fission'] = deposition_units
+score_units['fission-q-prompt'] = deposition_units
+score_units['fission-q-recoverable'] = deposition_units
+score_units['decay-rate'] = 'Seconds^-1'
+score_units['damage-energy'] = deposition_units
+
 class PlotterDock(QDockWidget):
 
     def __init__(self, model, FM, parent=None):
