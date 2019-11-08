@@ -21,6 +21,8 @@ from matplotlib import image as mpimage
 from matplotlib import lines as mlines
 from matplotlib import cm as mcolormaps
 from matplotlib.colors import SymLogNorm, NoNorm
+from matplotlib.transforms import Bbox
+
 import openmc
 
 import numpy as np
@@ -503,13 +505,16 @@ class PlotImage(FigureCanvas):
             return "No tallies or scores selected!"
 
         if tally_selected and tally_visible and nuclides_and_scores_selected:
-            image_data, data_min, data_max, units = self.create_tally_image(self.model.selectedTally,
+            image_data, data_min, data_max, units, extents = self.create_tally_image(self.model.selectedTally,
                                                                             self.model.appliedScores,
                                                                             self.model.appliedNuclides)
 
             if image_data is None:
                 self.draw()
                 return "Done"
+
+            if extents is None:
+                extents = data_bounds
 
             self.model.tally_data = image_data
 
@@ -519,7 +524,7 @@ class PlotImage(FigureCanvas):
                                               alpha = cv.tallyDataAlpha,
                                               cmap = cv.tallyDataColormap,
                                               norm = norm,
-                                              extent=data_bounds)
+                                              extent=extents)
             # add colorbar
             self.tally_colorbar = self.figure.colorbar(self.tally_image,
                                                        anchor=(1.0, 0.0))
@@ -540,8 +545,16 @@ class PlotImage(FigureCanvas):
                                           va='bottom',
                                           ha='right')
 
-        self.draw()
 
+        # always make sure the data bounds are set correctly
+        self.ax.set_xbound(data_bounds[0], data_bounds[1])
+        self.ax.set_ybound(data_bounds[2], data_bounds[3])
+        self.ax.dataLim.x0 = data_bounds[0]
+        self.ax.dataLim.x1 = data_bounds[1]
+        self.ax.dataLim.y0 = data_bounds[2]
+        self.ax.dataLim.y1 = data_bounds[3]
+
+        self.draw()
         return "Done"
 
     def create_tally_image(self, tally_id, scores=[], nuclides=[]):
@@ -563,7 +576,7 @@ class PlotImage(FigureCanvas):
                 msg_box.setIcon(QMessageBox.Information)
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.exec_()
-                return (None, None, None, None)
+                return (None, None, None, None, None)
 
             units.add(unit)
 
@@ -577,7 +590,7 @@ class PlotImage(FigureCanvas):
             msg_box.setIcon(QMessageBox.Information)
             msg_box.setStandardButtons(QMessageBox.Ok)
             msg_box.exec_()
-            return (None, None, None, None)
+            return (None, None, None, None, None)
 
         units_out = list(units)[0]
 
@@ -598,6 +611,8 @@ class PlotImage(FigureCanvas):
             raise NotImplementedError("'{}' is not supported yet.".format(type(filter)))
 
         image_data = np.full(self.model.ids.shape, -1.0)
+
+        extents = None
 
         filter_bins = []
         for filter in tally.filters:
@@ -657,34 +672,54 @@ class PlotImage(FigureCanvas):
                 v_ind = 2
                 ax = 1
 
-            # get the slice of the mesh on our coordinate
-            k = (cv.origin[ax] - mesh.lower_left[ax]) // mesh.width[ax]
 
-            mesh_data = tally.get_pandas_dataframe(nuclides=False)
+            #mesh_data = tally.get_pandas_dataframe(nuclides=False)
 
-            mesh_data = mesh_data[mesh_data['score'] == 'flux']
+            #mesh_data = mesh_data[mesh_data['score'] == 'flux']
 
-            mesh_data = mesh_data['mean'].values.reshape(mesh.dimension)
+            #mesh_data = mesh_data['mean'].values.reshape(mesh.dimension)
 
-            image_data = mesh_data[:,:,int(k)]
+            #image_data = mesh_data[:,:,int(k)]
 
             deltas = (mesh.upper_right - mesh.lower_left) / mesh.dimension
             di = deltas[h_ind]
             dj = deltas[v_ind]
+
             min_i = int(((cv.origin[h_ind] - cv.width / 2.0) - mesh.lower_left[h_ind]) // di)
+            min_i -= 1
             min_i = max(min_i, 0)
             max_i = int(((cv.origin[h_ind] + cv.width / 2.0) - mesh.lower_left[h_ind]) // di)
-            max_i = min(max_i, image_data.shape[h_ind])
-            min_j = int(((cv.origin[v_ind] - cv.height / 2.0) - mesh.lower_left[v_ind]) // dj)
+            max_i += 1
+            max_i = min(max_i, mesh.dimension[h_ind])
+            min_j = int(((cv.origin[v_ind] + cv.height / 2.0) - mesh.lower_left[v_ind]) // dj)
+            min_j = mesh.dimension[v_ind] - min_j - 1
             min_j = max(min_j, 0)
-            max_j = int(((cv.origin[v_ind] + cv.height / 2.0) - mesh.lower_left[v_ind]) // dj)
-            max_j = min(max_j, image_data.shape[v_ind])
-            print(min_i, max_i, min_j, max_j)
+            max_j = int(((cv.origin[v_ind] - cv.height / 2.0) - mesh.lower_left[v_ind]) // dj)
+            max_j = mesh.dimension[v_ind] - max_j + 1
+            max_j = min(max_j, mesh.dimension[v_ind])
 
-            mask = np.zeros(image_data.shape, dtype=bool)
-            mask[min_i:max_i, min_j:max_j] = True
-            image_data = image_data[min_i:max_i, min_j:max_j]
-            image_data.transpose()
+            # get the slice of the mesh on our coordinate
+            k = int((cv.origin[ax] - mesh.lower_left[ax]) // mesh.width[ax])
+
+            matrix = np.zeros((mesh.dimension[h_ind], mesh.dimension[v_ind]))
+
+            mesh_indices = []
+            for i in range(min_i, max_i):
+                for j in range(min_j, max_j):
+                    mesh_index = [0, 0, 0]
+                    mesh_index[h_ind] = i + 1
+                    mesh_index[v_ind] = j + 1
+                    mesh_index[ax] = k
+                    mesh_indices.append(tuple(mesh_index))
+
+            mean = tally.get_values(filters=[openmc.MeshFilter,],
+                                     filter_bins=[tuple(mesh_indices),])
+            mean = mean.reshape((max_i - min_i, max_j - min_j))
+
+            matrix[min_i:max_i, min_j:max_j] = mean
+
+            image_data = matrix.transpose()
+            extents = [mesh.lower_left[h_ind], mesh.upper_right[h_ind], mesh.lower_left[v_ind], mesh.upper_right[v_ind]]
 
         elif filter_type == openmc.filter.UniverseFilter:
             # get the statepoint summary
@@ -714,7 +749,7 @@ class PlotImage(FigureCanvas):
         data_min = np.min(image_data)
         data_max = np.max(image_data)
 
-        return image_data, data_min, data_max, units_out
+        return image_data, data_min, data_max, units_out, extents
 
     def updateColorbarScale(self):
         self.updatePixmap()
