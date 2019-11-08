@@ -460,7 +460,7 @@ class TallyDock(PlotterDock):
             # value selection
             self.formLayout.addRow(QLabel("Value:"))
             self.valueBox = QComboBox(self)
-            self.values = ('Mean', 'Std. Dev.', 'Sum', 'Sum Sq.')
+            self.values = ('Mean', 'Std. Dev.')
             for value in self.values:
                 self.valueBox.addItem(value)
             self.formLayout.addRow(self.valueBox)

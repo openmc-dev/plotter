@@ -672,53 +672,34 @@ class PlotImage(FigureCanvas):
                 v_ind = 2
                 ax = 1
 
-
-            #mesh_data = tally.get_pandas_dataframe(nuclides=False)
-
-            #mesh_data = mesh_data[mesh_data['score'] == 'flux']
-
-            #mesh_data = mesh_data['mean'].values.reshape(mesh.dimension)
-
-            #image_data = mesh_data[:,:,int(k)]
-
-            deltas = (mesh.upper_right - mesh.lower_left) / mesh.dimension
-            di = deltas[h_ind]
-            dj = deltas[v_ind]
-
-            min_i = int(((cv.origin[h_ind] - cv.width / 2.0) - mesh.lower_left[h_ind]) // di)
-            min_i -= 1
-            min_i = max(min_i, 0)
-            max_i = int(((cv.origin[h_ind] + cv.width / 2.0) - mesh.lower_left[h_ind]) // di)
-            max_i += 1
-            max_i = min(max_i, mesh.dimension[h_ind])
-            min_j = int(((cv.origin[v_ind] + cv.height / 2.0) - mesh.lower_left[v_ind]) // dj)
-            min_j = mesh.dimension[v_ind] - min_j - 1
-            min_j = max(min_j, 0)
-            max_j = int(((cv.origin[v_ind] - cv.height / 2.0) - mesh.lower_left[v_ind]) // dj)
-            max_j = mesh.dimension[v_ind] - max_j + 1
-            max_j = min(max_j, mesh.dimension[v_ind])
-
             # get the slice of the mesh on our coordinate
             k = int((cv.origin[ax] - mesh.lower_left[ax]) // mesh.width[ax])
 
-            matrix = np.zeros((mesh.dimension[h_ind], mesh.dimension[v_ind]))
+            df = tally.get_pandas_dataframe(nuclides=False)
 
-            mesh_indices = []
-            for i in range(min_i, max_i):
-                for j in range(min_j, max_j):
-                    mesh_index = [0, 0, 0]
-                    mesh_index[h_ind] = i + 1
-                    mesh_index[v_ind] = j + 1
-                    mesh_index[ax] = k
-                    mesh_indices.append(tuple(mesh_index))
+            if tally_value == 'std_dev':
+                value = 'std. dev.'
+            else:
+                value = tally_value
 
-            mean = tally.get_values(filters=[openmc.MeshFilter,],
-                                     filter_bins=[tuple(mesh_indices),])
-            mean = mean.reshape((max_i - min_i, max_j - min_j))
+            # sum up values by score
+            mesh_data = np.zeros(mesh.dimension)
+            for score in scores:
+                t = df[df['score'] == score]
+                t = t[value].values.reshape(mesh.dimension)
+                mesh_data += t
 
-            matrix[min_i:max_i, min_j:max_j] = mean
+            mesh_data = np.swapaxes(mesh_data, 0, 2)
 
-            image_data = matrix.transpose()
+            # setup slice
+            data_slice = [None, None, None]
+            data_slice[h_ind] = slice(mesh.dimension[h_ind])
+            data_slice[v_ind] = slice(mesh.dimension[v_ind])
+            data_slice[ax] = k
+
+            # slice data and transpose
+            image_data = mesh_data[tuple(data_slice)].transpose()
+
             extents = [mesh.lower_left[h_ind], mesh.upper_right[h_ind], mesh.lower_left[v_ind], mesh.upper_right[v_ind]]
 
         elif filter_type == openmc.filter.UniverseFilter:
