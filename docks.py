@@ -19,7 +19,6 @@ from common_widgets import HorizontalLine
 _SPATIAL_FILTERS = (UniverseFilter, MaterialFilter, CellFilter,
                     SurfaceFilter, MeshFilter, MeshSurfaceFilter)
 
-
 reaction_units = 'Reactions per Source Particle'
 flux_units = 'Particle-cm per Source Particle'
 production_units = 'Particles Produced per Source Particle'
@@ -110,6 +109,8 @@ class OptionsDock(PlotterDock):
 
         # Create Layout
         self.dockLayout = QVBoxLayout()
+        self.dockLayout.addWidget(QLabel("Geometry"))
+        self.dockLayout.addWidget(HorizontalLine())
         self.dockLayout.addWidget(self.originGroupBox)
         self.dockLayout.addWidget(self.optionsGroupBox)
         self.dockLayout.addWidget(self.resGroupBox)
@@ -352,14 +353,14 @@ class TallyDock(PlotterDock):
         self.applyButton.setMinimumHeight(self.FM.height() * 1.6)
         self.applyButton.clicked.connect(self.mw.applyChanges)
 
-        self.dockLayout.addWidget(self.tallyGroupBox)
-        self.dockLayout.addStretch()
-
         self.tallyColorForm = ColorForm(self.model, self.mw, 'tally')
-
         self.scoresListWidget = QListWidget()
         self.nuclideListWidget = QListWidget()
 
+        self.dockLayout.addWidget(QLabel("Tallies"))
+        self.dockLayout.addWidget(HorizontalLine())
+        self.dockLayout.addWidget(self.tallyGroupBox)
+        self.dockLayout.addStretch()
         self.dockLayout.addWidget(HorizontalLine())
         self.dockLayout.addWidget(self.tallyColorForm)
         self.dockLayout.addWidget(HorizontalLine())
@@ -379,7 +380,7 @@ class TallyDock(PlotterDock):
         self.formLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
         # tally group box
-        self.tallyGroupBox = QGroupBox('Tally')
+        self.tallyGroupBox = QGroupBox('Selected Tally')
         self.tallyGroupBox.setLayout(self.formLayout)
 
     def updateMinMax(self):
