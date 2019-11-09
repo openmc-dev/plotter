@@ -546,6 +546,7 @@ class TallyDock(PlotterDock):
                 sunits = score_units[score]
                 if sunits != selected_units:
                     score_box.setFlags(QtCore.Qt.ItemIsUserCheckable)
+                    score_box.setToolTip("Score is incompatible with currently selected scores")
                 else:
                     score_box.setFlags(score_box.flags() | QtCore.Qt.ItemIsUserCheckable)
                     score_box.setFlags(score_box.flags() & ~QtCore.Qt.ItemIsSelectable)
