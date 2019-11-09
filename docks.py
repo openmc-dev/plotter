@@ -1,11 +1,12 @@
 from functools import partial
+import re
 
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QGroupBox, QFormLayout, QLabel,
                                QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox,
                                QSizePolicy, QSpacerItem, QMainWindow, QCheckBox,
-                               QDialog, QTabWidget, QGridLayout,
+                               QDialog, QTabWidget, QGridLayout, QMessageBox,
                                QToolButton, QColorDialog, QDockWidget,
                                QItemDelegate, QHeaderView, QSlider,
                                QTextEdit, QListWidget, QListWidgetItem, QTreeWidget, QTreeWidgetItem)
@@ -488,7 +489,18 @@ class TallyDock(PlotterDock):
                     ql.setFlags(ql.flags() | QtCore.Qt.ItemIsUserCheckable)
                     ql.setFlags(ql.flags() & ~QtCore.Qt.ItemIsSelectable)
                 self.score_map[score] = ql
+                # add inelastic scattering score to unit dictionary if needed
+                if score not in score_units:
+                    if not re.match("\(n,n[1-9]+\)", score):
+                        msg_box = QMessageBox()
+                        msg_box.setText("Warning: The score {} is not recognized".format(score))
+                        msg_box.setIcon(QMessageBox.Warning)
+                        msg_box.setStandardButtons(QMessageBox.Ok)
+                        msg_box.exec_()
+                    else:
+                        score_units[score] = reaction_units
                 self.scoresListWidget.addItem(ql)
+
             self.formLayout.addRow(self.scoresListWidget)
 
             self.formLayout.addRow(HorizontalLine())
@@ -518,6 +530,25 @@ class TallyDock(PlotterDock):
             if score_box.checkState() == QtCore.Qt.CheckState.Checked:
                 applied_scores.append(score)
         self.model.appliedScores = tuple(applied_scores)
+
+        if len(applied_scores) == 0:
+            # if no scores are selected, enable all scores again
+            for score, score_box in self.score_map.items():
+                sunits = score_units[score]
+                empty_item = QListWidgetItem()
+                score_box.setFlags(empty_item.flags() | QtCore.Qt.ItemIsUserCheckable)
+                score_box.setFlags(empty_item.flags() & ~QtCore.Qt.ItemIsSelectable)
+        else:
+            # get units of applied scores
+            selected_units = score_units[applied_scores[0]]
+            # disable scores with incompatible units
+            for score, score_box in self.score_map.items():
+                sunits = score_units[score]
+                if sunits != selected_units:
+                    score_box.setFlags(QtCore.Qt.ItemIsUserCheckable)
+                else:
+                    score_box.setFlags(score_box.flags() | QtCore.Qt.ItemIsUserCheckable)
+                    score_box.setFlags(score_box.flags() & ~QtCore.Qt.ItemIsSelectable)
 
     def updateNuclides(self):
         applied_nuclides = []
