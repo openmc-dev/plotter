@@ -494,7 +494,6 @@ class PlotImage(FigureCanvas):
         self.ax.set_xlabel(axis_label_str.format(cv.basis[0]))
         self.ax.set_ylabel(axis_label_str.format(cv.basis[1]))
 
-
         # draw tally
         tally_selected =  self.model.selectedTally is not None
         tally_visible = self.model.currentView.tallyDataVisible
@@ -545,6 +544,15 @@ class PlotImage(FigureCanvas):
                                           va='bottom',
                                           ha='right')
 
+        if cv.colorby in ('material', 'cell') and cv.outlines:
+            if cv.colorby == 'material':
+                levels = len(cv.materials)
+            else:
+                levels = len(cv.cells)
+            self.ax.contour(self.model.mat_ids[::-1],
+                            colors='k',
+                            levels=levels,
+                            extent=data_bounds)
 
         # always make sure the data bounds are set correctly
         self.ax.set_xbound(data_bounds[0], data_bounds[1])

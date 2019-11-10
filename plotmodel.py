@@ -311,6 +311,8 @@ class PlotView(openmc.lib.plot._PlotBase):
         Alpha value of the geometry plot
     plotVisibility : bool
         Controls visibility of geometry
+    outlines: bool
+        Controls visibility of geometry outlines
     tallyDataColormap : str
         Name of the colormap used for tally data
     tallyDataVisible : bool
@@ -355,6 +357,7 @@ class PlotView(openmc.lib.plot._PlotBase):
 
         self.plotAlpha = 1.0
         self.plotVisibility = True
+        self.outlines = False
 
         self.colormaps = {'temperature': 'Oranges', 'density': 'Greys'}
 

@@ -196,6 +196,10 @@ class OptionsDock(PlotterDock):
         self.visibilityBox = QCheckBox(self)
         self.visibilityBox.stateChanged.connect(self.mw.editPlotVisibility)
 
+        # Outlines
+        self.outlinesBox = QCheckBox(self)
+        self.outlinesBox.stateChanged.connect(self.mw.toggleOutlines)
+
         # Basis
         self.basisBox = QComboBox(self)
         self.basisBox.addItem("xy")
@@ -216,6 +220,7 @@ class OptionsDock(PlotterDock):
         self.opLayout.addRow('Color By:', self.colorbyBox)
         self.opLayout.addRow('Plot alpha:', self.plotAlphaBox)
         self.opLayout.addRow('Visible:', self.visibilityBox)
+        self.opLayout.addRow('Outlines:', self.outlinesBox)
         self.opLayout.addRow(self.colorOptionsButton)
         self.opLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
         self.opLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
@@ -264,6 +269,7 @@ class OptionsDock(PlotterDock):
         self.updateColorBy()
         self.updatePlotAlpha()
         self.updatePlotVisibility()
+        self.updateOutlines()
         self.updateBasis()
         self.updateAspectLock()
         self.updateHRes()
@@ -288,6 +294,9 @@ class OptionsDock(PlotterDock):
 
     def updatePlotVisibility(self):
         self.visibilityBox.setChecked(self.model.activeView.plotVisibility)
+
+    def updateOutlines(self):
+        self.outlinesBox.setChecked(self.model.activeView.outlines)
 
     def updateBasis(self):
         self.basisBox.setCurrentText(self.model.activeView.basis)
@@ -415,7 +424,7 @@ class TallyDock(PlotterDock):
                 filter_item.setFlags(filter_item.flags() | QtCore.Qt.ItemIsTristate | QtCore.Qt.ItemIsUserCheckable)
             filter_item.setCheckState(0, QtCore.Qt.Unchecked)
 
-            for bin in filter.bins:
+            for bin in sorted(filter.bins):
                 item = QTreeWidgetItem(filter_item, [str(bin),])
                 if not spatial_filters:
                     item.setFlags(QtCore.Qt.ItemIsUserCheckable)

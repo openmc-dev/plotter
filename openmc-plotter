@@ -715,6 +715,9 @@ class MainWindow(QMainWindow):
     def editPlotVisibility(self, value):
         self.model.activeView.plotVisibility = bool(value)
 
+    def toggleOutlines(self, value):
+        self.model.activeView.outlines = bool(value)
+
     def editWidth(self, value):
         self.model.activeView.width = value
         self.onRatioChange()
