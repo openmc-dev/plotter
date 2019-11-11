@@ -424,13 +424,14 @@ class TallyDock(PlotterDock):
                 filter_item.setFlags(filter_item.flags() | QtCore.Qt.ItemIsTristate | QtCore.Qt.ItemIsUserCheckable)
             filter_item.setCheckState(0, QtCore.Qt.Unchecked)
 
-            for bin in sorted(filter.bins):
+            for bin in filter.bins:
                 item = QTreeWidgetItem(filter_item, [str(bin),])
                 if not spatial_filters:
                     item.setFlags(QtCore.Qt.ItemIsUserCheckable)
                 else:
                     item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
                 item.setCheckState(0, QtCore.Qt.Unchecked)
+                bin = bin if not hasattr(bin, '__iter__') else tuple(bin)
                 self.bin_map[(filter, bin)] = item
 
     def selectTally(self, tally_label=None):

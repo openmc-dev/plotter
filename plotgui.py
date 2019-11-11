@@ -63,6 +63,11 @@ class PlotImage(FigureCanvas):
         self.data_indicator = None
         self.image = None
 
+        self._supported_spatial_filters = (openmc.filter.CellFilter,
+                                           openmc.filter.UniverseFilter,
+                                           openmc.filter.MaterialFilter,
+                                           openmc.filter.MeshFilter)
+
         self.menu = QMenu(self)
 
     def enterEvent(self, event):
@@ -504,7 +509,7 @@ class PlotImage(FigureCanvas):
             return "No tallies or scores selected!"
 
         if tally_selected and tally_visible and nuclides_and_scores_selected:
-            image_data, data_min, data_max, units, extents = self.create_tally_image(self.model.selectedTally,
+            image_data, extents, data_min, data_max, units = self.create_tally_image(self.model.selectedTally,
                                                                             self.model.appliedScores,
                                                                             self.model.appliedNuclides)
 
@@ -565,13 +570,135 @@ class PlotImage(FigureCanvas):
         self.draw()
         return "Done"
 
+    def _create_tally_domain_image(self, tally, scores, nuclides):
+        sp = self.model.statepoint
+
+        # start with an empty numpy array with the size
+        # of the image resolution
+
+
+        print("Tally domain image")
+
+    def _create_tally_mesh_image(self, tally, scores, nuclides):
+        cv = self.model.currentView
+        sp = self.model.statepoint
+        mesh = tally.find_filter(openmc.MeshFilter).mesh
+
+        print("Getting reshaped data")
+        data = tally.get_reshaped_data()
+
+        slice_all = slice(None, None)
+
+        if cv.basis == 'xy':
+            h_ind = 0
+            v_ind = 1
+            ax = 2
+        elif cv.basis == 'yz':
+            h_ind = 1
+            v_ind = 2
+            ax = 0
+        else:
+            h_ind = 0
+            v_ind = 2
+            ax = 1
+
+        # get the slice of the mesh on our coordinate
+        k = int((cv.origin[ax] - mesh.lower_left[ax]) // mesh.width[ax])
+
+         # setup slice
+        data_slice = [None, None, None]
+        data_slice[h_ind] = slice(mesh.dimension[h_ind])
+        data_slice[v_ind] = slice(mesh.dimension[v_ind])
+        data_slice[ax] = k
+
+        # move mesh axes to the end of the filters
+        for filter_idx, filter in enumerate(tally.filters):
+            if type(filter) == openmc.filter.MeshFilter:
+                data = np.moveaxis(data, filter_idx, -1)
+                data = data.reshape(data.shape[:-1] + tuple(mesh.dimension))
+                data = np.swapaxes(data, -3, -1)
+                print(data.shape)
+                print(data_slice)
+                data = data[..., data_slice[0], data_slice[1], data_slice[2]]
+
+        print("Original data shape: {}".format(data.shape))
+        for filter_idx, filter in enumerate(tally.filters):
+            print(type(filter))
+            # move MeshFilter to the end of the array
+            if type(filter) == openmc.filter.MeshFilter:
+                print(data.shape)
+                continue
+            filter_bins = []
+            filter_check_state = self.mw.tallyDock.filter_map[filter].checkState(0)
+            if filter_check_state != QtCore.Qt.Unchecked:
+                selected_bins = []
+                for idx, bin in enumerate(filter.bins):
+                    bin = bin if not hasattr(bin, '__iter__') else tuple(bin)
+                    bin_check_state = self.mw.tallyDock.bin_map[(filter, bin)].checkState(0)
+                    if bin_check_state == QtCore.Qt.Checked:
+                        selected_bins.append(idx)
+                print(selected_bins)
+                data = data[np.array(selected_bins)].sum(axis=0)
+                print(data.shape)
+            else:
+                data[:,...] = 0.0
+                data = data.sum(axis=0)
+                print(data.shape)
+
+
+        # filter by selected nuclides
+        selected_nuclides = []
+        for idx, nuclide in enumerate(tally.nuclides):
+            if nuclide in nuclides:
+                selected_nuclides.append(idx)
+        data = data[np.array(selected_nuclides)].sum(axis=0)
+
+        # filter by selected scores
+        selected_scores = []
+        for idx, score in enumerate(tally.scores):
+            if score in scores:
+                selected_scores.append(idx)
+        data = data[np.array(selected_scores)].sum(axis=0)
+
+        print(data.shape)
+
+        print("Before reshape:", data.shape)
+
+        data_min = np.min(data)
+        data_max = np.max(data)
+
+        image_data = data.transpose()
+
+        extents = [mesh.lower_left[h_ind], mesh.upper_right[h_ind], mesh.lower_left[v_ind], mesh.upper_right[v_ind]]
+
+        return image_data, extents, data_min, data_max
+
+        # for filter_idx, filter in enumerate(tally.filters):
+        #     # slice out
+        #     sl = [slice_all,] * (filter_idx + 1)
+
+        #     data = data[sl, Ellipsis, tuple(scores), tuple(nuclides)]
+
+        # start with a pandas dataframe for the specified
+        # scores and nuclides
+
+        # tally_df = tally.get_pandas_dataframe(paths=False)
+
+        # # filter out rows without the scores we want
+        # tally_df = tally_df.loc[tally_df['score'].isin(scores)]
+
+        # # filter out rows without the nuclides we want
+        # tally_df = tally_df.loc[tally_df['nuclide'].isin(nuclides)]
+
+
+        print("Tally mesh image")
+
     def create_tally_image(self, tally_id, scores=[], nuclides=[]):
-        supported_spatial_filters = (openmc.filter.CellFilter,
-                                     openmc.filter.UniverseFilter,
-                                     openmc.filter.MaterialFilter,
-                                     openmc.filter.MeshFilter)
 
         cv = self.model.currentView
+
+        tally = self.model.statepoint.tallies[tally_id]
+
 
         # check score units
         units = set()
@@ -602,20 +729,23 @@ class PlotImage(FigureCanvas):
 
         units_out = list(units)[0]
 
+        if tally.contains_filter(openmc.MeshFilter):
+            return self._create_tally_mesh_image(tally, scores, nuclides) + (units_out,)
+        else:
+            return self._create_tally_domain_image(tally, scores, nuclides) + (units_out,)
 
-        tally = self.model.statepoint.tallies[tally_id]
         tally_value = cv.tallyValue
         # convert tally value to OpenMC format
         tally_value = tally_value.lower().replace(".","").replace(" ", "_")
 
         # find a spatial filter
         for filter in tally.filters:
-            if type(filter) in supported_spatial_filters:
+            if type(filter) in self._supported_spatial_filters:
                 break
 
         filter_type = type(filter)
 
-        if filter_type not in supported_spatial_filters:
+        if filter_type not in self._supported_spatial_filters:
             raise NotImplementedError("'{}' is not supported yet.".format(type(filter)))
 
         image_data = np.full(self.model.ids.shape, -1.0)
@@ -628,6 +758,7 @@ class PlotImage(FigureCanvas):
             if filter_check_state != QtCore.Qt.Unchecked:
                 selected_bins = []
                 for bin in filter.bins:
+                    bin = bin if not hasattr(bin, '__iter__') else tuple(bin)
                     bin_check_state = self.mw.tallyDock.bin_map[(filter,bin)].checkState(0)
                     if bin_check_state == QtCore.Qt.Checked:
                         selected_bins.append(bin)
@@ -738,7 +869,7 @@ class PlotImage(FigureCanvas):
         data_min = np.min(image_data)
         data_max = np.max(image_data)
 
-        return image_data, data_min, data_max, units_out, extents
+        return image_data, extents, data_min, data_max, units_out
 
     def updateColorbarScale(self):
         self.updatePixmap()
