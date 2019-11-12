@@ -498,8 +498,7 @@ class PlotImage(FigureCanvas):
                                                  anchor=(1.0, 0.0))
             self.colorbar.set_label(cmap_label,
                                     rotation=-90,
-                                    va='bottom',
-                                    ha='right')
+                                    labelpad=15)
             # draw line on colorbar
             dl = self.colorbar.ax.dataLim.get_points()
             self.data_indicator = mlines.Line2D(dl[:][0],
@@ -556,7 +555,6 @@ class PlotImage(FigureCanvas):
             self.tally_colorbar = self.figure.colorbar(self.tally_image,
                                                        anchor=(1.0, 0.0))
 
-
             if not cv.tallyDataUserMinMax:
                 cv.tallyDataMin = data_min
                 cv.tallyDataMax = data_max
@@ -569,9 +567,9 @@ class PlotImage(FigureCanvas):
             self.tally_colorbar.mappable.set_clim(data_min, data_max)
             self.tally_colorbar.set_label(units,
                                           rotation=-90,
-                                          va='bottom',
-                                          ha='right')
+                                          labelpad=15)
 
+        # draw outlines as isocontours
         if cv.colorby in ('material', 'cell') and cv.outlines:
             if cv.colorby == 'material':
                 levels = len(cv.materials)
