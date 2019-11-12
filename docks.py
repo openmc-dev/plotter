@@ -541,6 +541,7 @@ class TallyDock(PlotterDock):
                 applied_scores.append(score)
         self.model.appliedScores = tuple(applied_scores)
 
+
         if len(applied_scores) == 0:
             # if no scores are selected, enable all scores again
             for score, score_box in self.score_map.items():
@@ -548,6 +549,13 @@ class TallyDock(PlotterDock):
                 empty_item = QListWidgetItem()
                 score_box.setFlags(empty_item.flags() | QtCore.Qt.ItemIsUserCheckable)
                 score_box.setFlags(empty_item.flags() & ~QtCore.Qt.ItemIsSelectable)
+        elif 'total' in applied_scores:
+            self.model.appliedScores = ['total',]
+            # if total is selected, disable all other scores
+            for score, score_box in self.score_map.items():
+                if score != 'total':
+                    score_box.setFlags(QtCore.Qt.ItemIsUserCheckable)
+                    score_box.setToolTip("De-select 'total' to enable other scores")
         else:
             # get units of applied scores
             selected_units = score_units[applied_scores[0]]
@@ -563,10 +571,24 @@ class TallyDock(PlotterDock):
 
     def updateNuclides(self):
         applied_nuclides = []
+
         for nuclide, nuclide_box in self.nuclide_map.items():
             if nuclide_box.checkState() == QtCore.Qt.CheckState.Checked:
                 applied_nuclides.append(nuclide)
         self.model.appliedNuclides = tuple(applied_nuclides)
+
+        if 'total' in applied_nuclides:
+            self.model.appliedNuclides = ['total',]
+            for nuclide, nuclide_box in self.nuclide_map.items():
+                if nuclide != 'total':
+                    nuclide_box.setFlags(QtCore.Qt.ItemIsUserCheckable)
+                    nuclide_box.setToolTip("De-select 'total' to enable other nuclides")
+        elif len(applied_nuclides) == 0:
+            # if no nuclides are selected, enable all nuclides again
+            for nuclide, nuclide_box in self.nuclide_map.items():
+                empty_item = QListWidgetItem()
+                nuclide_box.setFlags(empty_item.flags() | QtCore.Qt.ItemIsUserCheckable)
+                nuclide_box.setFlags(empty_item.flags() & ~QtCore.Qt.ItemIsSelectable)
 
     @staticmethod
     def cellFilterForm(filter):
