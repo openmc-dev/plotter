@@ -570,12 +570,11 @@ class PlotImage(FigureCanvas):
 
         # draw outlines as isocontours
         if cv.colorby in ('material', 'cell') and cv.outlines:
-            if cv.colorby == 'material':
-                levels = len(cv.materials)
-            else:
-                levels = len(cv.cells)
-            self.ax.contour(self.model.mat_ids[::-1],
+            levels = np.unique(self.model.ids)
+            self.ax.contour(self.model.ids,
+                            origin='upper',
                             colors='k',
+                            linestyles='solid',
                             levels=levels,
                             extent=data_bounds)
 
