@@ -529,7 +529,6 @@ class PlotImage(FigureCanvas):
             return "No tallies or scores selected!"
 
         if tally_selected and tally_visible and nuclides_and_scores_selected:
-            print("Updating tally image")
             image_data, extents, data_min, data_max, units = self.create_tally_image(self.model.selectedTally,
                                                                             self.model.appliedScores,
                                                                             self.model.appliedNuclides)
@@ -701,7 +700,7 @@ class PlotImage(FigureCanvas):
         # reduce data to the visible slice of the mesh values
         k = int((cv.origin[ax] - mesh.lower_left[ax]) // mesh.width[ax])
 
-         # setup slice
+        # setup slice
         data_slice = [None, None, None]
         data_slice[h_ind] = slice(mesh.dimension[h_ind])
         data_slice[v_ind] = slice(mesh.dimension[v_ind])
@@ -710,9 +709,10 @@ class PlotImage(FigureCanvas):
         # move mesh axes to the end of the filters
         filter_idx = [ type(filter) for filter in tally.filters ].index(openmc.MeshFilter)
         data = np.moveaxis(data, filter_idx, -1)
-        data = data.reshape(data.shape[:-1] + tuple(mesh.dimension))
-        data = np.swapaxes(data, -3, -1)
-        data = data[..., data_slice[0], data_slice[1], data_slice[2]]
+
+        # reshape data (with zyx ordering for mesh data)
+        data = data.reshape(data.shape[:-1] + tuple(mesh.dimension[::-1]))
+        data = data[..., data_slice[2], data_slice[1], data_slice[0]]
 
         # sum over the rest of the tally filters
         for filter_idx, filter in enumerate(tally.filters):
@@ -756,8 +756,8 @@ class PlotImage(FigureCanvas):
         data_min = np.min(data)
         data_max = np.max(data)
 
-        # transpose data for reversed y-indexing
-        image_data = data.transpose()
+        # set image data, reverse y-axis
+        image_data = data[::-1,...]
 
         # return data extents (in cm) for the tally
         extents = [mesh.lower_left[h_ind], mesh.upper_right[h_ind], mesh.lower_left[v_ind], mesh.upper_right[v_ind]]
