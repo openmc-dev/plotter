@@ -508,6 +508,7 @@ class MainWindow(QMainWindow):
         self.updateDataMenu()
         self.tallyDock.selectTally()
         self.tallyDock.update()
+        self.plotIm.updatePixmap()
 
     def updateDataMenu(self):
         if self.model.statepoint:
