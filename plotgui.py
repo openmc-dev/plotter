@@ -443,9 +443,10 @@ class PlotImage(FigureCanvas):
 
         self.menu.exec_(event.globalPos())
 
-    def generatePixmap(self):
+    def generatePixmap(self, update=False):
         self.model.generatePlot()
-        self.updatePixmap()
+        if update:
+            self.updatePixmap()
 
     def updatePixmap(self):
 
@@ -529,6 +530,7 @@ class PlotImage(FigureCanvas):
             return "No tallies or scores selected!"
 
         if tally_selected and tally_visible and nuclides_and_scores_selected:
+            print("Updating tally image")
             image_data, extents, data_min, data_max, units = self.create_tally_image(self.model.selectedTally,
                                                                             self.model.appliedScores,
                                                                             self.model.appliedNuclides)
