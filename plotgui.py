@@ -281,7 +281,7 @@ class PlotImage(FigureCanvas):
             else:
                 domainInfo = ""
 
-            if self.model.selectedTally:
+            if self.model.tally_data is not None:
                 tid, value = self.getTallyInfo(event)
                 if value is not None:
                     tallyInfo = "Tally {}: {:.5E}".format(tid, value)
