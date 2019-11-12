@@ -525,17 +525,10 @@ class PlotImage(FigureCanvas):
         nuclides_and_scores_selected = bool(self.model.appliedNuclides)
         nuclides_and_scores_selected &= bool(self.model.appliedScores)
 
-        if tally_selected and tally_visible and not nuclides_and_scores_selected:
-            return "No tallies or scores selected!"
-
         if tally_selected and tally_visible and nuclides_and_scores_selected:
             image_data, extents, data_min, data_max, units = self.create_tally_image(self.model.selectedTally,
                                                                             self.model.appliedScores,
                                                                             self.model.appliedNuclides)
-
-            if image_data is None:
-                self.draw()
-                return "Done"
 
             if extents is None:
                 extents = data_bounds
@@ -738,6 +731,9 @@ class PlotImage(FigureCanvas):
                 data = data.sum(axis=0)
 
         # filter by selected nuclides
+        if not nuclides:
+            data = 0.0
+
         selected_nuclides = []
         for idx, nuclide in enumerate(tally.nuclides):
             if nuclide in nuclides:
@@ -745,6 +741,9 @@ class PlotImage(FigureCanvas):
         data = data[np.array(selected_nuclides)].sum(axis=0)
 
         # filter by selected scores
+        if not scores:
+            data = 0.0
+
         selected_scores = []
         for idx, score in enumerate(tally.scores):
             if score in scores:

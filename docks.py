@@ -11,6 +11,7 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QItemDelegate, QHeaderView, QSlider,
                                QTextEdit, QListWidget, QListWidgetItem, QTreeWidget, QTreeWidgetItem)
 from matplotlib import cm as mcolormaps
+import numpy as np
 
 from openmc.filter import (UniverseFilter, MaterialFilter, CellFilter,
                            SurfaceFilter, MeshFilter, MeshSurfaceFilter)
@@ -424,7 +425,7 @@ class TallyDock(PlotterDock):
                 filter_item.setFlags(filter_item.flags() | QtCore.Qt.ItemIsTristate | QtCore.Qt.ItemIsUserCheckable)
             filter_item.setCheckState(0, QtCore.Qt.Unchecked)
 
-            for bin in filter.bins:
+            for bin in sorted(filter.bins, key=np.sum):
                 item = QTreeWidgetItem(filter_item, [str(bin),])
                 if not spatial_filters:
                     item.setFlags(QtCore.Qt.ItemIsUserCheckable)
@@ -433,6 +434,9 @@ class TallyDock(PlotterDock):
                 item.setCheckState(0, QtCore.Qt.Unchecked)
                 bin = bin if not hasattr(bin, '__iter__') else tuple(bin)
                 self.bin_map[(filter, bin)] = item
+
+            # start with all filters selected
+            filter_item.setCheckState(0, QtCore.Qt.Checked)
 
     def selectTally(self, tally_label=None):
         av = self.model.activeView
@@ -445,6 +449,8 @@ class TallyDock(PlotterDock):
 
         if tally_label is None or tally_label == "None" or tally_label == "":
             self.model.selectedTally = None
+            self.score_map = None
+            self.nuclide_map = None
             av.tallyValue = None
         else:
             tally_id = int(tally_label.split()[1])
@@ -465,8 +471,6 @@ class TallyDock(PlotterDock):
             self.create_filter_tree(spatial_filters)
 
             self.formLayout.addRow(self.filterTree)
-
-
             self.formLayout.addRow(HorizontalLine())
 
             # value selection
@@ -483,13 +487,20 @@ class TallyDock(PlotterDock):
 
             self.formLayout.addRow(HorizontalLine())
 
-            # list for tally scores
+            # scores
+            self.score_map = {}
             self.formLayout.addRow(QLabel("Scores:"))
-            self.scoresListWidget.setSortingEnabled(True)
             self.scoresListWidget.itemClicked.connect(self.mw.updateScores)
             self.score_map.clear()
             self.scoresListWidget.clear()
-            for score in tally.scores:
+
+            sorted_scores = sorted(tally.scores)
+            # always put total first if present
+            if 'total' in sorted_scores:
+                idx = sorted_scores.index('total')
+                sorted_scores.insert(0, sorted_scores.pop(idx))
+
+            for score in sorted_scores:
                 ql = QListWidgetItem()
                 ql.setText(score.capitalize())
                 ql.setCheckState(QtCore.Qt.Unchecked)
@@ -511,17 +522,29 @@ class TallyDock(PlotterDock):
                         score_units[score] = reaction_units
                 self.scoresListWidget.addItem(ql)
 
+            # select the first score item
+            for item in self.score_map.values():
+                item.setCheckState(QtCore.Qt.Checked)
+                break
+            self.updateScores()
+
             self.formLayout.addRow(self.scoresListWidget)
 
+            # nuclides
+            self.nuclide_map = {}
             self.formLayout.addRow(HorizontalLine())
             self.formLayout.addRow(QLabel("Nuclides:"))
-
-            # list for nuclides
-            self.nuclideListWidget.setSortingEnabled(True)
             self.nuclideListWidget.itemClicked.connect(self.mw.updateNuclides)
             self.nuclide_map.clear()
             self.nuclideListWidget.clear()
-            for nuclide in tally.nuclides:
+
+            sorted_nuclides = sorted(tally.nuclides)
+            # always put total at the top
+            if 'total' in sorted_nuclides:
+                idx = sorted_nuclides.index('total')
+                sorted_nuclides.insert(0, sorted_nuclides.pop(idx))
+
+            for nuclide in sorted_nuclides:
                 ql = QListWidgetItem()
                 ql.setText(nuclide.capitalize())
                 ql.setCheckState(QtCore.Qt.Unchecked)
@@ -532,7 +555,15 @@ class TallyDock(PlotterDock):
                     ql.setFlags(ql.flags() & ~QtCore.Qt.ItemIsSelectable)
                 self.nuclide_map[nuclide] = ql
                 self.nuclideListWidget.addItem(ql)
+
+            # select the first nuclide item
+            for item in self.nuclide_map.values():
+                item.setCheckState(QtCore.Qt.Checked)
+                break
+            self.updateNuclides()
+
             self.formLayout.addRow(self.nuclideListWidget)
+
 
     def updateScores(self):
         applied_scores = []
