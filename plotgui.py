@@ -6,7 +6,7 @@ import itertools
 from plot_colors import rgb_normalize, invert_rgb
 from plotmodel import DomainDelegate
 from plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
-from ScientificSpinBox import ScientificDoubleSpinBox
+from scientific_spin_box import ScientificDoubleSpinBox
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QApplication, QGroupBox, QFormLayout, QLabel,

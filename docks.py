@@ -17,7 +17,7 @@ from openmc.filter import (UniverseFilter, MaterialFilter, CellFilter,
                            SurfaceFilter, MeshFilter, MeshSurfaceFilter)
 
 from common_widgets import HorizontalLine
-from ScientificSpinBox import ScientificDoubleSpinBox
+from scientific_spin_box import ScientificDoubleSpinBox
 
 _SPATIAL_FILTERS = (UniverseFilter, MaterialFilter, CellFilter,
                     SurfaceFilter, MeshFilter, MeshSurfaceFilter)
