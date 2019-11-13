@@ -319,6 +319,8 @@ class PlotView(openmc.lib.plot._PlotBase):
         Indicator for whether or not the tally data is visible
     tallyDataAlpha : float
         Value of the tally image alpha
+    tallyDataIndicator : bool
+        Indicates whether or not the data indicator is active on the tally colorbar
     tallyDataMin : float
         Minimum scale value for tally data
     tallyDataMax : float
@@ -369,6 +371,7 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.tallyDataColormap = 'spectral'
         self.tallyDataVisible = True
         self.tallyDataAlpha = 1.0
+        self.tallyDataIndicator = False
         self.tallyDataUserMinMax = False
         self.tallyDataMin = 0.0
         self.tallyDataMax = np.inf

@@ -64,6 +64,7 @@ class PlotImage(FigureCanvas):
 
         self.colorbar = None
         self.data_indicator = None
+        self.tally_data_indicator = None
         self.image = None
 
         self._supported_spatial_filters = (openmc.filter.CellFilter,
@@ -283,12 +284,19 @@ class PlotImage(FigureCanvas):
 
             if self.model.tally_data is not None:
                 tid, value = self.getTallyInfo(event)
-                if value is not None:
+                if value is not None and value != np.nan:
+                    self.updateTallyDataIndicatorValue(value)
                     tallyInfo = "Tally {}: {:.5E}".format(tid, value)
+                else:
+                    self.updateTallyDataIndicatorValue(0.0)
         else:
+            self.updateTallyDataIndicatorValue(0.0)
             self.updateDataIndicatorValue(0.0)
 
-        self.mw.statusBar().showMessage(" " + domainInfo + "      " + tallyInfo)
+        if domainInfo:
+            self.mw.statusBar().showMessage(" " + domainInfo + "      " + tallyInfo)
+        else:
+            self.mw.statusBar().showMessage(" " + tallyInfo)
 
         # Update rubber band and values if mouse button held down
         if event.buttons() == QtCore.Qt.LeftButton:
@@ -568,13 +576,23 @@ class PlotImage(FigureCanvas):
                                                        anchor=(1.0, 0.0))
 
 
+            # draw line on colorbar
+            self.tally_data_indicator = mlines.Line2D([0.0, 1.0],
+                                                      [0.0, 0.0],
+                                                      linewidth=3.,
+                                                      color='blue',
+                                                      clip_on=True)
+            self.tally_colorbar.ax.add_line(self.tally_data_indicator)
+            self.tally_colorbar.ax.margins(0.0, 0.0)
+
+            self.tally_data_indicator.set_visible(cv.tallyDataIndicator)
+
             self.mw.updateTallyMinMax()
 
             self.tally_colorbar.mappable.set_clim(data_min, data_max)
             self.tally_colorbar.set_label(units,
                                           rotation=-90,
                                           labelpad=15)
-
 
         self.draw_outlines()
 
@@ -840,6 +858,22 @@ class PlotImage(FigureCanvas):
 
     def updateColorbarScale(self):
         self.updatePixmap()
+
+    def updateTallyDataIndicatorValue(self, y_val):
+        cv = self.model.currentView
+
+        if not cv.tallyDataVisible or not cv.tallyDataIndicator:
+             return
+
+        if self.tally_data_indicator is not None:
+            data = self.tally_data_indicator.get_data()
+            # use norm to get axis value if log scale
+            if cv.tallyDataLogScale:
+                y_val = self.tally_image.norm(y_val)
+            self.tally_data_indicator.set_data([data[0], [y_val, y_val]])
+            dl_color = invert_rgb(self.tally_image.get_cmap()(y_val), True)
+            self.tally_data_indicator.set_c(dl_color)
+            self.draw()
 
     def updateDataIndicatorValue(self, y_val):
         cv = self.model.currentView

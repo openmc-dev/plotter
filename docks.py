@@ -722,8 +722,6 @@ class ColorForm(QWidget):
         cmap_connector = partial(self.mw.editTallyDataColormap)
         self.colormapBox.currentTextChanged[str].connect(cmap_connector)
 
-        self.layout.addRow("Colormap: ", self.colormapBox)
-
         self.visibilityBox = QCheckBox()
 
         visible_connector = partial(self.mw.toggleTallyVisibility)
@@ -734,8 +732,12 @@ class ColorForm(QWidget):
         alpha_connector = partial(self.mw.editTallyAlpha)
         self.alphaBox.valueChanged.connect(alpha_connector)
 
+        self.dataIndicatorCheckBox = QCheckBox()
+        data_indicator_connector = partial(self.mw.toggleTallyDataIndicator)
+        self.dataIndicatorCheckBox.stateChanged.connect(data_indicator_connector)
+
         self.userMinMaxBox = QCheckBox()
-        minmax_connector = partial(self.mw.toggleTallyDataUserMinMax, apply=True)
+        minmax_connector = partial(self.mw.toggleTallyDataUserMinMax)
         self.userMinMaxBox.stateChanged.connect(minmax_connector)
 
         self.minBox = ScientificDoubleSpinBox()
@@ -763,6 +765,8 @@ class ColorForm(QWidget):
         # add widgets to form
         self.layout.addRow("Visible:", self.visibilityBox)
         self.layout.addRow("Alpha: ", self.alphaBox)
+        self.layout.addRow("Colormap: ", self.colormapBox)
+        self.layout.addRow("Data Indicator: ", self.dataIndicatorCheckBox)
         self.layout.addRow("Custom Min/Max: ", self.userMinMaxBox)
         self.layout.addRow("Min: ", self.minBox)
         self.layout.addRow("Max: ", self.maxBox)
@@ -773,6 +777,10 @@ class ColorForm(QWidget):
         self.setLayout(self.layout)
 
         self.update()
+
+    def updateDataIndicator(self):
+        cv = self.model.currentView
+        self.dataIndicatorCheckBox.setChecked(cv.tallyDataIndicator)
 
     def updateMinMax(self):
         cv = self.model.currentView
@@ -815,3 +823,4 @@ class ColorForm(QWidget):
 
         self.updateMaskZeros()
         self.updateDataClip()
+        self.updateDataIndicator()

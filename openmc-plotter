@@ -857,6 +857,12 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
+    def toggleTallyDataIndicator(self, state, apply=False):
+        av = self.model.activeView
+        av.tallyDataIndicator = bool(state)
+        if apply:
+            self.applyChanges()
+
     def toggleTallyDataClip(self, state):
         av = self.model.activeView
         av.clipTallyData = bool(state)
