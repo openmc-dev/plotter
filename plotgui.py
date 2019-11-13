@@ -859,7 +859,6 @@ class PlotImage(FigureCanvas):
 
     def updateColorMap(self, colormap_name, property_type):
         if self.colorbar and property_type == self.model.activeView.colorby:
-            self.colorbar.set_cmap(colormap_name)
             self.image.set_cmap(colormap_name)
             self.colorbar.draw_all()
             self.draw()
