@@ -311,10 +311,20 @@ class MainWindow(QMainWindow):
         self.overlapAct.setCheckable(True)
         self.overlapAct.setToolTip('Toggle overlapping regions')
         self.overlapAct.setStatusTip('Toggle display of overlapping '
-                                    'regions when enabled')
+                                     'regions when enabled')
         overlap_connector = partial(self.toggleOverlaps, apply=True)
         self.overlapAct.toggled.connect(overlap_connector)
         self.editMenu.addAction(self.overlapAct)
+
+        self.outlineAct = QAction('Enable Domain Outlines', self)
+        self.outlineAct.setShortcut('Ctrl+U')
+        self.outlineAct.setCheckable(True)
+        self.outlineAct.setToolTip('Display Cell/Material Boundaries')
+        self.outlineAct.setStatusTip('Toggle display of domain '
+                                     'outlines when enabled')
+        outline_connector = partial(self.toggleOutlines, apply=True)
+        self.outlineAct.toggled.connect(outline_connector)
+        self.editMenu.addAction(self.outlineAct)
 
         # View Menu
         self.dockAction = QAction('Hide &Dock', self)
@@ -374,6 +384,7 @@ class MainWindow(QMainWindow):
 
         self.maskingAction.setChecked(self.model.currentView.masking)
         self.highlightingAct.setChecked(self.model.currentView.highlighting)
+        self.outlineAct.setChecked(self.model.currentView.outlines)
 
         num_previous_views = len(self.model.previousViews)
         self.undoAction.setText('&Undo ({})'.format(num_previous_views))
@@ -716,8 +727,12 @@ class MainWindow(QMainWindow):
     def editPlotVisibility(self, value):
         self.model.activeView.plotVisibility = bool(value)
 
-    def toggleOutlines(self, value):
+    def toggleOutlines(self, value, apply=False):
         self.model.activeView.outlines = bool(value)
+        self.dock.updateOutlines()
+
+        if apply:
+            self.applyChanges()
 
     def editWidth(self, value):
         self.model.activeView.width = value

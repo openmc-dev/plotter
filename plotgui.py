@@ -575,15 +575,8 @@ class PlotImage(FigureCanvas):
                                           rotation=-90,
                                           labelpad=15)
 
-        # draw outlines as isocontours
-        if cv.colorby in ('material', 'cell') and cv.outlines:
-            levels = np.unique(self.model.ids)
-            self.ax.contour(self.model.ids,
-                            origin='upper',
-                            colors='k',
-                            linestyles='solid',
-                            levels=levels,
-                            extent=data_bounds)
+
+        self.draw_outlines()
 
         # always make sure the data bounds are set correctly
         self.ax.set_xbound(data_bounds[0], data_bounds[1])
@@ -595,6 +588,27 @@ class PlotImage(FigureCanvas):
 
         self.draw()
         return "Done"
+
+    def draw_outlines(self):
+        cv = self.model.currentView
+        # draw outlines as isocontours
+        if cv.outlines:
+            # set data extents for automatic reporting of pointer location
+            data_bounds = [cv.origin[self.mw.xBasis] - cv.width/2.,
+                           cv.origin[self.mw.xBasis] + cv.width/2.,
+                           cv.origin[self.mw.yBasis] - cv.height/2.,
+                           cv.origin[self.mw.yBasis] + cv.height/2.]
+
+
+            levels = np.unique(self.model.ids)
+            self.contours = self.ax.contour(self.model.ids,
+                                            origin='upper',
+                                            colors='k',
+                                            linestyles='solid',
+                                            levels=levels,
+                                            extent=data_bounds)
+
+
 
     def _create_tally_domain_image(self, tally, scores, nuclides):
         # data resources used throughout

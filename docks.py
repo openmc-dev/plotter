@@ -111,7 +111,7 @@ class OptionsDock(PlotterDock):
 
         # Create Layout
         self.dockLayout = QVBoxLayout()
-        self.dockLayout.addWidget(QLabel("Geometry"))
+        self.dockLayout.addWidget(QLabel("Geometry & Properties"))
         self.dockLayout.addWidget(HorizontalLine())
         self.dockLayout.addWidget(self.originGroupBox)
         self.dockLayout.addWidget(self.optionsGroupBox)
