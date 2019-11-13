@@ -71,6 +71,7 @@ class MainWindow(QMainWindow):
 
         # Tally Dock
         self.tallyDock = TallyDock(self.model, FM, self)
+        self.tallyDock.update()
         self.tallyDock.setObjectName("TallyDock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.tallyDock)
 
@@ -821,13 +822,11 @@ class MainWindow(QMainWindow):
     # Tally dock methods
 
     def editSelectedTally(self, event):
-        if hasattr(self, 'tallyDock'):
-            self.tallyDock.selectTally(event)
+        self.tallyDock.selectTally(event)
 
     def editTallyValue(self, event):
         av = self.model.activeView
-        if hasattr(self, 'tallyDock'):
-            av.tallyValue = event
+        av.tallyValue = event
 
     def updateScores(self, state):
         self.tallyDock.updateScores()

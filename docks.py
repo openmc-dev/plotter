@@ -380,10 +380,8 @@ class TallyDock(PlotterDock):
         self.dockLayout.addWidget(self.tallyColorForm)
         self.dockLayout.addWidget(HorizontalLine())
         self.dockLayout.addWidget(self.applyButton)
-        self.update()
 
     def createTallySelectionLayout(self):
-
         self.formLayout = QFormLayout()
 
         # Tally listing
@@ -455,7 +453,7 @@ class TallyDock(PlotterDock):
             self.model.selectedTally = None
             self.score_map = None
             self.nuclide_map = None
-            av.tallyValue = None
+            av.tallyValue = "Mean"
         else:
             tally_id = int(tally_label.split()[1])
             tally = self.model.statepoint.tallies[tally_id]
@@ -567,16 +565,10 @@ class TallyDock(PlotterDock):
 
             self.formLayout.addRow(self.nuclideListWidget)
 
-
     def updateTallyValue(self):
-        av = self.model.activeView
-        if av.tallyValue is None:
-            idx = 0
-            av.tallyValue = "Mean"
-        else:
-            idx = self.valueBox.findText(av.tallyValue)
+        cv = self.model.currentView
+        idx = self.valueBox.findText(cv.tallyValue)
         self.valueBox.setCurrentIndex(idx)
-
 
     def updateScores(self):
         applied_scores = []
@@ -776,8 +768,6 @@ class ColorForm(QWidget):
 
         self.setLayout(self.layout)
 
-        self.update()
-
     def updateDataIndicator(self):
         cv = self.model.currentView
         self.dataIndicatorCheckBox.setChecked(cv.tallyDataIndicator)
@@ -817,10 +807,9 @@ class ColorForm(QWidget):
         self.visibilityBox.setChecked(cv.tallyDataVisible)
         self.userMinMaxBox.setChecked(cv.tallyDataUserMinMax)
 
-        # self.updateMinMax()
+        self.updateMinMax()
 
         self.scaleBox.setChecked(cv.tallyDataLogScale)
-
         self.updateMaskZeros()
         self.updateDataClip()
         self.updateDataIndicator()

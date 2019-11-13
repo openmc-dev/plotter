@@ -378,7 +378,7 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.tallyDataLogScale = False
         self.tallyMaskZeroValues = False
         self.clipTallyData = False
-        self.tallyValue = None
+        self.tallyValue = "Mean"
 
         # set defaults for color dialog
         self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
