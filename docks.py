@@ -59,6 +59,9 @@ score_units['fission-q-recoverable'] = deposition_units
 score_units['decay-rate'] = 'Seconds^-1'
 score_units['damage-energy'] = deposition_units
 
+tally_values = {'Mean': 'mean',
+                'Std. Dev.': 'std_dev'}
+
 class PlotterDock(QDockWidget):
 
     def __init__(self, model, FM, parent=None):
@@ -476,14 +479,13 @@ class TallyDock(PlotterDock):
             # value selection
             self.formLayout.addRow(QLabel("Value:"))
             self.valueBox = QComboBox(self)
-            self.values = ('Mean', 'Std. Dev.')
+            self.values = tuple(tally_values.keys())
             for value in self.values:
                 self.valueBox.addItem(value)
             self.formLayout.addRow(self.valueBox)
             self.valueBox.currentTextChanged[str].connect(self.mw.editTallyValue)
-            # set to mean by default
-            if self.model.activeView.tallyValue is None:
-                av.tallyValue = self.values[0]
+            self.updateTallyValue()
+
 
             self.formLayout.addRow(HorizontalLine())
 
@@ -563,6 +565,16 @@ class TallyDock(PlotterDock):
             self.updateNuclides()
 
             self.formLayout.addRow(self.nuclideListWidget)
+
+
+    def updateTallyValue(self):
+        av = self.model.activeView
+        if av.tallyValue is None:
+            idx = 0
+            av.tallyValue = "Mean"
+        else:
+            idx = self.valueBox.findText(av.tallyValue)
+        self.valueBox.setCurrentIndex(idx)
 
 
     def updateScores(self):

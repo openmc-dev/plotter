@@ -23,7 +23,7 @@ from matplotlib.figure import Figure
 from matplotlib import image as mpimage
 from matplotlib import lines as mlines
 from matplotlib import cm as mcolormaps
-from matplotlib.colors import SymLogNorm, NoNorm
+from matplotlib.colors import LogNorm, SymLogNorm, NoNorm
 from matplotlib.transforms import Bbox
 
 import openmc
@@ -37,7 +37,7 @@ else:
     from matplotlib.backends.backend_qt5agg import (
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
-from docks import TallyDock, OptionsDock, score_units
+from docks import TallyDock, OptionsDock, score_units, tally_values
 from common_widgets import HorizontalLine
 
 
@@ -485,7 +485,7 @@ class PlotImage(FigureCanvas):
                 idx = 1
                 cmap_label = "Density (g/cc)"
 
-            norm = SymLogNorm(1E-2) if cv.color_scale_log[cv.colorby] else None
+            norm = SymLogNorm(1E-10) if cv.color_scale_log[cv.colorby] else None
             data = self.model.properties[:, :, idx]
             self.image = self.figure.subplots().imshow(data,
                                                        cmap=cmap,
@@ -527,8 +527,8 @@ class PlotImage(FigureCanvas):
 
         if tally_selected and tally_visible and nuclides_and_scores_selected:
             image_data, extents, data_min, data_max, units = self.create_tally_image(self.model.selectedTally,
-                                                                            self.model.appliedScores,
-                                                                            self.model.appliedNuclides)
+                                                                                     self.model.appliedScores,
+                                                                                     self.model.appliedNuclides)
 
             if not cv.tallyDataUserMinMax:
                 cv.tallyDataMin = data_min
@@ -556,12 +556,11 @@ class PlotImage(FigureCanvas):
             self.model.tally_data = image_data
             self.model.tally_extents = extents if extents is not None else data_bounds
 
-            norm = SymLogNorm(1E-2) if cv.tallyDataLogScale else None
-
+            norm = SymLogNorm(1E-30) if cv.tallyDataLogScale else None
             self.tally_image = self.ax.imshow(image_data,
-                                              alpha = cv.tallyDataAlpha,
-                                              cmap = cv.tallyDataColormap,
-                                              norm = norm,
+                                              alpha=cv.tallyDataAlpha,
+                                              cmap=cv.tallyDataColormap,
+                                              norm=norm,
                                               extent=extents)
             # add colorbar
             self.tally_colorbar = self.figure.colorbar(self.tally_image,
@@ -610,7 +609,7 @@ class PlotImage(FigureCanvas):
 
 
 
-    def _create_tally_domain_image(self, tally, scores, nuclides):
+    def _create_tally_domain_image(self, tally, tally_value, scores, nuclides):
         # data resources used throughout
         cv = self.model.currentView
         sp = self.model.statepoint
@@ -694,14 +693,20 @@ class PlotImage(FigureCanvas):
 
         return image_data, None, data_min, data_max
 
-    def _create_tally_mesh_image(self, tally, scores, nuclides):
+    def _create_tally_mesh_image(self, tally, tally_value, scores, nuclides):
         # some variables used throughout
         cv = self.model.currentView
         sp = self.model.statepoint
         mesh = tally.find_filter(openmc.MeshFilter).mesh
 
+        def _do_op(array, tally_value, ax=0):
+            if tally_value == 'mean':
+                return np.sum(array, axis=ax)
+            elif tally_value == 'std_dev':
+                return np.sqrt(np.sum(array**2, axis=ax))
+
         # start with reshaped data
-        data = tally.get_reshaped_data()
+        data = tally.get_reshaped_data(tally_value)
 
         # determine basis indices
         if cv.basis == 'xy':
@@ -756,7 +761,7 @@ class PlotImage(FigureCanvas):
                 # if the filter is completely unselected,
                 # set all of it's data to zero and remove the axis
                 data[:,...] = 0.0
-                data = data.sum(axis=0)
+                data = _do_op(data, tally_value)
 
         # filter by selected nuclides
         if not nuclides:
@@ -766,7 +771,7 @@ class PlotImage(FigureCanvas):
         for idx, nuclide in enumerate(tally.nuclides):
             if nuclide in nuclides:
                 selected_nuclides.append(idx)
-        data = data[np.array(selected_nuclides)].sum(axis=0)
+        data = _do_op(data[np.array(selected_nuclides)], tally_value)
 
         # filter by selected scores
         if not scores:
@@ -776,7 +781,7 @@ class PlotImage(FigureCanvas):
         for idx, score in enumerate(tally.scores):
             if score in scores:
                 selected_scores.append(idx)
-        data = data[np.array(selected_scores)].sum(axis=0)
+        data = _do_op(data[np.array(selected_scores)], tally_value)
 
         # get dataset's min/max
         data_min = np.min(data)
@@ -795,6 +800,8 @@ class PlotImage(FigureCanvas):
         cv = self.model.currentView
 
         tally = self.model.statepoint.tallies[tally_id]
+
+        tally_value = tally_values[cv.tallyValue]
 
         # check score units
         units = set()
@@ -826,9 +833,9 @@ class PlotImage(FigureCanvas):
         units_out = list(units)[0]
 
         if tally.contains_filter(openmc.MeshFilter):
-            return self._create_tally_mesh_image(tally, scores, nuclides) + (units_out,)
+            return self._create_tally_mesh_image(tally, tally_value, scores, nuclides) + (units_out,)
         else:
-            return self._create_tally_domain_image(tally, scores, nuclides) + (units_out,)
+            return self._create_tally_domain_image(tally, tally_value, scores, nuclides) + (units_out,)
 
     def updateColorbarScale(self):
         self.updatePixmap()
