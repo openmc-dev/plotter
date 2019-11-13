@@ -83,6 +83,7 @@ class MainWindow(QMainWindow):
 
         # Create menubar
         self.createMenuBar()
+        self.updateEditMenu()
 
         # Status Bar
         self.coord_label = QLabel()
@@ -172,7 +173,7 @@ class MainWindow(QMainWindow):
         self.openStatePointAction.setToolTip('Open statepoint file')
         self.openStatePointAction.triggered.connect(self.openStatePoint)
 
-        self.dataMenu = self.mainMenu.addMenu('&Data')
+        self.dataMenu = self.mainMenu.addMenu('D&ata')
         self.dataMenu.addAction(self.openStatePointAction)
         self.updateDataMenu()
 
@@ -287,6 +288,7 @@ class MainWindow(QMainWindow):
 
         self.editMenu.addSeparator()
 
+        # Edit -> Other Options
         self.maskingAction = QAction('Enable &Masking', self)
         self.maskingAction.setShortcut('Ctrl+M')
         self.maskingAction.setCheckable(True)
