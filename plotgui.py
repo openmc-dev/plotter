@@ -241,7 +241,7 @@ class PlotImage(FigureCanvas):
         self.mw.editPlotOrigin(xCenter, yCenter, apply=True)
 
     def mouseMoveEvent(self, event):
-
+        cv = self.model.currentView
         # Show Cursor position relative to plot in status bar
         xPlotPos, yPlotPos = self.getPlotCoords(event.pos())
 
@@ -286,7 +286,7 @@ class PlotImage(FigureCanvas):
                 tid, value = self.getTallyInfo(event)
                 if value is not None and value != np.nan:
                     self.updateTallyDataIndicatorValue(value)
-                    tallyInfo = "Tally {}: {:.5E}".format(tid, value)
+                    tallyInfo = "Tally {} {}: {:.5E}".format(tid, cv.tallyValue, value)
                 else:
                     self.updateTallyDataIndicatorValue(0.0)
         else:
@@ -633,8 +633,14 @@ class PlotImage(FigureCanvas):
         cv = self.model.currentView
         sp = self.model.statepoint
 
-        data = tally.get_reshaped_data()
+        data = tally.get_reshaped_data(tally_value)
         data_out = np.full(self.model.ids.shape, -1.0)
+
+        def _do_op(array, tally_value, ax=0):
+            if tally_value == 'mean':
+                return np.sum(array, axis=ax)
+            elif tally_value == 'std_dev':
+                return np.sqrt(np.sum(array**2, axis=ax))
 
         # data structure for tracking which spatial
         # filter bins are enabled
@@ -655,24 +661,24 @@ class PlotImage(FigureCanvas):
                 if type(filter) in self._supported_spatial_filters:
                     spatial_filter_bins[filter] = selected_bins
                 else:
-                    data = data[np.array(selected_bins)].sum(axis=0)
+                    data = _do_op([np.array(selected_bins)], tally_value)
             else:
                 data[:,...] = 0.0
-                data = data.sum(axis=0)
+                data = _do_op(data, tally_value)
 
         # filter by selected scores
         selected_scores = []
         for idx, score in enumerate(tally.scores):
             if score in scores:
                 selected_scores.append(idx)
-        data = data[..., np.array(selected_scores)].sum(axis=-1)
+        data = _do_op(data[..., np.array(selected_scores)], tally_value, -1)
 
         # filter by selected nuclides
         selected_nuclides = []
         for idx, nuclide in enumerate(tally.nuclides):
             if nuclide in nuclides:
                 selected_nuclides.append(idx)
-        data = data[..., np.array(selected_nuclides)].sum(axis=-1)
+        data = _do_op(data[..., np.array(selected_nuclides)], tally_value, -1)
 
         # get data limits
         data_min = np.min(data)
