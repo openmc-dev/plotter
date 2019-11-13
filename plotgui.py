@@ -530,6 +530,26 @@ class PlotImage(FigureCanvas):
                                                                             self.model.appliedScores,
                                                                             self.model.appliedNuclides)
 
+            if not cv.tallyDataUserMinMax:
+                cv.tallyDataMin = data_min
+                cv.tallyDataMax = data_max
+            else:
+                data_min = cv.tallyDataMin
+                data_max = cv.tallyDataMax
+
+            # always mask out negative values
+            image_mask = image_data < 0.0
+
+            if cv.clipTallyData:
+                image_mask |= image_data < data_min
+                image_mask |= image_data > data_max
+
+            if cv.tallyMaskZeroValues:
+                image_mask |= image_data == 0.0
+
+            # mask out invalid values
+            image_data = np.ma.masked_where(image_mask, image_data)
+
             if extents is None:
                 extents = data_bounds
 
@@ -547,12 +567,6 @@ class PlotImage(FigureCanvas):
             self.tally_colorbar = self.figure.colorbar(self.tally_image,
                                                        anchor=(1.0, 0.0))
 
-            if not cv.tallyDataUserMinMax:
-                cv.tallyDataMin = data_min
-                cv.tallyDataMax = data_max
-            else:
-                data_min = cv.tallyDataMin
-                data_max = cv.tallyDataMax
 
             self.mw.updateTallyMinMax()
 

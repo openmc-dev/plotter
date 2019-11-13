@@ -830,11 +830,19 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
+    def toggleTallyMaskZero(self, state):
+        av = self.model.activeView
+        av.tallyMaskZeroValues = bool(state)
+
     def editTallyAlpha(self, value, apply=False):
         av = self.model.activeView
         av.tallyDataAlpha = value
         if apply:
             self.applyChanges()
+
+    def toggleTallyDataClip(self, state):
+        av = self.model.activeView
+        av.clipTallyData = bool(state)
 
     def toggleTallyDataUserMinMax(self, state, apply=False):
         av = self.model.activeView

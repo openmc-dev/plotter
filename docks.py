@@ -743,6 +743,13 @@ class ColorForm(QWidget):
         scale_connector = partial(self.mw.toggleTallyLogScale)
         self.scaleBox.stateChanged.connect(scale_connector)
 
+        self.maskZeroBox = QCheckBox()
+        zero_connector = partial(self.mw.toggleTallyMaskZero)
+        self.maskZeroBox.stateChanged.connect(zero_connector)
+
+        self.clipDataBox = QCheckBox()
+        clip_connector = partial(self.mw.toggleTallyDataClip)
+        self.clipDataBox.stateChanged.connect(clip_connector)
 
         # add widgets to form
         self.layout.addRow("Visible:", self.visibilityBox)
@@ -751,6 +758,8 @@ class ColorForm(QWidget):
         self.layout.addRow("Min: ", self.minBox)
         self.layout.addRow("Max: ", self.maxBox)
         self.layout.addRow("Log Scale: ", self.scaleBox)
+        self.layout.addRow("Clip Data: ", self.clipDataBox)
+        self.layout.addRow("Mask Zeros: ", self.maskZeroBox)
 
         self.setLayout(self.layout)
 
@@ -775,6 +784,14 @@ class ColorForm(QWidget):
         self.minBox.setValue(cv.tallyDataMin)
         self.maxBox.setValue(cv.tallyDataMax)
 
+    def updateMaskZeros(self):
+        cv = self.model.currentView
+        self.maskZeroBox.setChecked(cv.tallyMaskZeroValues)
+
+    def updateDataClip(self):
+        cv = self.model.currentView
+        self.clipDataBox.setChecked(cv.clipTallyData)
+
     def update(self):
         cv = self.model.currentView
 
@@ -790,3 +807,5 @@ class ColorForm(QWidget):
 
         self.scaleBox.setChecked(cv.tallyDataLogScale)
 
+        self.updateMaskZeros()
+        self.updateDataClip()

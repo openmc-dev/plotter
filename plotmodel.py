@@ -325,6 +325,10 @@ class PlotView(openmc.lib.plot._PlotBase):
         Minimum scale value for tally data
     tallyDataLogScale : bool
         Indicator of logarithmic scale for tally data
+    tallyMaskZeroValues : bool
+        Indicates whether or not zero values in tally data should be masked
+    clipTallyData: bool
+        Indicates whether or not tally data is clipped by the colorbar min/max
     tallyValue : str
         Indicator for what type of value is displayed in plots.
     """
@@ -369,6 +373,8 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.tallyDataMin = 0.0
         self.tallyDataMax = np.inf
         self.tallyDataLogScale = False
+        self.tallyMaskZeroValues = False
+        self.clipTallyData = False
         self.tallyValue = None
 
         # set defaults for color dialog
