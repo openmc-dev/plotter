@@ -17,6 +17,7 @@ from openmc.filter import (UniverseFilter, MaterialFilter, CellFilter,
                            SurfaceFilter, MeshFilter, MeshSurfaceFilter)
 
 from common_widgets import HorizontalLine
+from ScientificSpinBox import ScientificDoubleSpinBox
 
 _SPATIAL_FILTERS = (UniverseFilter, MaterialFilter, CellFilter,
                     SurfaceFilter, MeshFilter, MeshSurfaceFilter)
@@ -737,17 +738,13 @@ class ColorForm(QWidget):
         minmax_connector = partial(self.mw.toggleTallyDataUserMinMax)
         self.userMinMaxBox.stateChanged.connect(minmax_connector)
 
-        self.minBox = QDoubleSpinBox()
+        self.minBox = ScientificDoubleSpinBox()
         self.minBox.setMinimum(0.0)
-        self.minBox.setMaximum(1.0E9)
-        self.minBox.setDecimals(8)
         min_connector = partial(self.mw.editTallyDataMin)
         self.minBox.valueChanged.connect(min_connector)
 
-        self.maxBox = QDoubleSpinBox()
+        self.maxBox = ScientificDoubleSpinBox()
         self.maxBox.setMinimum(0.0)
-        self.maxBox.setMaximum(1.0E9)
-        self.maxBox.setDecimals(8)
         max_connector = partial(self.mw.editTallyDataMax)
         self.maxBox.valueChanged.connect(max_connector)
 

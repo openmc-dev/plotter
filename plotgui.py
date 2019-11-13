@@ -6,7 +6,7 @@ import itertools
 from plot_colors import rgb_normalize, invert_rgb
 from plotmodel import DomainDelegate
 from plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
-
+from ScientificSpinBox import ScientificDoubleSpinBox
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QApplication, QGroupBox, QFormLayout, QLabel,
@@ -853,7 +853,7 @@ class PlotImage(FigureCanvas):
             if cv.color_scale_log[cv.colorby]:
                 y_val = self.image.norm(y_val)
             self.data_indicator.set_data([data[0], [y_val, y_val]])
-            dl_color = invert_rgb(self.colorbar.get_cmap()(y_val), True)
+            dl_color = invert_rgb(self.image.get_cmap()(y_val), True)
             self.data_indicator.set_c(dl_color)
             self.draw()
 
@@ -1046,10 +1046,10 @@ class ColorDialog(QDialog):
         connector1 = partial(self.mw.toggleUserMinMax, property=property_kind)
         propertyTab.minMaxCheckBox.stateChanged.connect(connector1)
 
-        propertyTab.minBox = QDoubleSpinBox(self)
+        propertyTab.minBox = ScientificDoubleSpinBox(self)
         propertyTab.minBox.setMaximum(1E9)
         propertyTab.minBox.setMinimum(0)
-        propertyTab.maxBox = QDoubleSpinBox(self)
+        propertyTab.maxBox = ScientificDoubleSpinBox(self)
         propertyTab.maxBox.setMaximum(1E9)
         propertyTab.maxBox.setMinimum(0)
 
