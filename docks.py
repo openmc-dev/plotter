@@ -735,7 +735,7 @@ class ColorForm(QWidget):
         self.alphaBox.valueChanged.connect(alpha_connector)
 
         self.userMinMaxBox = QCheckBox()
-        minmax_connector = partial(self.mw.toggleTallyDataUserMinMax)
+        minmax_connector = partial(self.mw.toggleTallyDataUserMinMax, apply=True)
         self.userMinMaxBox.stateChanged.connect(minmax_connector)
 
         self.minBox = ScientificDoubleSpinBox()
@@ -781,17 +781,14 @@ class ColorForm(QWidget):
             self.minBox.setEnabled(True)
             self.maxBox.setEnabled(True)
         else:
+            self.minBox.setValue(cv.tallyDataMin)
+            self.maxBox.setValue(cv.tallyDataMax)
             self.minBox.setEnabled(False)
             self.maxBox.setEnabled(False)
 
     def updateTallyVisibility(self):
         cv = self.model.currentView
         self.visibilityBox.setChecked(cv.tallyDataVisible)
-
-    def updateMinMax(self):
-        cv = self.model.currentView
-        self.minBox.setValue(cv.tallyDataMin)
-        self.maxBox.setValue(cv.tallyDataMax)
 
     def updateMaskZeros(self):
         cv = self.model.currentView

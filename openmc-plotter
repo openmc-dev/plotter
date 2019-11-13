@@ -864,6 +864,7 @@ class MainWindow(QMainWindow):
     def toggleTallyDataUserMinMax(self, state, apply=False):
         av = self.model.activeView
         av.tallyDataUserMinMax = bool(state)
+        self.tallyDock.updateMinMax()
         if apply:
             self.applyChanges()
 
@@ -889,7 +890,6 @@ class MainWindow(QMainWindow):
         self.tallyDock.updateMinMax()
 
     # Plot image methods
-
     def editPlotOrigin(self, xOr, yOr, zOr=None, apply=False):
         if zOr is not None:
             self.model.activeView.origin = [xOr, yOr, zOr]

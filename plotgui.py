@@ -509,6 +509,7 @@ class PlotImage(FigureCanvas):
             self.colorbar.ax.add_line(self.data_indicator)
             self.colorbar.ax.margins(0.0 ,0.0)
             self.updateDataIndicatorVisibility()
+
             self.updateColorMinMax(cv.colorby)
 
         self.ax = self.figure.axes[0]
@@ -1120,6 +1121,8 @@ class ColorDialog(QDialog):
         custom_minmax = self.model.activeView.use_custom_minmax
         for key, val, in custom_minmax.items():
             self.tabs[key].minMaxCheckBox.setChecked(val)
+            self.tabs[key].minBox.setEnabled(val)
+            self.tabs[key].maxBox.setEnabled(val)
 
     def updateColorbarScale(self):
         av = self.model.activeView
