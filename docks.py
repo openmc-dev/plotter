@@ -440,7 +440,12 @@ class TallyDock(PlotterDock):
             # start with all filters selected
             filter_item.setCheckState(0, QtCore.Qt.Checked)
 
+    def selectFromModel(self):
+        cv = self.model.currentView
+        self.selectedTally(cv.selectedTally)
+
     def selectTally(self, tally_label=None):
+        print("Selecting tally {}".format(tally_label))
         av = self.model.activeView
         # reset form layout
         for i in reversed(range(self.formLayout.count())):
@@ -450,9 +455,10 @@ class TallyDock(PlotterDock):
         self.formLayout.addRow(HorizontalLine())
 
         if tally_label is None or tally_label == "None" or tally_label == "":
-            self.model.selectedTally = None
+            av.selectedTally = None
             self.score_map = None
             self.nuclide_map = None
+            self.filter_map = None
             av.tallyValue = "Mean"
         else:
             tally_id = int(tally_label.split()[1])
@@ -570,13 +576,19 @@ class TallyDock(PlotterDock):
         idx = self.valueBox.findText(cv.tallyValue)
         self.valueBox.setCurrentIndex(idx)
 
+    def updateSelectedTally(self):
+        cv = self.model.currentView
+        idx = 0
+        if cv.selectedTally:
+            idx = self.tallySelector.findText(cv.selectedTally)
+        self.tallySelector.setCurrentIndex(idx)
+
     def updateScores(self):
         applied_scores = []
         for score, score_box in self.score_map.items():
             if score_box.checkState() == QtCore.Qt.CheckState.Checked:
                 applied_scores.append(score)
         self.model.appliedScores = tuple(applied_scores)
-
 
         if len(applied_scores) == 0:
             # if no scores are selected, enable all scores again
@@ -607,7 +619,6 @@ class TallyDock(PlotterDock):
 
     def updateNuclides(self):
         applied_nuclides = []
-
         for nuclide, nuclide_box in self.nuclide_map.items():
             if nuclide_box.checkState() == QtCore.Qt.CheckState.Checked:
                 applied_nuclides.append(nuclide)
@@ -626,38 +637,6 @@ class TallyDock(PlotterDock):
                 nuclide_box.setFlags(empty_item.flags() | QtCore.Qt.ItemIsUserCheckable)
                 nuclide_box.setFlags(empty_item.flags() & ~QtCore.Qt.ItemIsSelectable)
 
-    @staticmethod
-    def cellFilterForm(filter):
-        l = QCheckBox()
-        txt = "{}. Cell Filter (IDs: {})"
-        ids = map(str, filter.bins)
-        l.setText(txt.format(filter.id, ", ".join(ids)))
-        return l
-
-    @staticmethod
-    def universeFilterForm(filter):
-        l = QCheckBox()
-        txt = "{}. Universe Filter (IDs: {})"
-        ids = map(str, filter.bins)
-        l.setText(txt.format(filter.id, ", ".join(ids)))
-        return l
-
-    @staticmethod
-    def surfaceFilterForm(filter):
-        l = QCheckBox()
-        txt = "{}. Universe Filter (IDs: {})"
-        ids = map(str, filter.bins)
-        l.setText(txt.format(filter.id, ", ".join(cells)))
-        return l
-
-    def updateColormap(self):
-        cmaps = self.model.activeView.colormaps
-        for key, val in cmaps.items():
-            idx = self.tabs[key].colormapBox.findText(val,
-                                                      QtCore.Qt.MatchFixedString)
-            if idx >= 0:
-                self.tabs[key].colormapBox.setCurrentIndex(idx)
-
     def update(self):
 
         self.tallyColorForm.update()
@@ -665,6 +644,7 @@ class TallyDock(PlotterDock):
         if self.model.statepoint:
             tally_w_name = 'Tally {} "{}"'
             tally_no_name = 'Tally {}'
+            self.tallySelector.clear()
             self.tallySelector.setEnabled(True)
             self.tallySelector.addItem("None")
             for idx, tally in enumerate(self.model.statepoint.tallies.values()):
@@ -673,6 +653,9 @@ class TallyDock(PlotterDock):
                 else:
                     self.tallySelector.addItem(tally_w_name.format(tally.id, tally.name))
                 self.tally_map[idx] = tally
+            self.updateSelectedTally()
+            self.updateTallyValue()
+            self.updateMinMax()
         else:
             self.tallySelector.clear()
             self.tallySelector.setDisabled(True)
@@ -786,7 +769,6 @@ class ColorForm(QWidget):
         self.dataIndicatorCheckBox.setChecked(cv.tallyDataIndicator)
 
     def setMinMaxEnabled(self, enable):
-
         if enable:
             self.minBox.setEnabled(True)
             self.maxBox.setEnabled(True)
@@ -796,15 +778,9 @@ class ColorForm(QWidget):
 
     def updateMinMax(self):
         cv = self.model.currentView
-
-        if cv.tallyDataUserMinMax:
-            self.minBox.setEnabled(True)
-            self.maxBox.setEnabled(True)
-        else:
-            self.minBox.setValue(cv.tallyDataMin)
-            self.maxBox.setValue(cv.tallyDataMax)
-            self.minBox.setEnabled(False)
-            self.maxBox.setEnabled(False)
+        self.minBox.setValue(cv.tallyDataMin)
+        self.maxBox.setValue(cv.tallyDataMax)
+        self.setMinMaxEnabled(cv.tallyDataUserMinMax)
 
     def updateTallyVisibility(self):
         cv = self.model.currentView

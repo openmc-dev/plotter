@@ -98,6 +98,7 @@ class MainWindow(QMainWindow):
         # Load Plot
         self.statusBar().showMessage('Generating Plot...')
         self.dock.updateDock()
+        self.tallyDock.update()
         self.colorDialog.updateDialogValues()
 
         # Timer allows GUI to render before plot finishes loading
@@ -515,7 +516,8 @@ class MainWindow(QMainWindow):
         # remove the statepoint object and update the data menu
         filename = self.model.statepoint.filename
         self.model.statepoint = None
-        self.model.selectedTally = None
+        self.model.currentView.selectedTally = None
+        self.model.activeView.selectedTally = None
 
         msg = "Closed statepoint file {}".format(filename)
         self.statusBar().showMessage(msg)
@@ -542,6 +544,7 @@ class MainWindow(QMainWindow):
             self.plotIm.generatePixmap()
             self.resetModels()
             self.showCurrentView()
+
         else:
             self.statusBar().showMessage('No changes to apply.', 3000)
 
@@ -822,6 +825,8 @@ class MainWindow(QMainWindow):
     # Tally dock methods
 
     def editSelectedTally(self, event):
+        av = self.model.activeView
+        av.selectedTally = event
         self.tallyDock.selectTally(event)
 
     def editTallyValue(self, event):

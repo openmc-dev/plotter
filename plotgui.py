@@ -529,7 +529,7 @@ class PlotImage(FigureCanvas):
         self.ax.set_ylabel(axis_label_str.format(cv.basis[1]))
 
         # draw tally
-        tally_selected =  self.model.selectedTally is not None
+        tally_selected =  cv.selectedTally is not None
         tally_visible = self.model.currentView.tallyDataVisible
         nuclides_and_scores_selected = bool(self.model.appliedNuclides)
         nuclides_and_scores_selected &= bool(self.model.appliedScores)

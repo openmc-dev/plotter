@@ -45,8 +45,6 @@ class PlotModel():
             The current RGB image data
         statepoint : StatePointModel
             Simulation data model used to display tally results
-        selectedTally : int
-            ID of the currently selected tally
         applied_filters : tuple of ints
             IDs of the applied filters for the displayed tally
         previousViews : list of PlotView instances
@@ -79,7 +77,6 @@ class PlotModel():
         # default statepoint value
         self._statepoint = None
         # default tally/filter info
-        self.selectedTally = None
         self.appliedFilters = ()
         self.appliedScores = ()
         self.appliedNuclides = ()
@@ -337,6 +334,8 @@ class PlotView(openmc.lib.plot._PlotBase):
         Indicates whether or not tallies are displayed as contours
     tallyContourLevels : str
         Number of contours levels or explicit level values
+    selectedTally : str
+        Label of the currently selected tally
     """
 
     def __init__(self, origin, width, height):
@@ -385,6 +384,7 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.tallyValue = "Mean"
         self.tallyContours = False
         self.tallyContourLevels = ""
+        self.selectedTally = None
 
         # set defaults for color dialog
         self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
