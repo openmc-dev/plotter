@@ -754,6 +754,12 @@ class ColorForm(QWidget):
         clip_connector = partial(self.mw.toggleTallyDataClip)
         self.clipDataBox.stateChanged.connect(clip_connector)
 
+        self.contoursBox = QCheckBox()
+        self.contoursBox.stateChanged.connect(self.mw.toggleTallyContours)
+
+        self.contourLevelsLine = QLineEdit()
+        self.contourLevelsLine.textChanged.connect(self.mw.editTallyContourLevels)
+
         # add widgets to form
         self.layout.addRow("Visible:", self.visibilityBox)
         self.layout.addRow("Alpha: ", self.alphaBox)
@@ -765,12 +771,28 @@ class ColorForm(QWidget):
         self.layout.addRow("Log Scale: ", self.scaleBox)
         self.layout.addRow("Clip Data: ", self.clipDataBox)
         self.layout.addRow("Mask Zeros: ", self.maskZeroBox)
+        self.layout.addRow("Contours: ", self.contoursBox)
+        self.layout.addRow("Contour Levels:", self.contourLevelsLine)
 
         self.setLayout(self.layout)
+
+    def updateTallyContours(self):
+        cv = self.model.currentView
+        self.contoursBox.setChecked(cv.tallyContours)
+        self.contourLevelsLine.setText(cv.tallyContourLevels)
 
     def updateDataIndicator(self):
         cv = self.model.currentView
         self.dataIndicatorCheckBox.setChecked(cv.tallyDataIndicator)
+
+    def setMinMaxEnabled(self, enable):
+
+        if enable:
+            self.minBox.setEnabled(True)
+            self.maxBox.setEnabled(True)
+        else:
+            self.minBox.setEnabled(False)
+            self.maxBox.setEnabled(False)
 
     def updateMinMax(self):
         cv = self.model.currentView
@@ -806,10 +828,10 @@ class ColorForm(QWidget):
         self.alphaBox.setValue(cv.tallyDataAlpha)
         self.visibilityBox.setChecked(cv.tallyDataVisible)
         self.userMinMaxBox.setChecked(cv.tallyDataUserMinMax)
+        self.scaleBox.setChecked(cv.tallyDataLogScale)
 
         self.updateMinMax()
-
-        self.scaleBox.setChecked(cv.tallyDataLogScale)
         self.updateMaskZeros()
         self.updateDataClip()
         self.updateDataIndicator()
+        self.updateTallyContours()

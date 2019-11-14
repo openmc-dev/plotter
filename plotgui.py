@@ -566,14 +566,36 @@ class PlotImage(FigureCanvas):
             self.model.tally_extents = extents if extents is not None else data_bounds
 
             norm = SymLogNorm(1E-30) if cv.tallyDataLogScale else None
-            self.tally_image = self.ax.imshow(image_data,
-                                              alpha=cv.tallyDataAlpha,
-                                              cmap=cv.tallyDataColormap,
-                                              norm=norm,
-                                              extent=extents)
+
+            if cv.tallyContours:
+                # parse the levels line
+                levels = self.parseContoursLine(cv.tallyContourLevels)
+                self.tally_image = self.ax.contour(image_data,
+                                                   origin='image',
+                                                   levels=levels,
+                                                   alpha=cv.tallyDataAlpha,
+                                                   cmap=cv.tallyDataColormap,
+                                                   norm=norm,
+                                                   extent=extents)
+
+            else:
+                self.tally_image = self.ax.imshow(image_data,
+                                                  alpha=cv.tallyDataAlpha,
+                                                  cmap=cv.tallyDataColormap,
+                                                  norm=norm,
+                                                  extent=extents)
             # add colorbar
             self.tally_colorbar = self.figure.colorbar(self.tally_image,
                                                        anchor=(1.0, 0.0))
+
+            if cv.tallyContours:
+                fmt = "%.2E"
+                self.ax.clabel(self.tally_image,
+                               self.tally_image.levels,
+                               inline=True,
+                               fmt=fmt)
+
+
 
 
             # draw line on colorbar
@@ -626,7 +648,13 @@ class PlotImage(FigureCanvas):
                                             levels=levels,
                                             extent=data_bounds)
 
-
+    @staticmethod
+    def parseContoursLine(line):
+        # if there are any commas in the line, treat as level values
+        if "," in line:
+            return [float(val) for val in line.split(",") if val is not ""]
+        else:
+            return  int(line)
 
     def _create_tally_domain_image(self, tally, tally_value, scores, nuclides):
         # data resources used throughout

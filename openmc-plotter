@@ -856,6 +856,14 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
+    def toggleTallyContours(self, state):
+        av = self.model.activeView
+        av.tallyContours = bool(state)
+
+    def editTallyContourLevels(self, value):
+        av = self.model.activeView
+        av.tallyContourLevels = value
+
     def toggleTallyDataIndicator(self, state, apply=False):
         av = self.model.activeView
         av.tallyDataIndicator = bool(state)
@@ -869,7 +877,7 @@ class MainWindow(QMainWindow):
     def toggleTallyDataUserMinMax(self, state, apply=False):
         av = self.model.activeView
         av.tallyDataUserMinMax = bool(state)
-        self.tallyDock.updateMinMax()
+        self.tallyDock.tallyColorForm.setMinMaxEnabled(bool(state))
         if apply:
             self.applyChanges()
 

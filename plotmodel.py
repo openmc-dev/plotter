@@ -333,6 +333,10 @@ class PlotView(openmc.lib.plot._PlotBase):
         Indicates whether or not tally data is clipped by the colorbar min/max
     tallyValue : str
         Indicator for what type of value is displayed in plots.
+    tallyContours : bool
+        Indicates whether or not tallies are displayed as contours
+    tallyContourLevels : str
+        Number of contours levels or explicit level values
     """
 
     def __init__(self, origin, width, height):
@@ -379,6 +383,8 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.tallyMaskZeroValues = False
         self.clipTallyData = False
         self.tallyValue = "Mean"
+        self.tallyContours = False
+        self.tallyContourLevels = ""
 
         # set defaults for color dialog
         self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
