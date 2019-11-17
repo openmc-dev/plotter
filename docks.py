@@ -445,7 +445,6 @@ class TallyDock(PlotterDock):
         self.selectedTally(cv.selectedTally)
 
     def selectTally(self, tally_label=None):
-        print("Selecting tally {}".format(tally_label))
         av = self.model.activeView
         # reset form layout
         for i in reversed(range(self.formLayout.count())):
