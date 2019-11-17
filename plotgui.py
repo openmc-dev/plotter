@@ -673,7 +673,7 @@ class PlotImage(FigureCanvas):
         # data structure for tracking which spatial
         # filter bins are enabled
         spatial_filter_bins = defaultdict(list)
-
+        n_spatial_filters = 0
         for filter_idx, filter in enumerate(tally.filters):
             filter_check_state = self.mw.tallyDock.filter_map[filter].checkState(0)
 
@@ -688,11 +688,15 @@ class PlotImage(FigureCanvas):
 
                 if type(filter) in self._supported_spatial_filters:
                     spatial_filter_bins[filter] = selected_bins
+                    n_spatial_filters += 1
                 else:
-                    data = _do_op([np.array(selected_bins)], tally_value)
+                    slc = [slice(None)] * len(data.shape)
+                    slc[n_spatial_filters] = selected_bins
+                    slc = tuple(slc)
+                    data = _do_op(data[slc], tally_value, n_spatial_filters)
             else:
                 data[:,...] = 0.0
-                data = _do_op(data, tally_value)
+                data = _do_op(data, tally_value, n_spatial_filters)
 
         # filter by selected scores
         selected_scores = []
@@ -707,6 +711,7 @@ class PlotImage(FigureCanvas):
             if nuclide in nuclides:
                 selected_nuclides.append(idx)
         data = _do_op(data[..., np.array(selected_nuclides)], tally_value, -1)
+
 
         # get data limits
         data_min = np.min(data)
@@ -727,8 +732,8 @@ class PlotImage(FigureCanvas):
             mask = np.full(self.model.ids.shape, True, dtype=bool)
 
             for filter, bin_idx in zip(spatial_filters, bin_indices):
-                bin= filter.bins[bin_idx]
-                if isinstance(filter, openmc.Cell):
+                bin = filter.bins[bin_idx]
+                if isinstance(filter, openmc.CellFilter):
                     mask &= self.model.cell_ids == bin
                 elif isinstance(filter, openmc.MaterialFilter):
                     mask &= self.model.mat_ids == bin
@@ -737,7 +742,6 @@ class PlotImage(FigureCanvas):
                     univ_cells = self.model.statepoint.universes[bin].cells
                     for cell in univ_cells:
                         mask &= self.model.cell_ids == cell
-
             # set image data values
             data_out[mask] = tally_val
 
