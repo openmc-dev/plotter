@@ -897,9 +897,29 @@ class PlotImage(FigureCanvas):
         units_out = list(units)[0]
 
         if tally.contains_filter(openmc.MeshFilter):
-            return self._create_tally_mesh_image(tally, tally_value, scores, nuclides) + (units_out,)
+            if tally_value == 'rel_err':
+                mean_data = self._create_tally_mesh_image(tally, 'mean', scores, nuclides) + (units_out,)
+                dev_data = self._create_tally_mesh_image(tally, 'std_dev', scores, nuclides) + (units_out,)
+                image_data = dev_data[0] / mean_data[0]
+                image_data = np.nan_to_num(image_data, nan=0.0, posinf=0.0, neginf=0.0)
+                extents = mean_data[1]
+                data_min = np.min(image_data)
+                data_max = np.max(image_data)
+                return image_data, extents, data_min, data_max, units_out
+            else:
+                return self._create_tally_mesh_image(tally, tally_value, scores, nuclides) + (units_out,)
         else:
-            return self._create_tally_domain_image(tally, tally_value, scores, nuclides) + (units_out,)
+            if tally_value == 'rel_err':
+                mean_data = self._create_tally_domain_image(tally, 'mean', scores, nuclides) + (units_out,)
+                dev_data = self._create_tally_domain_image(tally, 'std_dev', scores, nuclides) + (units_out,)
+                image_data = dev_data[0] / mean_data[0]
+                image_data = np.nan_to_num(image_data, nan=0.0, posinf=0.0, neginf=0.0)
+                extents = mean_data[1]
+                data_min = np.min(image_data)
+                data_max = np.max(image_data)
+                return image_data, extents, data_min, data_max, units_out
+            else:
+                return self._create_tally_domain_image(tally, tally_value, scores, nuclides) + (units_out,)
 
     def updateColorbarScale(self):
         self.updatePixmap()

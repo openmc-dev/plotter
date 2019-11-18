@@ -61,7 +61,8 @@ score_units['decay-rate'] = 'Seconds^-1'
 score_units['damage-energy'] = deposition_units
 
 tally_values = {'Mean': 'mean',
-                'Std. Dev.': 'std_dev'}
+                'Std. Dev.': 'std_dev',
+                'Rel. Error' : 'rel_err'}
 
 class PlotterDock(QDockWidget):
 
