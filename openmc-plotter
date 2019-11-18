@@ -826,7 +826,11 @@ class MainWindow(QMainWindow):
 
     def editSelectedTally(self, event):
         av = self.model.activeView
-        av.selectedTally = event
+
+        if event is None or event == "None" or event == "":
+            av.selectedTally = None
+        else:
+            av.selectedTally = int(event.split()[1])
         self.tallyDock.selectTally(event)
 
     def editTallyValue(self, event):

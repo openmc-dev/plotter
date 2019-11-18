@@ -185,13 +185,11 @@ class PlotImage(FigureCanvas):
         if self.model.tally_data is None:
             return -1, None
 
-        if not self.model.selectedTally or not cv.tallyDataVisible:
+        if not cv.selectedTally or not cv.tallyDataVisible:
             return -1, None
 
-        tally_id = self.model.selectedTally
-
         # don't look up mesh filter data (for now)
-        tally = self.model.statepoint.tallies[tally_id]
+        tally = self.model.statepoint.tallies[cv.selectedTally]
         filters = tally.filters
 
         # check that the position is in the axes view
@@ -201,7 +199,7 @@ class PlotImage(FigureCanvas):
         else:
             value = None
 
-        return tally_id, value
+        return cv.selectedTally, value
 
     def getIDinfo(self, event):
 
@@ -853,8 +851,7 @@ class PlotImage(FigureCanvas):
     def create_tally_image(self):
         cv = self.model.currentView
 
-        tally = cv.selectedTally
-        tally_id = int(tally.split()[1])
+        tally_id = cv.selectedTally
 
         scores = self.model.appliedScores
         nuclides = self.model.appliedNuclides

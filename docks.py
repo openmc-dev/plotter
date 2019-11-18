@@ -350,28 +350,36 @@ class TallyDock(PlotterDock):
     def __init__(self, model, FM, parent=None):
         super().__init__(model, FM, parent)
 
+        # Dock maps for tally information
         self.tally_map = {}
         self.filter_map = {}
         self.score_map = {}
         self.nuclide_map = {}
 
-        self.createTallySelectionLayout()
+        # Tally selector
+        self.tallySelectorLayout = QFormLayout()
+        self.tallySelector = QComboBox(self)
+        self.tallySelector.currentTextChanged[str].connect(self.mw.editSelectedTally)
+        self.tallySelectorLayout.addRow(self.tallySelector)
+        self.tallySelectorLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
+        self.tallySelectorLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 
-        self.dockLayout = QVBoxLayout()
-
-        self.widget = QWidget()
-        self.widget.setLayout(self.dockLayout)
-        self.setWidget(self.widget)
+        # Add selector to its own box
+        self.tallyGroupBox = QGroupBox('Selected Tally')
+        self.tallyGroupBox.setLayout(self.tallySelectorLayout)
 
         # Create submit button
         self.applyButton = QPushButton("ApplyChanges")
         self.applyButton.setMinimumHeight(self.FM.height() * 1.6)
         self.applyButton.clicked.connect(self.mw.applyChanges)
 
+        # Color options section
         self.tallyColorForm = ColorForm(self.model, self.mw, 'tally')
         self.scoresListWidget = QListWidget()
         self.nuclideListWidget = QListWidget()
 
+        # Main layout
+        self.dockLayout = QVBoxLayout()
         self.dockLayout.addWidget(QLabel("Tallies"))
         self.dockLayout.addWidget(HorizontalLine())
         self.dockLayout.addWidget(self.tallyGroupBox)
@@ -381,26 +389,14 @@ class TallyDock(PlotterDock):
         self.dockLayout.addWidget(HorizontalLine())
         self.dockLayout.addWidget(self.applyButton)
 
-    def createTallySelectionLayout(self):
-        self.formLayout = QFormLayout()
-
-        # Tally listing
-        self.tallySelector = QComboBox(self)
-        self.tallySelector.currentTextChanged[str].connect(self.mw.editSelectedTally)
-
-        self.formLayout.addRow(self.tallySelector)
-        self.formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
-        self.formLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
-
-        # tally group box
-        self.tallyGroupBox = QGroupBox('Selected Tally')
-        self.tallyGroupBox.setLayout(self.formLayout)
-
-    def updateMinMax(self):
-        self.tallyColorForm.updateMinMax()
+        # Create widget for dock and apply main layout
+        self.widget = QWidget()
+        self.widget.setLayout(self.dockLayout)
+        self.setWidget(self.widget)
 
     def create_filter_tree(self, spatial_filters):
-        tally = self.model.statepoint.tallies[self.model.selectedTally]
+        av = self.model.activeView
+        tally = self.model.statepoint.tallies[av.selectedTally]
         filters = tally.filters
 
         # create a tree for the filters
@@ -445,13 +441,16 @@ class TallyDock(PlotterDock):
         self.selectedTally(cv.selectedTally)
 
     def selectTally(self, tally_label=None):
+        # using active view to populate tally options live
         av = self.model.activeView
+
         # reset form layout
-        for i in reversed(range(self.formLayout.count())):
-            self.formLayout.itemAt(i).widget().setParent(None)
-        # always re-add the tally selector
-        self.formLayout.addRow(self.tallySelector)
-        self.formLayout.addRow(HorizontalLine())
+        for i in reversed(range(self.tallySelectorLayout.count())):
+            self.tallySelectorLayout.itemAt(i).widget().setParent(None)
+
+        # always re-add the tally selector to the layout
+        self.tallySelectorLayout.addRow(self.tallySelector)
+        self.tallySelectorLayout.addRow(HorizontalLine())
 
         if tally_label is None or tally_label == "None" or tally_label == "":
             av.selectedTally = None
@@ -460,42 +459,42 @@ class TallyDock(PlotterDock):
             self.filter_map = None
             av.tallyValue = "Mean"
         else:
-            tally_id = int(tally_label.split()[1])
-            tally = self.model.statepoint.tallies[tally_id]
-            self.model.selectedTally = tally_id
+            # get the tally
+            tally = self.model.statepoint.tallies[av.selectedTally]
+
+            # populate filters
 
             filter_types = set()
             for filter in tally.filters:
                 filter_types.add(type(filter))
             spatial_filters = bool(len(filter_types.intersection(_SPATIAL_FILTERS)))
 
-            self.formLayout.addRow(QLabel("Filters:"))
-
+            self.tallySelectorLayout.addRow(QLabel("Filters:"))
             if not spatial_filters:
                 self.filter_description = QLabel("(No Spatial Filters)")
-                self.formLayout.addRow(self.filter_description)
+                self.tallySelectorLayout.addRow(self.filter_description)
 
             self.create_filter_tree(spatial_filters)
 
-            self.formLayout.addRow(self.filterTree)
-            self.formLayout.addRow(HorizontalLine())
+            self.tallySelectorLayout.addRow(self.filterTree)
+            self.tallySelectorLayout.addRow(HorizontalLine())
 
             # value selection
-            self.formLayout.addRow(QLabel("Value:"))
+            self.tallySelectorLayout.addRow(QLabel("Value:"))
             self.valueBox = QComboBox(self)
             self.values = tuple(tally_values.keys())
             for value in self.values:
                 self.valueBox.addItem(value)
-            self.formLayout.addRow(self.valueBox)
+            self.tallySelectorLayout.addRow(self.valueBox)
             self.valueBox.currentTextChanged[str].connect(self.mw.editTallyValue)
             self.updateTallyValue()
 
 
-            self.formLayout.addRow(HorizontalLine())
+            self.tallySelectorLayout.addRow(HorizontalLine())
 
             # scores
             self.score_map = {}
-            self.formLayout.addRow(QLabel("Scores:"))
+            self.tallySelectorLayout.addRow(QLabel("Scores:"))
             self.scoresListWidget.itemClicked.connect(self.mw.updateScores)
             self.score_map.clear()
             self.scoresListWidget.clear()
@@ -528,18 +527,18 @@ class TallyDock(PlotterDock):
                         score_units[score] = reaction_units
                 self.scoresListWidget.addItem(ql)
 
-            # select the first score item
+            # select the first score item by default
             for item in self.score_map.values():
                 item.setCheckState(QtCore.Qt.Checked)
                 break
             self.updateScores()
 
-            self.formLayout.addRow(self.scoresListWidget)
+            self.tallySelectorLayout.addRow(self.scoresListWidget)
 
             # nuclides
             self.nuclide_map = {}
-            self.formLayout.addRow(HorizontalLine())
-            self.formLayout.addRow(QLabel("Nuclides:"))
+            self.tallySelectorLayout.addRow(HorizontalLine())
+            self.tallySelectorLayout.addRow(QLabel("Nuclides:"))
             self.nuclideListWidget.itemClicked.connect(self.mw.updateNuclides)
             self.nuclide_map.clear()
             self.nuclideListWidget.clear()
@@ -562,13 +561,16 @@ class TallyDock(PlotterDock):
                 self.nuclide_map[nuclide] = ql
                 self.nuclideListWidget.addItem(ql)
 
-            # select the first nuclide item
+            # select the first nuclide item by default
             for item in self.nuclide_map.values():
                 item.setCheckState(QtCore.Qt.Checked)
                 break
             self.updateNuclides()
 
-            self.formLayout.addRow(self.nuclideListWidget)
+            self.tallySelectorLayout.addRow(self.nuclideListWidget)
+
+    def updateMinMax(self):
+        self.tallyColorForm.updateMinMax()
 
     def updateTallyValue(self):
         cv = self.model.currentView
@@ -579,7 +581,7 @@ class TallyDock(PlotterDock):
         cv = self.model.currentView
         idx = 0
         if cv.selectedTally:
-            idx = self.tallySelector.findText(cv.selectedTally)
+            idx = self.tallySelector.findData(cv.selectedTally)
         self.tallySelector.setCurrentIndex(idx)
 
     def updateScores(self):
@@ -638,6 +640,7 @@ class TallyDock(PlotterDock):
 
     def update(self):
 
+        # update the color form
         self.tallyColorForm.update()
 
         if self.model.statepoint:
@@ -648,12 +651,11 @@ class TallyDock(PlotterDock):
             self.tallySelector.addItem("None")
             for idx, tally in enumerate(self.model.statepoint.tallies.values()):
                 if tally.name == "":
-                    self.tallySelector.addItem(tally_no_name.format(tally.id))
+                    self.tallySelector.addItem(tally_no_name.format(tally.id), userData=tally.id)
                 else:
-                    self.tallySelector.addItem(tally_w_name.format(tally.id, tally.name))
+                    self.tallySelector.addItem(tally_w_name.format(tally.id, tally.name), userData=tally.id)
                 self.tally_map[idx] = tally
             self.updateSelectedTally()
-            self.updateTallyValue()
             self.updateMinMax()
         else:
             self.tallySelector.clear()
@@ -674,6 +676,35 @@ class ColorForm(QWidget):
         Indicator for whether or not the field should be visible
     alphaBox : QDoubleSpinBox instance
         Holds the alpha value for the displayed field data
+    colormapBox : QComboBox
+        Selector for colormap
+    dataIndicatorCheckBox : QCheckBox
+        Inidcates whether or not the data indicator will appear on the colorbar
+    userMinMaxBox : QCheckBox
+        Indicates whether or not the user defined values in the min and max
+        will be used to set the bounds of the colorbar.
+    maxBox : ScientificDoubleSpinBox
+        Max value of the colorbar. If the userMinMaxBox is checked, this will be
+        the user's input. If the userMinMaxBox is not checked, this box will
+        hold the max value of the visible data.
+    minBox : ScientificDoubleSpinBox
+        Min value of the colorbar. If the userMinMaxBox is checked, this will be
+        the user's input. If the userMinMaxBox is not checked, this box will
+        hold the max value of the visible data.
+    scaleBox : QCheckBox
+        Indicates whether or not the data is displayed on a log or linear
+        scale
+    maskZeroBox : QCheckBox
+        Indicates whether or not values equal to zero are displayed
+    clipDataBox : QCheckBox
+        Indicates whether or not values outside the min/max are displayed
+    contoursBox :  QCheckBox
+        Inidicates whether or not data is displayed as contours
+    contourLevelsLine : QLineEdit
+        Controls the contours of the data. If this line contains a single
+        integer, that number of levels is used to display the data. If a
+        comma-separated set of values is entered, those values will be used as
+        levels in the contour plot.
     """
     def __init__(self, model, mw, field, colormaps=None):
         """
@@ -686,63 +717,73 @@ class ColorForm(QWidget):
 
         self.layout = QFormLayout()
 
-        self.colormapBox = QComboBox()
-        # populate with colormaps
-        if colormaps is None:
-            colormaps = sorted(m for m in mcolormaps.datad if not m.endswith("_r"))
-        for colormap in colormaps:
-            self.colormapBox.addItem(colormap)
 
-        cmap_connector = partial(self.mw.editTallyDataColormap)
-        self.colormapBox.currentTextChanged[str].connect(cmap_connector)
 
+        # Visibility check box
         self.visibilityBox = QCheckBox()
-
         visible_connector = partial(self.mw.toggleTallyVisibility)
         self.visibilityBox.stateChanged.connect(visible_connector)
 
+        # Alpha value
         self.alphaBox = QDoubleSpinBox()
         self.alphaBox.setDecimals(2)
         alpha_connector = partial(self.mw.editTallyAlpha)
         self.alphaBox.valueChanged.connect(alpha_connector)
 
+        # Color map selector
+        self.colormapBox = QComboBox()
+        if colormaps is None:
+            colormaps = sorted(m for m in mcolormaps.datad if not m.endswith("_r"))
+        for colormap in colormaps:
+            self.colormapBox.addItem(colormap)
+        cmap_connector = partial(self.mw.editTallyDataColormap)
+        self.colormapBox.currentTextChanged[str].connect(cmap_connector)
+
+
+        # Data indicator line check box
         self.dataIndicatorCheckBox = QCheckBox()
         data_indicator_connector = partial(self.mw.toggleTallyDataIndicator)
         self.dataIndicatorCheckBox.stateChanged.connect(data_indicator_connector)
 
+        # User specified min/max check box
         self.userMinMaxBox = QCheckBox()
         minmax_connector = partial(self.mw.toggleTallyDataUserMinMax)
         self.userMinMaxBox.stateChanged.connect(minmax_connector)
 
+        # Data min spin box
         self.minBox = ScientificDoubleSpinBox()
         self.minBox.setMinimum(0.0)
         min_connector = partial(self.mw.editTallyDataMin)
         self.minBox.valueChanged.connect(min_connector)
 
+        # Data max spin box
         self.maxBox = ScientificDoubleSpinBox()
         self.maxBox.setMinimum(0.0)
         max_connector = partial(self.mw.editTallyDataMax)
         self.maxBox.valueChanged.connect(max_connector)
 
+        # Linear/Log scaling check box
         self.scaleBox = QCheckBox()
         scale_connector = partial(self.mw.toggleTallyLogScale)
         self.scaleBox.stateChanged.connect(scale_connector)
 
+        # Masking of zero values check box
         self.maskZeroBox = QCheckBox()
         zero_connector = partial(self.mw.toggleTallyMaskZero)
         self.maskZeroBox.stateChanged.connect(zero_connector)
 
+        # Clip data to min/max check box
         self.clipDataBox = QCheckBox()
         clip_connector = partial(self.mw.toggleTallyDataClip)
         self.clipDataBox.stateChanged.connect(clip_connector)
 
+        # Display data as contour plot check box
         self.contoursBox = QCheckBox()
         self.contoursBox.stateChanged.connect(self.mw.toggleTallyContours)
-
         self.contourLevelsLine = QLineEdit()
         self.contourLevelsLine.textChanged.connect(self.mw.editTallyContourLevels)
 
-        # add widgets to form
+        # Organize widgets on layout
         self.layout.addRow("Visible:", self.visibilityBox)
         self.layout.addRow("Alpha: ", self.alphaBox)
         self.layout.addRow("Colormap: ", self.colormapBox)
@@ -755,7 +796,6 @@ class ColorForm(QWidget):
         self.layout.addRow("Mask Zeros: ", self.maskZeroBox)
         self.layout.addRow("Contours: ", self.contoursBox)
         self.layout.addRow("Contour Levels:", self.contourLevelsLine)
-
         self.setLayout(self.layout)
 
     def updateTallyContours(self):
@@ -796,6 +836,7 @@ class ColorForm(QWidget):
     def update(self):
         cv = self.model.currentView
 
+        # set colormap value in selector
         cmap = cv.tallyDataColormap
         idx = self.colormapBox.findText(cmap, QtCore.Qt.MatchFixedString)
         self.colormapBox.setCurrentIndex(idx)
