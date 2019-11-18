@@ -1,7 +1,7 @@
 from functools import partial
 import re
 
-from PySide2 import QtCore, QtGui
+from PySide2 import QtCore, QtGui, QtWidgets
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QGroupBox, QFormLayout, QLabel,
                                QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox,
@@ -16,7 +16,7 @@ import numpy as np
 from openmc.filter import (UniverseFilter, MaterialFilter, CellFilter,
                            SurfaceFilter, MeshFilter, MeshSurfaceFilter)
 
-from common_widgets import HorizontalLine
+from common_widgets import HorizontalLine, CollapsibleBox, Expander
 from scientific_spin_box import ScientificDoubleSpinBox
 
 _SPATIAL_FILTERS = (UniverseFilter, MaterialFilter, CellFilter,
@@ -376,8 +376,9 @@ class TallyDock(PlotterDock):
 
         # Color options section
         self.tallyColorForm = ColorForm(self.model, self.mw, 'tally')
+        self.scoresGroupBox = Expander(title="Scores:")
         self.scoresListWidget = QListWidget()
-        self.nuclideListWidget = QListWidget()
+        self.nuclidesListWidget = QListWidget()
 
         # Main layout
         self.dockLayout = QVBoxLayout()
@@ -464,7 +465,6 @@ class TallyDock(PlotterDock):
             tally = self.model.statepoint.tallies[av.selectedTally]
 
             # populate filters
-
             filter_types = set()
             for filter in tally.filters:
                 filter_types.add(type(filter))
@@ -490,12 +490,8 @@ class TallyDock(PlotterDock):
             self.valueBox.currentTextChanged[str].connect(self.mw.editTallyValue)
             self.updateTallyValue()
 
-
-            self.tallySelectorLayout.addRow(HorizontalLine())
-
             # scores
             self.score_map = {}
-            self.tallySelectorLayout.addRow(QLabel("Scores:"))
             self.scoresListWidget.itemClicked.connect(self.mw.updateScores)
             self.score_map.clear()
             self.scoresListWidget.clear()
@@ -534,15 +530,17 @@ class TallyDock(PlotterDock):
                 break
             self.updateScores()
 
-            self.tallySelectorLayout.addRow(self.scoresListWidget)
+            self.scoresGroupBoxLayout = QVBoxLayout()
+            self.scoresGroupBox = Expander(title="Scores:")
+            self.scoresGroupBoxLayout.addWidget(self.scoresListWidget)
+            self.scoresGroupBox.setContentLayout(self.scoresGroupBoxLayout)
+            self.tallySelectorLayout.addRow(self.scoresGroupBox)
 
             # nuclides
             self.nuclide_map = {}
-            self.tallySelectorLayout.addRow(HorizontalLine())
-            self.tallySelectorLayout.addRow(QLabel("Nuclides:"))
-            self.nuclideListWidget.itemClicked.connect(self.mw.updateNuclides)
+            self.nuclidesListWidget.itemClicked.connect(self.mw.updateNuclides)
             self.nuclide_map.clear()
-            self.nuclideListWidget.clear()
+            self.nuclidesListWidget.clear()
 
             sorted_nuclides = sorted(tally.nuclides)
             # always put total at the top
@@ -560,7 +558,7 @@ class TallyDock(PlotterDock):
                     ql.setFlags(ql.flags() | QtCore.Qt.ItemIsUserCheckable)
                     ql.setFlags(ql.flags() & ~QtCore.Qt.ItemIsSelectable)
                 self.nuclide_map[nuclide] = ql
-                self.nuclideListWidget.addItem(ql)
+                self.nuclidesListWidget.addItem(ql)
 
             # select the first nuclide item by default
             for item in self.nuclide_map.values():
@@ -568,7 +566,11 @@ class TallyDock(PlotterDock):
                 break
             self.updateNuclides()
 
-            self.tallySelectorLayout.addRow(self.nuclideListWidget)
+            self.nuclidesGroupBoxLayout = QVBoxLayout()
+            self.nuclidesGroupBox = Expander(title="Nuclides:")
+            self.nuclidesGroupBoxLayout.addWidget(self.nuclidesListWidget)
+            self.nuclidesGroupBox.setContentLayout(self.nuclidesGroupBoxLayout)
+            self.tallySelectorLayout.addRow(self.nuclidesGroupBox)
 
     def updateMinMax(self):
         self.tallyColorForm.updateMinMax()
