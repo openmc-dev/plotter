@@ -528,18 +528,10 @@ class PlotImage(FigureCanvas):
         self.ax.set_xlabel(axis_label_str.format(cv.basis[0]))
         self.ax.set_ylabel(axis_label_str.format(cv.basis[1]))
 
-        # draw tally
-        tally_selected =  cv.selectedTally is not None
-        tally_visible = self.model.currentView.tallyDataVisible
-        nuclides_and_scores_selected = bool(self.model.appliedNuclides)
-        nuclides_and_scores_selected &= bool(self.model.appliedScores)
+        # generate tally image
+        image_data, extents, data_min, data_max, units = self.create_tally_image()
 
-        image_data = None
-
-        if tally_selected and tally_visible and nuclides_and_scores_selected:
-            image_data, extents, data_min, data_max, units = self.create_tally_image(self.model.selectedTally,
-                                                                                     self.model.appliedScores,
-                                                                                     self.model.appliedNuclides)
+        # draw tally image
         if image_data is not None:
 
             if not cv.tallyDataUserMinMax:
@@ -858,9 +850,21 @@ class PlotImage(FigureCanvas):
 
         return image_data, extents, data_min, data_max
 
-    def create_tally_image(self, tally_id, scores=[], nuclides=[]):
-
+    def create_tally_image(self):
         cv = self.model.currentView
+
+        tally = cv.selectedTally
+        tally_id = int(tally.split()[1])
+
+        scores = self.model.appliedScores
+        nuclides = self.model.appliedNuclides
+
+        tally_selected = cv.selectedTally is not None
+        tally_visible = cv.tallyDataVisible
+        visible_selection = bool(scores) and bool(nuclides)
+
+        if not tally_selected or not tally_visible or not visible_selection:
+            return (None, None, None, None, None)
 
         tally = self.model.statepoint.tallies[tally_id]
 
