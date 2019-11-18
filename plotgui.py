@@ -534,10 +534,13 @@ class PlotImage(FigureCanvas):
         nuclides_and_scores_selected = bool(self.model.appliedNuclides)
         nuclides_and_scores_selected &= bool(self.model.appliedScores)
 
+        image_data = None
+
         if tally_selected and tally_visible and nuclides_and_scores_selected:
             image_data, extents, data_min, data_max, units = self.create_tally_image(self.model.selectedTally,
                                                                                      self.model.appliedScores,
                                                                                      self.model.appliedNuclides)
+        if image_data is not None:
 
             if not cv.tallyDataUserMinMax:
                 cv.tallyDataMin = data_min
@@ -787,6 +790,9 @@ class PlotImage(FigureCanvas):
         data_slice[h_ind] = slice(mesh.dimension[h_ind])
         data_slice[v_ind] = slice(mesh.dimension[v_ind])
         data_slice[ax] = k
+
+        if k < 0 or k > mesh.dimension[ax]:
+            return (None, None, None, None)
 
         # move mesh axes to the end of the filters
         filter_idx = [ type(filter) for filter in tally.filters ].index(openmc.MeshFilter)
