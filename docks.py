@@ -8,7 +8,7 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QSizePolicy, QSpacerItem, QMainWindow, QCheckBox,
                                QDialog, QTabWidget, QGridLayout, QMessageBox,
                                QToolButton, QColorDialog, QDockWidget,
-                               QItemDelegate, QHeaderView, QSlider,
+                               QItemDelegate, QHeaderView, QSlider, QScrollArea,
                                QTextEdit, QListWidget, QListWidgetItem, QTreeWidget, QTreeWidgetItem)
 from matplotlib import cm as mcolormaps
 import numpy as np
@@ -392,9 +392,12 @@ class TallyDock(PlotterDock):
         self.dockLayout.addWidget(self.applyButton)
 
         # Create widget for dock and apply main layout
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
         self.widget = QWidget()
         self.widget.setLayout(self.dockLayout)
-        self.setWidget(self.widget)
+        self.scroll.setWidget(self.widget)
+        self.setWidget(self.scroll)
 
     def create_filter_tree(self, spatial_filters):
         av = self.model.activeView
