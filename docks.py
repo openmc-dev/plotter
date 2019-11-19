@@ -16,7 +16,7 @@ import numpy as np
 from openmc.filter import (UniverseFilter, MaterialFilter, CellFilter,
                            SurfaceFilter, MeshFilter, MeshSurfaceFilter)
 
-from common_widgets import HorizontalLine, CollapsibleBox, Expander
+from common_widgets import HorizontalLine, Expander
 from scientific_spin_box import ScientificDoubleSpinBox
 
 _SPATIAL_FILTERS = (UniverseFilter, MaterialFilter, CellFilter,
@@ -405,7 +405,12 @@ class TallyDock(PlotterDock):
         filters = tally.filters
 
         # create a tree for the filters
+        self.treeExpander = Expander(title="Filters:")
+        self.treeLayout = QVBoxLayout()
         self.filterTree = QTreeWidget()
+        self.treeLayout.addWidget(self.filterTree)
+        self.treeExpander.setContentLayout(self.treeLayout)
+
         header = QTreeWidgetItem(["Filters"])
         self.filterTree.setHeaderItem(header)
         self.filterTree.setItemHidden(header, True)
@@ -473,14 +478,13 @@ class TallyDock(PlotterDock):
                 filter_types.add(type(filter))
             spatial_filters = bool(len(filter_types.intersection(_SPATIAL_FILTERS)))
 
-            self.tallySelectorLayout.addRow(QLabel("Filters:"))
             if not spatial_filters:
                 self.filter_description = QLabel("(No Spatial Filters)")
                 self.tallySelectorLayout.addRow(self.filter_description)
 
             self.create_filter_tree(spatial_filters)
 
-            self.tallySelectorLayout.addRow(self.filterTree)
+            self.tallySelectorLayout.addRow(self.treeExpander)
             self.tallySelectorLayout.addRow(HorizontalLine())
 
             # value selection
