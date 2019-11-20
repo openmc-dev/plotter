@@ -1,27 +1,28 @@
 import re
 
+from PySide2 import QtGui
+from PySide2.QtWidgets import QDoubleSpinBox
+import numpy as np
+
 # Regular expression to find floats. Match groups are the whole string, the
 # whole coefficient, the decimal part of the coefficient, and the exponent
 # part.
 _float_re = re.compile(r'(([+-]?\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)')
 
-from PySide2 import QtGui
-from PySide2.QtWidgets import QDoubleSpinBox
-import numpy as np
-
-def valid_float_string(string):
-    match = _float_re.search(string)
-    return match.groups()[0] == string if match else False
-
 
 class FloatValidator(QtGui.QValidator):
 
     def validate(self, string, position):
-        if valid_float_string(string):
+        if self.valid_float_string(string):
             return self.State.Acceptable
         if string == "" or string[position-1] in 'e.-+':
             return self.State.Intermediate
         return self.State.Invalid
+
+    @staticmethod
+    def valid_float_string(string):
+        match = _float_re.search(string)
+        return match.groups()[0] == string if match else False
 
     def fixup(self, text):
         match = _float_re.search(text)
@@ -47,7 +48,10 @@ class ScientificDoubleSpinBox(QDoubleSpinBox):
         return float(text)
 
     def textFromValue(self, value):
-        return format_float(value)
+        """Modified form of the 'g' format specifier."""
+        flt_str = "{:g}".format(value).replace("e+", "e")
+        flt_str = re.sub("e(-?)0*(\d+)", r"e\1\2", flt_str)
+        return flt_str
 
     def stepBy(self, steps):
         text = self.cleanText()
@@ -56,10 +60,3 @@ class ScientificDoubleSpinBox(QDoubleSpinBox):
         decimal += steps
         new_string = "{:g}".format(decimal) + (groups[3] if groups[3] else "")
         self.lineEdit().setText(new_string)
-
-
-def format_float(value):
-    """Modified form of the 'g' format specifier."""
-    string = "{:g}".format(value).replace("e+", "e")
-    string = re.sub("e(-?)0*(\d+)", r"e\1\2", string)
-    return string
