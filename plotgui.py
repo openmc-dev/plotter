@@ -38,7 +38,7 @@ else:
         FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
 
 from docks import TallyDock, OptionsDock, score_units, tally_values
-from common_widgets import HorizontalLine
+from custom_widgets import HorizontalLine
 
 
 class PlotImage(FigureCanvas):

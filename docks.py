@@ -17,7 +17,7 @@ import numpy as np
 from openmc.filter import (UniverseFilter, MaterialFilter, CellFilter,
                            SurfaceFilter, MeshFilter, MeshSurfaceFilter)
 
-from common_widgets import HorizontalLine, Expander
+from custom_widgets import HorizontalLine, Expander
 from scientific_spin_box import ScientificDoubleSpinBox
 
 _SPATIAL_FILTERS = (UniverseFilter, MaterialFilter, CellFilter,
@@ -419,7 +419,6 @@ class TallyDock(PlotterDock):
             filter_item = QTreeWidgetItem(self.filterTree, [filter_label,])
             self.filter_map[filter] = filter_item
 
-
             # make checkable
             if not spatial_filters:
                 filter_item.setFlags(QtCore.Qt.ItemIsUserCheckable)
@@ -451,8 +450,9 @@ class TallyDock(PlotterDock):
                 bin = bin if not hasattr(bin, '__iter__') else tuple(bin)
                 self.bin_map[(filter, bin)] = item
 
-            # start with all filters selected
-            filter_item.setCheckState(0, QtCore.Qt.Checked)
+            # start with all filters selected if spatial filters are present
+            if spatial_filters:
+                filter_item.setCheckState(0, QtCore.Qt.Checked)
 
     def selectFromModel(self):
         cv = self.model.currentView
