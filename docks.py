@@ -299,7 +299,7 @@ class OptionsDock(PlotterDock):
         self.plotAlphaBox.setValue(self.model.activeView.plotAlpha)
 
     def updatePlotVisibility(self):
-        self.visibilityBox.setChecked(self.model.activeView.plotVisibility)
+        self.visibilityBox.setChecked(self.model.activeView.plotVisible)
 
     def updateOutlines(self):
         self.outlinesBox.setChecked(self.model.activeView.outlines)

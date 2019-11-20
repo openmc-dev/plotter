@@ -465,19 +465,22 @@ class PlotImage(FigureCanvas):
         self.figure.patch.set_facecolor(rgb_normalize(window_bg.getRgb()))
 
         # set data extents for automatic reporting of pointer location
+        # in model units
         data_bounds = [cv.origin[self.mw.xBasis] - cv.width/2.,
                        cv.origin[self.mw.xBasis] + cv.width/2.,
                        cv.origin[self.mw.yBasis] - cv.height/2.,
                        cv.origin[self.mw.yBasis] + cv.height/2.]
 
-        # make sure we have an image to load
+        # make sure we have a domain image to load
         if not hasattr(self.model, 'image'):
             self.model.generatePlot()
 
-        alpha = cv.plotAlpha
-        if not cv.plotVisibility:
-            alpha = 0.0
+        ### DRAW DOMAIN IMAGE ###
 
+        # still generate the domain image if the geometric
+        # plot isn't visible so mouse-over info can still
+        # be shown
+        alpha = cv.plotAlpha if cv.plotVisible else 0.0
         if cv.colorby in ('material', 'cell'):
             self.image = self.figure.subplots().imshow(self.model.image,
                                                        extent=data_bounds,
@@ -492,6 +495,7 @@ class PlotImage(FigureCanvas):
                 cmap_label = "Density (g/cc)"
 
             norm = SymLogNorm(1E-10) if cv.color_scale_log[cv.colorby] else None
+
             data = self.model.properties[:, :, idx]
             self.image = self.figure.subplots().imshow(data,
                                                        cmap=cmap,
@@ -515,7 +519,6 @@ class PlotImage(FigureCanvas):
             self.colorbar.ax.add_line(self.data_indicator)
             self.colorbar.ax.margins(0.0 ,0.0)
             self.updateDataIndicatorVisibility()
-
             self.updateColorMinMax(cv.colorby)
 
         self.ax = self.figure.axes[0]
@@ -528,6 +531,8 @@ class PlotImage(FigureCanvas):
 
         # generate tally image
         image_data, extents, data_min, data_max, units = self.create_tally_image()
+
+        ### DRAW TALLY IMAGE ###
 
         # draw tally image
         if image_data is not None:
@@ -588,9 +593,6 @@ class PlotImage(FigureCanvas):
                                inline=True,
                                fmt=fmt)
 
-
-
-
             # draw line on colorbar
             self.tally_data_indicator = mlines.Line2D([0.0, 1.0],
                                                       [0.0, 0.0],
@@ -609,7 +611,8 @@ class PlotImage(FigureCanvas):
                                           rotation=-90,
                                           labelpad=15)
 
-        self.draw_outlines()
+        # annotate outlines
+        self.add_outlines()
 
         # always make sure the data bounds are set correctly
         self.ax.set_xbound(data_bounds[0], data_bounds[1])
@@ -622,7 +625,7 @@ class PlotImage(FigureCanvas):
         self.draw()
         return "Done"
 
-    def draw_outlines(self):
+    def add_outlines(self):
         cv = self.model.currentView
         # draw outlines as isocontours
         if cv.outlines:
@@ -631,8 +634,6 @@ class PlotImage(FigureCanvas):
                            cv.origin[self.mw.xBasis] + cv.width/2.,
                            cv.origin[self.mw.yBasis] - cv.height/2.,
                            cv.origin[self.mw.yBasis] + cv.height/2.]
-
-
             levels = np.unique(self.model.ids)
             self.contours = self.ax.contour(self.model.ids,
                                             origin='upper',

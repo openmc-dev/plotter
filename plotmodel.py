@@ -306,7 +306,7 @@ class PlotView(openmc.lib.plot._PlotBase):
         Dictionary of material view settings by ID
     plotAlpha: float between 0 and 1
         Alpha value of the geometry plot
-    plotVisibility : bool
+    plotVisibile : bool
         Controls visibility of geometry
     outlines: bool
         Controls visibility of geometry outlines
@@ -343,18 +343,18 @@ class PlotView(openmc.lib.plot._PlotBase):
 
         super().__init__()
 
+        # View Parameters
         self.level = -1
         self.origin = origin
         self.width = width
         self.height = height
-
         self.h_res = 1000
         self.v_res = 1000
         self.aspectLock = True
-
         self.basis = 'xy'
-        self.colorby = 'material'
 
+        # Geometry Plot
+        self.colorby = 'material'
         self.masking = True
         self.maskBackground = (0, 0, 0)
         self.highlighting = False
@@ -363,14 +363,21 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.highlightSeed = 1
         self.plotBackground = (50, 50, 50)
         self.overlap_color = (255, 0, 0)
-
         self.plotAlpha = 1.0
-        self.plotVisibility = True
+        self.plotVisible = True
         self.outlines = False
-
         self.colormaps = {'temperature': 'Oranges', 'density': 'Greys'}
+        # set defaults for color dialog
+        self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
+        self.user_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
+        self.use_custom_minmax = {prop: False for prop in _MODEL_PROPERTIES}
+        self.data_indicator_enabled = {prop: False for prop in _MODEL_PROPERTIES}
+        self.color_scale_log = {prop: False for prop in _MODEL_PROPERTIES}
+        # Get model domain info
+        self.cells = self.getDomains('cell')
+        self.materials = self.getDomains('material')
 
-        # tally viz defaults
+        # Tally Viz Settings
         self.tallyDataColormap = 'spectral'
         self.tallyDataVisible = True
         self.tallyDataAlpha = 1.0
@@ -385,16 +392,6 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.tallyContours = False
         self.tallyContourLevels = ""
         self.selectedTally = None
-
-        # set defaults for color dialog
-        self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
-        self.user_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
-        self.use_custom_minmax = {prop: False for prop in _MODEL_PROPERTIES}
-        self.data_indicator_enabled = {prop: False for prop in _MODEL_PROPERTIES}
-        self.color_scale_log = {prop: False for prop in _MODEL_PROPERTIES}
-
-        self.cells = self.getDomains('cell')
-        self.materials = self.getDomains('material')
 
     def __hash__(self):
         return hash(self.__dict__.__str__() + self.__str__())

@@ -9,7 +9,7 @@ class HorizontalLine(QFrame):
 
 class Expander(QtWidgets.QWidget):
 
-    def __init__(self, parent=None, title='', animationDuration=100):
+    def __init__(self, parent=None, title='', startExpanded=False, animationDuration=100):
         super().__init__(parent)
 
         self.animationDuration = animationDuration
@@ -36,8 +36,9 @@ class Expander(QtWidgets.QWidget):
         self.contentArea.setStyleSheet("QScrollArea { background-color: white; border: none; }")
         self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
         # start out collapsed
-        self.contentArea.setMaximumHeight(0)
-        self.contentArea.setMinimumHeight(0)
+        if not startExpanded:
+            self.contentArea.setMaximumHeight(0)
+            self.contentArea.setMinimumHeight(0)
         # let the entire widget grow and shrink with its content
         toggleAnimation = self.toggleAnimation
         toggleAnimation.addAnimation(QtCore.QPropertyAnimation(self, b"minimumHeight"))
