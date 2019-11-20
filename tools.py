@@ -21,10 +21,10 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         cv = self.model.currentView
 
         if not self.model.statepoint:
-            msg = QMessageBox()
+            msg = QtWidgets.QMessageBox()
             msg.setText("No statepoint file loaded.")
-            msg.setIcon(QMessageBox.Warning)
-            msg.setStandardButtons(QMessageBox.Ok)
+            msg.setIcon(QtWidgets.QMessageBox.Warning)
+            msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
             msg.exec_()
             return
 
