@@ -637,10 +637,11 @@ class PlotImage(FigureCanvas):
     @staticmethod
     def parseContoursLine(line):
         # if there are any commas in the line, treat as level values
-        if "," in line:
-            return [float(val) for val in line.split(",") if val is not ""]
+        line = line.strip()
+        if ',' in line:
+            return [float(val) for val in line.split(",") if val != '']
         else:
-            return  int(line)
+            return int(line)
 
     def _create_tally_domain_image(self, tally, tally_value, scores, nuclides):
         # data resources used throughout
