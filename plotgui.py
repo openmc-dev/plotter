@@ -480,7 +480,7 @@ class PlotImage(FigureCanvas):
         # still generate the domain image if the geometric
         # plot isn't visible so mouse-over info can still
         # be shown
-        alpha = cv.plotAlpha if cv.plotVisible else 0.0
+        alpha = cv.domainAlpha if cv.domainVisible else 0.0
         if cv.colorby in ('material', 'cell'):
             self.image = self.figure.subplots().imshow(self.model.image,
                                                        extent=data_bounds,
@@ -501,7 +501,7 @@ class PlotImage(FigureCanvas):
                                                        cmap=cmap,
                                                        norm=norm,
                                                        extent=data_bounds,
-                                                       alpha=cv.plotAlpha)
+                                                       alpha=cv.domainAlpha)
 
             # add colorbar
             self.colorbar = self.figure.colorbar(self.image,
@@ -1315,7 +1315,7 @@ class ColorDialog(QDialog):
         self.seedBox.setValue(self.model.activeView.highlightSeed)
 
     def updateBackgroundColor(self):
-        color = self.model.activeView.plotBackground
+        color = self.model.activeView.domainBackground
         self.bgButton.setStyleSheet("border-radius: 8px;"
                                     "background-color: rgb%s" % (str(color)))
 

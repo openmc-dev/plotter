@@ -728,10 +728,10 @@ class MainWindow(QMainWindow):
         self.model.activeView.origin[dimension] = value
 
     def editPlotAlpha(self, value):
-        self.model.activeView.plotAlpha = value
+        self.model.activeView.domainAlpha = value
 
     def editPlotVisibility(self, value):
-        self.model.activeView.plotVisible = bool(value)
+        self.model.activeView.domainVisible = bool(value)
 
     def toggleOutlines(self, value, apply=False):
         self.model.activeView.outlines = bool(value)
@@ -805,13 +805,13 @@ class MainWindow(QMainWindow):
             self.applyChanges()
 
     def editBackgroundColor(self, apply=False):
-        current_color = self.model.activeView.plotBackground
+        current_color = self.model.activeView.domainBackground
         dlg = QColorDialog(self)
 
         dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
         if dlg.exec_():
             new_color = dlg.currentColor().getRgb()[:3]
-            self.model.activeView.plotBackground = new_color
+            self.model.activeView.domainBackground = new_color
             self.colorDialog.updateBackgroundColor()
 
         if apply:

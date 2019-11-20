@@ -191,12 +191,12 @@ class OptionsDock(PlotterDock):
         self.colorbyBox.currentTextChanged[str].connect(self.mw.editColorBy)
 
         # Alpha
-        self.plotAlphaBox = QDoubleSpinBox(self)
-        self.plotAlphaBox.setValue(self.model.activeView.plotAlpha)
-        self.plotAlphaBox.setSingleStep(0.05)
-        self.plotAlphaBox.setDecimals(2)
-        self.plotAlphaBox.setRange(0.0, 1.0)
-        self.plotAlphaBox.valueChanged.connect(self.mw.editPlotAlpha)
+        self.domainAlphaBox = QDoubleSpinBox(self)
+        self.domainAlphaBox.setValue(self.model.activeView.domainAlpha)
+        self.domainAlphaBox.setSingleStep(0.05)
+        self.domainAlphaBox.setDecimals(2)
+        self.domainAlphaBox.setRange(0.0, 1.0)
+        self.domainAlphaBox.valueChanged.connect(self.mw.editPlotAlpha)
 
         # Visibility
         self.visibilityBox = QCheckBox(self)
@@ -224,7 +224,7 @@ class OptionsDock(PlotterDock):
         self.opLayout.addRow('Height:', self.heightBox)
         self.opLayout.addRow('Basis:', self.basisBox)
         self.opLayout.addRow('Color By:', self.colorbyBox)
-        self.opLayout.addRow('Plot alpha:', self.plotAlphaBox)
+        self.opLayout.addRow('Plot alpha:', self.domainAlphaBox)
         self.opLayout.addRow('Visible:', self.visibilityBox)
         self.opLayout.addRow('Outlines:', self.outlinesBox)
         self.opLayout.addRow(self.colorOptionsButton)
@@ -296,10 +296,10 @@ class OptionsDock(PlotterDock):
         self.colorbyBox.setCurrentText(self.model.activeView.colorby)
 
     def updatePlotAlpha(self):
-        self.plotAlphaBox.setValue(self.model.activeView.plotAlpha)
+        self.domainAlphaBox.setValue(self.model.activeView.domainAlpha)
 
     def updatePlotVisibility(self):
-        self.visibilityBox.setChecked(self.model.activeView.plotVisible)
+        self.visibilityBox.setChecked(self.model.activeView.domainVisible)
 
     def updateOutlines(self):
         self.outlinesBox.setChecked(self.model.activeView.outlines)

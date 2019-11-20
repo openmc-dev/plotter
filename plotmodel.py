@@ -195,7 +195,7 @@ class PlotModel():
         unique_ids = np.unique(self.ids)
         for id in unique_ids:
             if id == _NOT_FOUND:
-                image[self.ids == id] = cv.plotBackground
+                image[self.ids == id] = cv.domainBackground
             elif id == _OVERLAP:
                 image[self.ids == id] = cv.overlap_color
             else:
@@ -294,7 +294,7 @@ class PlotView(openmc.lib.plot._PlotBase):
     highlightSeed : int
         Random number seed used to generate color scheme when highlighting
         is active
-    plotBackground : 3-tuple of int
+    domainBackground : 3-tuple of int
         RGB color to apply to plot background
     color_overlaps : bool
         Indicator of whether or not overlaps will be shown
@@ -304,7 +304,7 @@ class PlotView(openmc.lib.plot._PlotBase):
         Dictionary of cell view settings by ID
     materials : Dict of DomainView instances
         Dictionary of material view settings by ID
-    plotAlpha: float between 0 and 1
+    domainAlpha : float between 0 and 1
         Alpha value of the geometry plot
     plotVisibile : bool
         Controls visibility of geometry
@@ -361,10 +361,10 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.highlightBackground = (80, 80, 80)
         self.highlightAlpha = 0.5
         self.highlightSeed = 1
-        self.plotBackground = (50, 50, 50)
+        self.domainBackground = (50, 50, 50)
         self.overlap_color = (255, 0, 0)
-        self.plotAlpha = 1.0
-        self.plotVisible = True
+        self.domainAlpha = 1.0
+        self.domainVisible = True
         self.outlines = False
         self.colormaps = {'temperature': 'Oranges', 'density': 'Greys'}
         # set defaults for color dialog
