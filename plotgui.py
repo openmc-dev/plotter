@@ -1,44 +1,36 @@
+# built-ins
 from collections import Iterable, defaultdict
 from functools import partial
 import itertools
 
-
+# application modules
 from plot_colors import rgb_normalize, invert_rgb
 from plotmodel import DomainDelegate
 from plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
 from scientific_spin_box import ScientificDoubleSpinBox
+from docks import score_units, tally_values
+from custom_widgets import HorizontalLine
+
+# third-party
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
-                               QApplication, QGroupBox, QFormLayout, QLabel,
-                               QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox,
-                               QSizePolicy, QSpacerItem, QMessageBox, QMainWindow, QCheckBox,
-                               QRubberBand, QMenu, QAction, QMenuBar,
-                               QFileDialog, QDialog, QTabWidget, QGridLayout,
-                               QToolButton, QColorDialog, QFrame, QDockWidget,
-                               QTableView, QItemDelegate, QHeaderView, QSlider,
-                               QTextEdit, QListWidget, QListWidgetItem, QTreeWidget, QTreeWidgetItem)
-import matplotlib.pyplot as plt
+                               QFormLayout, QComboBox, QSpinBox,
+                               QDoubleSpinBox, QSizePolicy, QMessageBox,
+                               QCheckBox, QRubberBand, QMenu, QDialog,
+                               QTabWidget, QTableView, QHeaderView)
 from matplotlib.backends.qt_compat import is_pyqt5
 from matplotlib.figure import Figure
-from matplotlib import image as mpimage
 from matplotlib import lines as mlines
 from matplotlib import cm as mcolormaps
-from matplotlib.colors import LogNorm, SymLogNorm, NoNorm
-from matplotlib.transforms import Bbox
+from matplotlib.colors import SymLogNorm
+import numpy as np
 
 import openmc
 
-import numpy as np
-
 if is_pyqt5():
-    from matplotlib.backends.backend_qt5agg import (
-        FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
+    from matplotlib.backends.backend_qt5agg import FigureCanvas
 else:
-    from matplotlib.backends.backend_qt5agg import (
-        FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
-
-from docks import TallyDock, OptionsDock, score_units, tally_values
-from custom_widgets import HorizontalLine
+    from matplotlib.backends.backend_qt5agg import FigureCanvas
 
 
 class PlotImage(FigureCanvas):

@@ -1,6 +1,6 @@
 
 import openmc
-import os
+
 
 class StatePointModel():
 

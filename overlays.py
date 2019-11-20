@@ -6,6 +6,7 @@ from PySide2.QtWidgets import (QWidget, QTableWidget, QSizePolicy,
 
 c_key = "⌘" if platform == 'darwin' else "Ctrl"
 
+
 class ShortcutTableItem(QTableWidgetItem):
 
     def __init__(self):
@@ -37,7 +38,8 @@ class ShortcutsOverlay(QWidget):
                             ("When zoomed:", ""),
                             ("Vertical Scroll", "Scroll"),
                             ("Horizontal Scroll", "Alt+Scroll")],
-                  "Menus": [("Hide/Show Options Dock", c_key + "+D"),
+                  "Menus": [("Hide/Show Geometry Dock", c_key + "+D"),
+                            ("Hide/Show Tally Dock", c_key + "+T"),
                             ("Reload Model", "Shift+" + c_key + "+R"),
                             ("Quit", c_key + "+Q"),
                             ("Display Shortcuts", "?")],

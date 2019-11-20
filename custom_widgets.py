@@ -1,7 +1,8 @@
 from functools import partial
 
-from PySide2 import QtWidgets, QtCore, QtGui
+from PySide2 import QtWidgets, QtCore
 from PySide2.QtWidgets import QFrame
+
 
 class HorizontalLine(QFrame):
     """
@@ -12,6 +13,7 @@ class HorizontalLine(QFrame):
         super().__init__()
         self.setFrameShape(QFrame.HLine)
         self.setFrameShadow(QFrame.Sunken)
+
 
 class Expander(QtWidgets.QWidget):
     """

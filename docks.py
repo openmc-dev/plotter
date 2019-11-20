@@ -4,13 +4,15 @@ import re
 
 from PySide2 import QtCore, QtGui, QtWidgets
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
-                               QGroupBox, QFormLayout, QLabel,
-                               QLineEdit, QComboBox, QSpinBox, QDoubleSpinBox,
-                               QSizePolicy, QSpacerItem, QMainWindow, QCheckBox,
-                               QDialog, QTabWidget, QGridLayout, QMessageBox,
-                               QToolButton, QColorDialog, QDockWidget,
-                               QItemDelegate, QHeaderView, QSlider, QScrollArea,
-                               QTextEdit, QListWidget, QListWidgetItem, QTreeWidget, QTreeWidgetItem)
+                               QGroupBox, QFormLayout, QLabel, QLineEdit,
+                               QComboBox, QSpinBox, QDoubleSpinBox,
+                               QSizePolicy, QSpacerItem, QMainWindow,
+                               QCheckBox, QDialog, QTabWidget, QGridLayout,
+                               QMessageBox, QToolButton, QColorDialog,
+                               QDockWidget, QItemDelegate, QHeaderView,
+                               QSlider, QScrollArea, QTextEdit, QListWidget,
+                               QListWidgetItem, QTreeWidget, QTreeWidgetItem)
+
 from matplotlib import cm as mcolormaps
 import numpy as np
 
@@ -26,7 +28,7 @@ _SPATIAL_FILTERS = (UniverseFilter, MaterialFilter, CellFilter,
 reaction_units = 'Reactions per Source Particle'
 flux_units = 'Particle-cm per Source Particle'
 production_units = 'Particles Produced per Source Particle'
-deposition_units = 'eV per Source Particle'
+energy_units = 'eV per Source Particle'
 
 reactions = ('absorption', 'elastic', 'fission',
              'scatter', 'total', '(n,2nd)',
@@ -47,27 +49,27 @@ productions = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
                'H3-production', 'He3-production', 'He4-production')
 
 score_units = {}
-score_units.update({ reaction : reaction_units for reaction in reactions })
-score_units.update({ production : production_units for production in productions })
+score_units.update({reaction : reaction_units for reaction in reactions})
+score_units.update({production : production_units for production in productions})
 score_units['flux'] = 'Particle-cm/Particle'
 score_units['current'] = 'Particles per source Particle'
 score_units['events'] = 'Events per Source Particle'
 score_units['inverse-velocity'] = 'Particle-seconds per Source Particle'
-score_units['heating'] = deposition_units
-score_units['heating-local'] = deposition_units
-score_units['kappa-fission'] = deposition_units
-score_units['fission-q-prompt'] = deposition_units
-score_units['fission-q-recoverable'] = deposition_units
+score_units['heating'] = energy_units
+score_units['heating-local'] = energy_units
+score_units['kappa-fission'] = energy_units
+score_units['fission-q-prompt'] = energy_units
+score_units['fission-q-recoverable'] = energy_units
 score_units['decay-rate'] = 'Seconds^-1'
-score_units['damage-energy'] = deposition_units
+score_units['damage-energy'] = energy_units
 
 tally_values = {'Mean': 'mean',
                 'Std. Dev.': 'std_dev',
-                'Rel. Error' : 'rel_err'}
+                'Rel. Error': 'rel_err'}
 
 class PlotterDock(QDockWidget):
     """
-    Dock widget for the plotting application
+    Dock widget with common settings for the plotting application
     """
     def __init__(self, model, FM, parent=None):
         super().__init__(parent)
@@ -77,12 +79,15 @@ class PlotterDock(QDockWidget):
         self.mw = parent
 
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-        self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea |
-                             QtCore.Qt.RightDockWidgetArea)
 
-class OptionsDock(PlotterDock):
+class DomainDock(PlotterDock):
+    """
+    Domain options dock
+    """
     def __init__(self, model, FM, parent=None):
         super().__init__(model, FM, parent)
+
+        self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea)
 
         # Create Controls
         self.createOriginBox()
@@ -345,6 +350,8 @@ class TallyDock(PlotterDock):
 
     def __init__(self, model, FM, parent=None):
         super().__init__(model, FM, parent)
+
+        self.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
 
         # Dock maps for tally information
         self.tally_map = {}
@@ -681,6 +688,7 @@ class TallyDock(PlotterDock):
             self.tallySelector.clear()
             self.tallySelector.setDisabled(True)
 
+
 class ColorForm(QWidget):
     """
     Class for handling a field with a colormap, alpha, and visibility
@@ -737,8 +745,6 @@ class ColorForm(QWidget):
 
         self.layout = QFormLayout()
 
-
-
         # Visibility check box
         self.visibilityBox = QCheckBox()
         visible_connector = partial(self.mw.toggleTallyVisibility)
@@ -758,7 +764,6 @@ class ColorForm(QWidget):
             self.colormapBox.addItem(colormap)
         cmap_connector = partial(self.mw.editTallyDataColormap)
         self.colormapBox.currentTextChanged[str].connect(cmap_connector)
-
 
         # Data indicator line check box
         self.dataIndicatorCheckBox = QCheckBox()

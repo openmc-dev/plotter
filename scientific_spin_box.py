@@ -1,13 +1,13 @@
 import re
-import numpy as np
 
 # Regular expression to find floats. Match groups are the whole string, the
 # whole coefficient, the decimal part of the coefficient, and the exponent
 # part.
 _float_re = re.compile(r'(([+-]?\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)')
 
-from PySide2 import QtCore, QtGui
+from PySide2 import QtGui
 from PySide2.QtWidgets import QDoubleSpinBox
+import numpy as np
 
 def valid_float_string(string):
     match = _float_re.search(string)

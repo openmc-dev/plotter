@@ -1,20 +1,20 @@
+# built-ins
 import copy
-import struct
 import threading
 from ast import literal_eval
 
-import openmc
-import openmc.lib
-import numpy as np
-import xml.etree.ElementTree as ET
-from PySide2.QtWidgets import (QTableView, QItemDelegate,
-                               QColorDialog, QLineEdit)
+# application modules
+from statepointmodel import StatePointModel
+from plot_colors import random_rgb, reset_seed
+
+# third-party
+from PySide2.QtWidgets import QItemDelegate, QColorDialog, QLineEdit
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
 from PySide2.QtGui import QColor
+import numpy as np
 
-from statepointmodel import StatePointModel
-
-from plot_colors import random_rgb, reset_seed
+import openmc
+import openmc.lib
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = tuple(range(0, 6))
 

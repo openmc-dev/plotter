@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+# built-ins
 import copy
 from functools import partial
 import os
@@ -8,23 +9,23 @@ import pickle
 import signal
 import sys
 from threading import Thread
-import time
 
-import openmc
-import openmc.lib
+# application modules
+from plotmodel import PlotModel, DomainTableModel
+from plotgui import PlotImage, ColorDialog
+from docks import DomainDock, TallyDock
+from overlays import ShortcutsOverlay
+
+# third-party
 from PySide2 import QtCore, QtGui
 from PySide2.QtGui import QKeyEvent
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
-                               QScrollArea, QMenu, QMessageBox, QAction,
+                               QScrollArea, QMessageBox, QAction,
                                QFileDialog, QColorDialog, QInputDialog,
-                               QSplashScreen, QWidget, QPushButton, QListWidget,
-                               QListWidgetItem, QTableWidget, QVBoxLayout,
-                               QTableWidgetItem, QGestureEvent)
+                               QSplashScreen, QWidget, QGestureEvent)
 
-from plotmodel import PlotModel, DomainTableModel
-from plotgui import PlotImage, ColorDialog, OptionsDock, TallyDock
-
-from overlays import ShortcutsOverlay
+import openmc
+import openmc.lib
 
 
 def _openmcReload():
@@ -65,14 +66,14 @@ class MainWindow(QMainWindow):
         self.frame.setWidget(self.plotIm)
 
         # Dock
-        self.dock = OptionsDock(self.model, FM, self)
-        self.dock.setObjectName("OptionsDock")
+        self.dock = DomainDock(self.model, FM, self)
+        self.dock.setObjectName("Domain Options Dock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
 
         # Tally Dock
         self.tallyDock = TallyDock(self.model, FM, self)
         self.tallyDock.update()
-        self.tallyDock.setObjectName("TallyDock")
+        self.tallyDock.setObjectName("Tally Options Dock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.tallyDock)
 
         # Color DialogtallyDock
@@ -100,6 +101,7 @@ class MainWindow(QMainWindow):
         self.dock.updateDock()
         self.tallyDock.update()
         self.colorDialog.updateDialogValues()
+        self.statusBar().showMessage('')
 
         # Timer allows GUI to render before plot finishes loading
         QtCore.QTimer.singleShot(0, self.plotIm.generatePixmap)
@@ -544,7 +546,7 @@ class MainWindow(QMainWindow):
             self.plotIm.generatePixmap()
             self.resetModels()
             self.showCurrentView()
-
+            self.statusBar().showMessage('')
         else:
             self.statusBar().showMessage('No changes to apply.', 3000)
 
@@ -561,6 +563,7 @@ class MainWindow(QMainWindow):
         if not self.model.previousViews:
             self.undoAction.setDisabled(True)
         self.redoAction.setDisabled(False)
+        self.statusBar().showMessage('')
 
     def redo(self):
         self.statusBar().showMessage('Generating Plot...')
@@ -575,6 +578,7 @@ class MainWindow(QMainWindow):
         if not self.model.subsequentViews:
             self.redoAction.setDisabled(True)
         self.undoAction.setDisabled(False)
+        self.statusBar().showMessage('')
 
     def restoreDefault(self):
         if self.model.currentView != self.model.defaultView:
@@ -591,6 +595,7 @@ class MainWindow(QMainWindow):
             self.colorDialog.updateDialogValues()
 
             self.model.subsequentViews = []
+            self.statusBar().showMessage('')
 
     def editBasis(self, basis, apply=False):
         self.model.activeView.basis = basis
