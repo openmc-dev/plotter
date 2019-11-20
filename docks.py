@@ -66,7 +66,9 @@ tally_values = {'Mean': 'mean',
                 'Rel. Error' : 'rel_err'}
 
 class PlotterDock(QDockWidget):
-
+    """
+    Dock widget for the plotting application
+    """
     def __init__(self, model, FM, parent=None):
         super().__init__(parent)
 
@@ -81,14 +83,6 @@ class PlotterDock(QDockWidget):
 class OptionsDock(PlotterDock):
     def __init__(self, model, FM, parent=None):
         super().__init__(model, FM, parent)
-
-        self.model = model
-        self.FM = FM
-        self.mw = parent
-
-        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
-        self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea |
-                             QtCore.Qt.RightDockWidgetArea)
 
         # Create Controls
         self.createOriginBox()
@@ -406,11 +400,11 @@ class TallyDock(PlotterDock):
         filters = tally.filters
 
         # create a tree for the filters
-        self.treeExpander = Expander(title="Filters:")
         self.treeLayout = QVBoxLayout()
         self.filterTree = QTreeWidget()
         self.treeLayout.addWidget(self.filterTree)
-        self.treeExpander.setContentLayout(self.treeLayout)
+        self.treeExpander = Expander("Filters:", layout=self.treeLayout)
+        self.treeExpander.expand()  # start with filters expanded
 
         header = QTreeWidgetItem(["Filters"])
         self.filterTree.setHeaderItem(header)
@@ -425,8 +419,7 @@ class TallyDock(PlotterDock):
             filter_item = QTreeWidgetItem(self.filterTree, [filter_label,])
             self.filter_map[filter] = filter_item
 
-            if isinstance(filter, MeshFilter):
-                continue
+
             # make checkable
             if not spatial_filters:
                 filter_item.setFlags(QtCore.Qt.ItemIsUserCheckable)
@@ -434,6 +427,12 @@ class TallyDock(PlotterDock):
             else:
                 filter_item.setFlags(filter_item.flags() | QtCore.Qt.ItemIsTristate | QtCore.Qt.ItemIsUserCheckable)
             filter_item.setCheckState(0, QtCore.Qt.Unchecked)
+
+            if isinstance(filter, MeshFilter):
+                filter_item.setCheckState(0, QtCore.Qt.Checked)
+                filter_item.setFlags(QtCore.Qt.ItemIsUserCheckable)
+                filter_item.setToolTip(0, "All Mesh bins are selected automatically")
+                continue
 
             def _bin_sort_val(bin):
                 if isinstance(bin, Iterable) and all([isinstance(val, float) for val in bin]):
@@ -506,6 +505,10 @@ class TallyDock(PlotterDock):
             self.valueBox.currentTextChanged[str].connect(self.mw.editTallyValue)
             self.updateTallyValue()
 
+            if not spatial_filters:
+                self.valueBox.setEnabled(False)
+                self.valueBox.setToolTip("Only tallies with spatial filters are viewable.")
+
             # scores
             self.score_map = {}
             self.scoresListWidget.itemClicked.connect(self.mw.updateScores)
@@ -547,9 +550,8 @@ class TallyDock(PlotterDock):
             self.updateScores()
 
             self.scoresGroupBoxLayout = QVBoxLayout()
-            self.scoresGroupBox = Expander(title="Scores:")
             self.scoresGroupBoxLayout.addWidget(self.scoresListWidget)
-            self.scoresGroupBox.setContentLayout(self.scoresGroupBoxLayout)
+            self.scoresGroupBox = Expander("Scores:", layout=self.scoresGroupBoxLayout)
             self.tallySelectorLayout.addRow(self.scoresGroupBox)
 
             # nuclides
@@ -583,9 +585,8 @@ class TallyDock(PlotterDock):
             self.updateNuclides()
 
             self.nuclidesGroupBoxLayout = QVBoxLayout()
-            self.nuclidesGroupBox = Expander(title="Nuclides:")
             self.nuclidesGroupBoxLayout.addWidget(self.nuclidesListWidget)
-            self.nuclidesGroupBox.setContentLayout(self.nuclidesGroupBoxLayout)
+            self.nuclidesGroupBox = Expander("Nuclides:", layout=self.nuclidesGroupBoxLayout)
             self.tallySelectorLayout.addRow(self.nuclidesGroupBox)
 
     def updateMinMax(self):

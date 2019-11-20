@@ -1,16 +1,27 @@
+from functools import partial
+
 from PySide2 import QtWidgets, QtCore, QtGui
 from PySide2.QtWidgets import QFrame
 
 class HorizontalLine(QFrame):
+    """
+    Custom divider widget used in several layouts as a marker between
+    different sections.
+    """
     def __init__(self):
         super().__init__()
         self.setFrameShape(QFrame.HLine)
         self.setFrameShadow(QFrame.Sunken)
 
 class Expander(QtWidgets.QWidget):
-
-    def __init__(self, parent=None, title='', startExpanded=False, animationDuration=100):
+    """
+    A containing widget that can have a title and be collapsed or expanded
+    inside of its frame.
+    """
+    def __init__(self, title='', parent=None, layout=None, animationDuration=100):
         super().__init__(parent)
+
+        self.layout_set = False
 
         self.animationDuration = animationDuration
         self.toggleAnimation = QtCore.QParallelAnimationGroup()
@@ -35,10 +46,10 @@ class Expander(QtWidgets.QWidget):
 
         self.contentArea.setStyleSheet("QScrollArea { background-color: white; border: none; }")
         self.contentArea.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        # start out collapsed
-        if not startExpanded:
-            self.contentArea.setMaximumHeight(0)
-            self.contentArea.setMinimumHeight(0)
+        # start collapsed by default
+        self.contentArea.setMaximumHeight(0)
+        self.contentArea.setMinimumHeight(0)
+
         # let the entire widget grow and shrink with its content
         toggleAnimation = self.toggleAnimation
         toggleAnimation.addAnimation(QtCore.QPropertyAnimation(self, b"minimumHeight"))
@@ -57,14 +68,30 @@ class Expander(QtWidgets.QWidget):
 
         def start_animation(checked):
             arrow_type = QtCore.Qt.DownArrow if checked else QtCore.Qt.RightArrow
-            direction = QtCore.QAbstractAnimation.Forward if checked else QtCore.QAbstractAnimation.Backward
             toggleButton.setArrowType(arrow_type)
-            self.toggleAnimation.setDirection(direction)
-            self.toggleAnimation.start()
+
+            if toggleButton.isChecked() != checked:
+                toggleButton.setChecked(checked)
+
+            if not self.layout_set:
+                raise Warning("No layout set for expanding widget")
+                return
+
+            direction = QtCore.QAbstractAnimation.Forward if checked else QtCore.QAbstractAnimation.Backward
+            toggleAnimation.setDirection(direction)
+            toggleAnimation.start()
 
         self.toggleButton.clicked.connect(start_animation)
 
+        # make animation accessible as callable attributes
+        self.expand = partial(start_animation, True)
+        self.collapse = partial(start_animation, False)
+
+        if layout is not None:
+            self.setContentLayout(layout)
+
     def setContentLayout(self, contentLayout):
+        self.layout_set = True
         # Not sure if this is equivalent to self.contentArea.destroy()
         self.contentArea.destroy()
         self.contentArea.setLayout(contentLayout)
