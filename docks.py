@@ -1,4 +1,5 @@
 from functools import partial
+from collections.abc import Iterable
 import re
 
 from PySide2 import QtCore, QtGui, QtWidgets
@@ -429,14 +430,22 @@ class TallyDock(PlotterDock):
             # make checkable
             if not spatial_filters:
                 filter_item.setFlags(QtCore.Qt.ItemIsUserCheckable)
+                filter_item.setToolTip(0, "Only tallies with spatial filters are viewable.")
             else:
                 filter_item.setFlags(filter_item.flags() | QtCore.Qt.ItemIsTristate | QtCore.Qt.ItemIsUserCheckable)
             filter_item.setCheckState(0, QtCore.Qt.Unchecked)
 
-            for bin in sorted(filter.bins, key=np.sum):
+            def _bin_sort_val(bin):
+                if isinstance(bin, Iterable) and all([isinstance(val, float) for val in bin]):
+                    return np.sum(bin)
+                else:
+                    return bin
+
+            for bin in sorted(filter.bins, key=_bin_sort_val):
                 item = QTreeWidgetItem(filter_item, [str(bin),])
                 if not spatial_filters:
                     item.setFlags(QtCore.Qt.ItemIsUserCheckable)
+                    item.setToolTip(0, "Only tallies with spatial filters are viewable.")
                 else:
                     item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
                 item.setCheckState(0, QtCore.Qt.Unchecked)
