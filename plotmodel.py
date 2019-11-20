@@ -18,7 +18,7 @@ from plot_colors import random_rgb, reset_seed
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = tuple(range(0, 6))
 
-__VERSION__ = "0.1.1"
+__VERSION__ = "0.2.1"
 
 _VOID_REGION = -1
 _NOT_FOUND = -2
