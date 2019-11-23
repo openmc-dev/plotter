@@ -1,5 +1,6 @@
 from functools import partial
 from collections.abc import Iterable
+from collections import defaultdict
 import re
 
 from PySide2 import QtCore, QtGui, QtWidgets
@@ -369,9 +370,11 @@ class TallyDock(PlotterDock):
         self.filterTree.setHeaderItem(header)
         self.filterTree.setItemHidden(header, True)
         self.filterTree.setColumnCount(1)
+        self.filterTree.itemChanged.connect(self.updateFilters)
 
         self.filter_map = {}
         self.bin_map = {}
+
 
         for tally_filter in filters:
             filter_label = str(type(tally_filter)).split(".")[-1][:-2]
@@ -382,6 +385,7 @@ class TallyDock(PlotterDock):
             if not spatial_filters:
                 filter_item.setFlags(QtCore.Qt.ItemIsUserCheckable)
                 filter_item.setToolTip(0, "Only tallies with spatial filters are viewable.")
+
             else:
                 filter_item.setFlags(filter_item.flags() | QtCore.Qt.ItemIsTristate | QtCore.Qt.ItemIsUserCheckable)
             filter_item.setCheckState(0, QtCore.Qt.Unchecked)
@@ -553,6 +557,21 @@ class TallyDock(PlotterDock):
         if cv.selectedTally:
             idx = self.tallySelector.findData(cv.selectedTally)
         self.tallySelector.setCurrentIndex(idx)
+
+    def updateFilters(self):
+        applied_filters = defaultdict(tuple)
+        for filter, filter_item in self.filter_map.items():
+            filter_checked = filter_item.checkState(0)
+            if filter_checked != QtCore.Qt.Unchecked:
+                selected_bins = []
+                for idx, bin in enumerate(filter.bins):
+                    bin = bin if not hasattr(bin, '__iter__') else tuple(bin)
+                    bin_checked = self.bin_map[(filter, bin)].checkState(0)
+                    if bin_checked == QtCore.Qt.Checked:
+                        selected_bins.append(idx)
+                applied_filters[filter] = tuple(selected_bins)
+
+            self.model.appliedFilters = applied_filters
 
     def updateScores(self):
         applied_scores = []
