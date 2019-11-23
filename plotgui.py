@@ -1,6 +1,5 @@
 from collections import Iterable, defaultdict
 from functools import partial
-import itertools
 
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
@@ -55,11 +54,6 @@ class PlotImage(FigureCanvas):
         self.data_indicator = None
         self.tally_data_indicator = None
         self.image = None
-
-        self._supported_spatial_filters = (openmc.CellFilter,
-                                           openmc.UniverseFilter,
-                                           openmc.MaterialFilter,
-                                           openmc.MeshFilter)
 
         self.menu = QMenu(self)
 

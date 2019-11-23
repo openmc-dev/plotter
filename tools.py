@@ -155,6 +155,7 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         res = np.array((self.xResBox.value(), self.yResBox.value(), self.zResBox.value()))
         dx, dy, dz = (urc - llc) / res
 
+        print("Exporting data with resolution: {}".format(res))
         # create empty array to store our values
         data = np.zeros(res[::-1], dtype=float)
 
@@ -174,7 +175,7 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
             z = z0 + k * dz
             view.origin = (x0, y0, z)
             view.basis = 'xy'
-
+            print(k)
             image_data = self.model.create_tally_image(view)
             data[k, :,:] = image_data[0]
 
@@ -187,7 +188,9 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         vtk_data.SetArray(data, data.size, True)
         vtk_image.GetCellData().AddArray(vtk_data)
 
+        print("Writing VTK Image file")
         writer = vtk.vtkXMLImageDataWriter()
         writer.SetInputData(vtk_image)
         writer.SetFileName("test_data.vti")
         writer.Write()
+        print("Export complete")

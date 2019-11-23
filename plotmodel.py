@@ -1,4 +1,6 @@
+from collections import Iterable, defaultdict
 import copy
+import itertools
 import threading
 from ast import literal_eval
 
@@ -48,6 +50,11 @@ _SCORE_UNITS['damage-energy'] = energy_units
 _TALLY_VALUES = {'Mean': 'mean',
                  'Std. Dev.': 'std_dev',
                  'Rel. Error': 'rel_err'}
+
+_supported_spatial_filters = (openmc.filter.CellFilter,
+                              openmc.filter.UniverseFilter,
+                              openmc.filter.MaterialFilter,
+                              openmc.filter.MeshFilter)
 
 
 class PlotModel():
@@ -352,19 +359,12 @@ class PlotModel():
         # filter bins are enabled
         spatial_filter_bins = defaultdict(list)
         n_spatial_filters = 0
-               for filter_idx, tally_filter in enumerate(tally.filters):
-            filter_check_state = self.mw.tallyDock.filter_map[tally_filter].checkState(0)
 
-            if filter_check_state != QtCore.Qt.Unchecked:
+        for tally_filter in tally.filters:
+            if tally_filter in self.appliedFilters:
+                selected_bins = self.appliedFilters[tally_filter]
 
-                selected_bins = []
-                for idx, bin in enumerate(tally_filter.bins):
-                    bin = bin if not hasattr(bin, '__iter__') else tuple(bin)
-                    bin_check_state = self.mw.tallyDock.bin_map[tally_filter, bin].checkState(0)
-                    if bin_check_state == QtCore.Qt.Checked:
-                        selected_bins.append(idx)
-
-                if type(tally_filter) in self._supported_spatial_filters:
+                if type(tally_filter) in _supported_spatial_filters:
                     spatial_filter_bins[tally_filter] = selected_bins
                     n_spatial_filters += 1
                 else:
@@ -405,19 +405,20 @@ class PlotModel():
                 continue
 
             # generate a mask with the correct size
-            mask = np.full(self.model.ids.shape, True, dtype=bool)
+            mask = np.full(self.ids.shape, True, dtype=bool)
 
             for tally_filter, bin_idx in zip(spatial_filters, bin_indices):
                 bin = tally_filter.bins[bin_idx]
                 if isinstance(tally_filter, openmc.CellFilter):
-                    mask &= self.model.cell_ids == bin
+                    mask &= self.cell_ids == bin
                 elif isinstance(tally_filter, openmc.MaterialFilter):
-                    mask &= self.model.mat_ids == bin
+                    mask &= self.mat_ids == bin
                 elif isinstance(tally_filter, openmc.UniverseFilter):
                     # get the statepoint summary
-                    univ_cells = self.model.statepoint.universes[bin].cells
+                    univ_cells = self.statepoint.universes[bin].cells
                     for cell in univ_cells:
-                        mask &= self.model.cell_ids == cell
+                        mask &= self.cell_ids == cell
+
             # set image data values
             data_out[mask] = tally_val
 
@@ -478,21 +479,12 @@ class PlotModel():
         data = data[..., data_slice[2], data_slice[1], data_slice[0]]
 
         # sum over the rest of the tally filters
-        for filter_idx, tally_filter in enumerate(tally.filters):
+        for tally_filter in tally.filters:
             if type(tally_filter) == openmc.MeshFilter:
                 continue
 
-            filter_check_state = self.mw.tallyDock.filter_map[tally_filter].checkState(0)
-
-            if filter_check_state != QtCore.Qt.Unchecked:
-                selected_bins = []
-                for idx, bin in enumerate(tally_filter.bins):
-                    if isinstance(bin, Iterable):
-                        bin = tuple(bin)
-                    # see if the bin is checked
-                    bin_check_state = self.mw.tallyDock.bin_map[tally_filter, bin].checkState(0)
-                    if bin_check_state == QtCore.Qt.Checked:
-                        selected_bins.append(idx)
+            if tally_filter in self.appliedFilters:
+                selected_bins = self.appliedFilters[tally_filter]
                 # sum filter data for the selected bins
                 data = data[np.array(selected_bins)].sum(axis=0)
             else:

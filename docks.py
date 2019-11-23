@@ -561,6 +561,9 @@ class TallyDock(PlotterDock):
     def updateFilters(self):
         applied_filters = defaultdict(tuple)
         for filter, filter_item in self.filter_map.items():
+            if type(filter) == MeshFilter:
+                continue
+
             filter_checked = filter_item.checkState(0)
             if filter_checked != QtCore.Qt.Unchecked:
                 selected_bins = []
