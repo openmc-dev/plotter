@@ -114,7 +114,7 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         self.layout.addWidget(self.dataLabelField, 6, 1, 1, 2)
 
         self.geomCheckBox = QtWidgets.QCheckBox()
-        self.layout.addWidget(QtWidgets.QLabel("Include Geometry:"), 7, 0, 1, 2)
+        self.layout.addWidget(QtWidgets.QLabel("Include Model Domains:"), 7, 0, 1, 2)
         self.layout.addWidget(self.geomCheckBox, 7, 2)
 
         self.layout.addWidget(HorizontalLine(), 8, 0, 1, 6)
@@ -228,10 +228,10 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
             self.model.activeView = view
             self.model.makePlot()
             image_data = self.model.create_tally_image(view)
-            data[k, :,:] = image_data[0]
+            data[k, :,:] = image_data[0][::-1, :]
             if include_geom:
-                mats[k, :, :] = self.model.mat_ids
-                cells[k, :, :] = self.model.cell_ids
+                mats[k, :, :] = self.model.mat_ids[::-1, :]
+                cells[k, :, :] = self.model.cell_ids[::-1, :]
             progressBar.setValue(k)
             if progressBar.wasCanceled():
                 # restore the previous active
