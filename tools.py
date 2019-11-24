@@ -106,16 +106,20 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         self.layout.addWidget(QtWidgets.QLabel("Z steps:"), 4, 4)
         self.layout.addWidget(self.zResBox, 4, 5)
 
+        self.layout.addWidget(HorizontalLine(), 5, 0, 1, 6)
+
         self.dataLabelField = QtWidgets.QLineEdit()
         self.dataLabelField.setText("Tally {}".format(cv.selectedTally))
-        self.layout.addWidget(QtWidgets.QLabel("Data Label:"), 5, 0)
-        self.layout.addWidget(self.dataLabelField, 5, 1)
+        self.layout.addWidget(QtWidgets.QLabel("Data Label:"), 6, 0)
+        self.layout.addWidget(self.dataLabelField, 6, 1, 1, 2)
 
-        self.exportButton = QtWidgets.QPushButton("Export")
+        self.exportButton = QtWidgets.QPushButton("Export to VTK")
         self.exportButton.clicked.connect(self.export_data)
         self.exportButton.setEnabled(_HAVE_VTK)
 
-        self.layout.addWidget(self.exportButton, 6, 0)
+        self.layout.addWidget(HorizontalLine(), 7, 0, 1, 6)
+
+        self.layout.addWidget(self.exportButton, 8, 5, 1, 2)
 
         if tally.contains_filter(openmc.MeshFilter):
 
@@ -181,8 +185,6 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
                                                               "untitled",
                                                               "VTK Image (.vti)")
 
-
-        print("Exporting data with resolution: {}".format(res))
         # create empty array to store our values
         data = np.zeros(res[::-1], dtype=float)
 
