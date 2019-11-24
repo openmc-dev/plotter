@@ -160,7 +160,9 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         data = np.zeros(res[::-1], dtype=float)
 
         # get a copy of the current view
-        view = copy.deepcopy(self.model.currentView)
+        cv = self.model.currentView
+        av = self.model.activeView
+        view = copy.deepcopy(cv)
 
         # get a view of the tally data for each x,y slice:
 
@@ -169,13 +171,15 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         view.height = urc[1] - llc[1]
         view.h_res = res[0]
         view.v_res = res[1]
+        print(view)
 
         z0 = llc[2] + dz / 2.0
         for k in range(res[2]):
             z = z0 + k * dz
             view.origin = (x0, y0, z)
             view.basis = 'xy'
-            print(k)
+            self.model.activeView = view
+            self.model.makePlot()
             image_data = self.model.create_tally_image(view)
             data[k, :,:] = image_data[0]
 
@@ -194,3 +198,8 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         writer.SetFileName("test_data.vti")
         writer.Write()
         print("Export complete")
+
+        # restore the previous active
+        self.model.currentView = cv
+        self.model.activeView = av
+        self.model.makePlot()

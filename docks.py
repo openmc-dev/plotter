@@ -20,7 +20,7 @@ from openmc import (UniverseFilter, MaterialFilter, CellFilter,
 
 from custom_widgets import HorizontalLine, Expander
 from scientific_spin_box import ScientificDoubleSpinBox
-from plotmodel import _SCORE_UNITS, _TALLY_VALUES
+from plotmodel import _SCORE_UNITS, _TALLY_VALUES, _REACTION_UNITS
 
 _SPATIAL_FILTERS = (UniverseFilter, MaterialFilter, CellFilter,
                     SurfaceFilter, MeshFilter, MeshSurfaceFilter)

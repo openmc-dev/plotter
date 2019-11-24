@@ -25,10 +25,10 @@ _OVERLAP = -3
 _MODEL_PROPERTIES = ('temperature', 'density')
 _PROPERTY_INDICES = {'temperature': 0, 'density': 1}
 
-reaction_units = 'Reactions per Source Particle'
-flux_units = 'Particle-cm per Source Particle'
-production_units = 'Particles Produced per Source Particle'
-energy_units = 'eV per Source Particle'
+_REACTION_UNITS = 'Reactions per Source Particle'
+_FLUX_UNITS = 'Particle-cm per Source Particle'
+_PRODUCTION_UNITS = 'Particles Produced per Source Particle'
+_ENERGY_UNITS = 'eV per Source Particle'
 
 productions = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
                'nu-scatter', 'H1-production', 'H2-production',
@@ -39,13 +39,13 @@ _SCORE_UNITS['flux'] = 'Particle-cm/Particle'
 _SCORE_UNITS['current'] = 'Particles per source Particle'
 _SCORE_UNITS['events'] = 'Events per Source Particle'
 _SCORE_UNITS['inverse-velocity'] = 'Particle-seconds per Source Particle'
-_SCORE_UNITS['heating'] = energy_units
-_SCORE_UNITS['heating-local'] = energy_units
-_SCORE_UNITS['kappa-fission'] = energy_units
-_SCORE_UNITS['fission-q-prompt'] = energy_units
-_SCORE_UNITS['fission-q-recoverable'] = energy_units
+_SCORE_UNITS['heating'] = _ENERGY_UNITS
+_SCORE_UNITS['heating-local'] = _ENERGY_UNITS
+_SCORE_UNITS['kappa-fission'] = _ENERGY_UNITS
+_SCORE_UNITS['fission-q-prompt'] = _ENERGY_UNITS
+_SCORE_UNITS['fission-q-recoverable'] = _ENERGY_UNITS
 _SCORE_UNITS['decay-rate'] = 'Seconds^-1'
-_SCORE_UNITS['damage-energy'] = energy_units
+_SCORE_UNITS['damage-energy'] = _ENERGY_UNITS
 
 _TALLY_VALUES = {'Mean': 'mean',
                  'Std. Dev.': 'std_dev',
