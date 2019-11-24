@@ -3,7 +3,7 @@ import numpy as np
 import copy
 from scientific_spin_box import ScientificDoubleSpinBox
 from custom_widgets import HorizontalLine
-
+from time import sleep
 import openmc
 
 try:
@@ -200,6 +200,13 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         view.v_res = res[1]
 
         z0 = llc[2] + dz / 2.0
+
+        progressBar = QtWidgets.QProgressDialog("Accumulating data...",
+                                                "Abort Copy",
+                                                0,
+                                                res[2])
+        progressBar.setWindowModality(QtCore.Qt.WindowModal)
+
         for k in range(res[2]):
             z = z0 + k * dz
             view.origin = (x0, y0, z)
@@ -208,6 +215,13 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
             self.model.makePlot()
             image_data = self.model.create_tally_image(view)
             data[k, :,:] = image_data[0]
+            progressBar.setValue(k)
+            if progressBar.wasCanceled():
+                # restore the previous active
+                self.model.currentView = cv
+                self.model.activeView = av
+                self.model.makePlot()
+                return
 
         vtk_image = vtk.vtkImageData()
         vtk_image.SetDimensions(res + 1)
@@ -215,17 +229,19 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         vtk_image.SetOrigin(llc)
         vtk_data = vtk.vtkDoubleArray()
         label = self.dataLabelField.text()
-        print(label)
         vtk_data.SetName(self.dataLabelField.text())
         vtk_data.SetArray(data, data.size, True)
         vtk_image.GetCellData().AddArray(vtk_data)
 
-        print("Writing VTK Image file")
+        progressBar.setLabel(QtWidgets.QLabel("Writing VTK Image file: {}...".format(filename)))
+
         writer = vtk.vtkXMLImageDataWriter()
         writer.SetInputData(vtk_image)
         writer.SetFileName(filename)
         writer.Write()
-        print("Export complete")
+
+        progressBar.setLabel(QtWidgets.QLabel("Export complete"))
+        progressBar.setValue(res[2])
 
         # restore the previous active
         self.model.currentView = cv
