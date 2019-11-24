@@ -53,6 +53,14 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
     def closeEvent(self, event):
         super().closeEvent(event)
 
+    @staticmethod
+    def _warn(msg):
+        msg_box = QMessageBox()
+        msg_box.setText(msg)
+        msg_box.setIcon(QMessageBox.Information)
+        msg_box.setStandardButtons(QMessageBox.Ok)
+        msg_box.exec_()
+
     def populate(self):
         cv = self.model.currentView
         tally = self.model.statepoint.tallies[cv.selectedTally]
@@ -91,7 +99,6 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         self.zResBox.setMaximum(1E6)
         self.zResBox.setMinimum(0)
 
-
         self.layout.addWidget(QtWidgets.QLabel("X steps:"), 4, 0)
         self.layout.addWidget(self.xResBox, 4, 1)
         self.layout.addWidget(QtWidgets.QLabel("Y steps:"), 4, 2)
@@ -99,11 +106,16 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         self.layout.addWidget(QtWidgets.QLabel("Z steps:"), 4, 4)
         self.layout.addWidget(self.zResBox, 4, 5)
 
+        self.dataLabelField = QtWidgets.QLineEdit()
+        self.dataLabelField.setText("Tally {}".format(cv.selectedTally))
+        self.layout.addWidget(QtWidgets.QLabel("Data Label:"), 5, 0)
+        self.layout.addWidget(self.dataLabelField, 5, 1)
+
         self.exportButton = QtWidgets.QPushButton("Export")
         self.exportButton.clicked.connect(self.export_data)
         self.exportButton.setEnabled(_HAVE_VTK)
 
-        self.layout.addWidget(self.exportButton, 5, 0)
+        self.layout.addWidget(self.exportButton, 6, 0)
 
         if tally.contains_filter(openmc.MeshFilter):
 
@@ -155,6 +167,21 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         res = np.array((self.xResBox.value(), self.yResBox.value(), self.zResBox.value()))
         dx, dy, dz = (urc - llc) / res
 
+        if any(llc >= urc):
+            _warn("Bounds of export data are invalid.")
+            return
+
+        if any(res <= 0):
+            _warn("Resolution of the export mesh is invalid. Values must be" \
+                  " <= 0.")
+            return
+
+        filename, ext = QtWidgets.QFileDialog.getSaveFileName(self,
+                                                              "Set VTK Filename",
+                                                              "untitled",
+                                                              "VTK Image (.vti)")
+
+
         print("Exporting data with resolution: {}".format(res))
         # create empty array to store our values
         data = np.zeros(res[::-1], dtype=float)
@@ -171,7 +198,6 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         view.height = urc[1] - llc[1]
         view.h_res = res[0]
         view.v_res = res[1]
-        print(view)
 
         z0 = llc[2] + dz / 2.0
         for k in range(res[2]):
@@ -188,14 +214,16 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         vtk_image.SetSpacing(dx, dy, dz)
         vtk_image.SetOrigin(llc)
         vtk_data = vtk.vtkDoubleArray()
-        vtk_data.SetName("tally_data")
+        label = self.dataLabelField.text()
+        print(label)
+        vtk_data.SetName(self.dataLabelField.text())
         vtk_data.SetArray(data, data.size, True)
         vtk_image.GetCellData().AddArray(vtk_data)
 
         print("Writing VTK Image file")
         writer = vtk.vtkXMLImageDataWriter()
         writer.SetInputData(vtk_image)
-        writer.SetFileName("test_data.vti")
+        writer.SetFileName(filename)
         writer.Write()
         print("Export complete")
 
