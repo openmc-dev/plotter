@@ -113,13 +113,17 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         self.layout.addWidget(QtWidgets.QLabel("Data Label:"), 6, 0)
         self.layout.addWidget(self.dataLabelField, 6, 1, 1, 2)
 
+        self.geomCheckBox = QtWidgets.QCheckBox()
+        self.layout.addWidget(QtWidgets.QLabel("Include Geometry:"), 7, 0, 1, 2)
+        self.layout.addWidget(self.geomCheckBox, 7, 2)
+
+        self.layout.addWidget(HorizontalLine(), 8, 0, 1, 6)
+
         self.exportButton = QtWidgets.QPushButton("Export to VTK")
         self.exportButton.clicked.connect(self.export_data)
         self.exportButton.setEnabled(_HAVE_VTK)
 
-        self.layout.addWidget(HorizontalLine(), 7, 0, 1, 6)
-
-        self.layout.addWidget(self.exportButton, 8, 5, 1, 2)
+        self.layout.addWidget(self.exportButton, 9, 5, 1, 2)
 
         if tally.contains_filter(openmc.MeshFilter):
 
@@ -184,9 +188,17 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
                                                               "Set VTK Filename",
                                                               "untitled",
                                                               "VTK Image (.vti)")
+        if filename[-4:] != ".vti":
+            filename += ".vti"
+
+        include_geom = self.geomCheckBox.checkState() == QtCore.Qt.Checked
 
         # create empty array to store our values
         data = np.zeros(res[::-1], dtype=float)
+
+        if include_geom:
+            mats = np.zeros(res[::-1], dtype='int32')
+            cells = np.zeros(res[::-1], dtype='int32')
 
         # get a copy of the current view
         cv = self.model.currentView
@@ -217,6 +229,9 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
             self.model.makePlot()
             image_data = self.model.create_tally_image(view)
             data[k, :,:] = image_data[0]
+            if include_geom:
+                mats[k, :, :] = self.model.mat_ids
+                cells[k, :, :] = self.model.cell_ids
             progressBar.setValue(k)
             if progressBar.wasCanceled():
                 # restore the previous active
@@ -234,6 +249,17 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         vtk_data.SetName(self.dataLabelField.text())
         vtk_data.SetArray(data, data.size, True)
         vtk_image.GetCellData().AddArray(vtk_data)
+
+        if include_geom:
+            mat_data = vtk.vtkIntArray()
+            mat_data.SetName("mats")
+            mat_data.SetArray(mats, mats.size, True)
+            vtk_image.GetCellData().AddArray(mat_data)
+
+            cell_data = vtk.vtkIntArray()
+            cell_data.SetName("cells")
+            cell_data.SetArray(cells, cells.size, True)
+            vtk_image.GetCellData().AddArray(cell_data)
 
         progressBar.setLabel(QtWidgets.QLabel("Writing VTK Image file: {}...".format(filename)))
 
