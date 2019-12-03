@@ -865,7 +865,7 @@ class PlotImage(FigureCanvas):
         units = set()
         for score in scores:
             try:
-                unit = score_units[score.lower()]
+                unit = score_units.get(score.lower(), reaction_units)
             except KeyError:
                 msg_box = QMessageBox()
                 msg_box.setText("Could not find unit for score '{}'".format(score))

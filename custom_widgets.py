@@ -1,4 +1,5 @@
 from functools import partial
+import warnings
 
 from PySide2 import QtWidgets, QtCore
 from PySide2.QtWidgets import QFrame
@@ -76,7 +77,7 @@ class Expander(QtWidgets.QWidget):
                 toggleButton.setChecked(checked)
 
             if not self.layout_set:
-                raise Warning("No layout set for expanding widget")
+                warnings.warn("No layout set for expanding widget")
                 return
 
             direction = QtCore.QAbstractAnimation.Forward if checked else QtCore.QAbstractAnimation.Backward
@@ -94,7 +95,6 @@ class Expander(QtWidgets.QWidget):
 
     def setContentLayout(self, contentLayout):
         self.layout_set = True
-        # Not sure if this is equivalent to self.contentArea.destroy()
         self.contentArea.destroy()
         self.contentArea.setLayout(contentLayout)
         collapsedHeight = self.sizeHint().height() - self.contentArea.maximumHeight()

@@ -11,7 +11,9 @@ _float_re = re.compile(r'(([+-]?\d+(\.\d*)?|\.\d+)([eE][+-]?\d+)?)')
 
 
 class FloatValidator(QtGui.QValidator):
-
+    """
+    Validator class for floats in scientific notation
+    """
     def validate(self, string, position):
         if self.valid_float_string(string):
             return self.State.Acceptable
@@ -30,7 +32,9 @@ class FloatValidator(QtGui.QValidator):
 
 
 class ScientificDoubleSpinBox(QDoubleSpinBox):
-
+    """
+    Double spin box which allows use of scientific notation
+    """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setMinimum(-np.inf)
@@ -56,7 +60,6 @@ class ScientificDoubleSpinBox(QDoubleSpinBox):
     def stepBy(self, steps):
         text = self.cleanText()
         groups = _float_re.search(text).groups()
-        decimal = float(groups[1])
-        decimal += steps
+        decimal = float(groups[1]) + steps
         new_string = "{:g}".format(decimal) + (groups[3] if groups[3] else "")
         self.lineEdit().setText(new_string)

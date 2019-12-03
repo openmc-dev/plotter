@@ -2,8 +2,11 @@
 import openmc
 
 
-class StatePointModel:
-
+class StatePointModel():
+    """
+    Class for management of an openmc.StatePoint instance
+    in the plotting application
+    """
     def __init__(self, filename, open_file=False):
         self.filename = filename
         self._sp = None
@@ -14,17 +17,11 @@ class StatePointModel:
 
     @property
     def tallies(self):
-        if self.is_open:
-            return self._sp.tallies
-        else:
-            return {}
+        return self._sp.tallies if self.is_open else {}
 
     @property
     def filters(self):
-        if self.is_open:
-            return self._sp.filters
-        else:
-            return {}
+        return self._sp.filters if self.is_open else {}
 
     @property
     def universes(self):

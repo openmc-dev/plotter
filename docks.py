@@ -28,29 +28,13 @@ flux_units = 'Particle-cm per Source Particle'
 production_units = 'Particles Produced per Source Particle'
 energy_units = 'eV per Source Particle'
 
-reactions = ('absorption', 'elastic', 'fission',
-             'scatter', 'total', '(n,2nd)',
-             '(n,2n)', '(n,3n)', '(n,na)',
-             '(n,n3a)', '(n,2na)', '(n,np)',
-             '(n,n2a)', '(n,2n2a)', '(n,nd)',
-             '(n,nt)', '(n,nHe-3)', '(n,nd2a)',
-             '(n,nt2a)', '(n,n4n)', '(n,2np)',
-             '(n,3np)', '(n,n2p)', '(n,n*X*)',
-             '(n,nc)', '(n,gamma)', '(n,elastic)',
-             '(n,p)', '(n,d)', '(n,t)',
-             '(n,3He)', '(n,a)', '(n,2a)',
-             '(n,3a)', '(n,2p)', '(n,pa)',
-             '(n,t2a)', '(n,d2a)', '(n,pd)',
-             '(n,pt)', '(n,da)')
 productions = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
                'nu-scatter', 'H1-production', 'H2-production',
                'H3-production', 'He3-production', 'He4-production')
 
-score_units = {}
-score_units.update({reaction : reaction_units for reaction in reactions})
-score_units.update({production: production_units for production in productions})
-score_units['flux'] = 'Particle-cm/Particle'
-score_units['current'] = 'Particles per source Particle'
+score_units = {production: production_units for production in productions}
+score_units['flux'] = 'Particle-cm per Source Particle'
+score_units['current'] = 'Particles per Source Particle'
 score_units['events'] = 'Events per Source Particle'
 score_units['inverse-velocity'] = 'Particle-seconds per Source Particle'
 score_units['heating'] = energy_units
@@ -65,6 +49,7 @@ tally_values = {'Mean': 'mean',
                 'Std. Dev.': 'std_dev',
                 'Rel. Error': 'rel_err'}
 
+
 class PlotterDock(QDockWidget):
     """
     Dock widget with common settings for the plotting application
@@ -78,6 +63,7 @@ class PlotterDock(QDockWidget):
 
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
+
 class DomainDock(PlotterDock):
     """
     Domain options dock
@@ -88,9 +74,9 @@ class DomainDock(PlotterDock):
         self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea)
 
         # Create Controls
-        self.createOriginBox()
-        self.createOptionsBox()
-        self.createResolutionBox()
+        self._createOriginBox()
+        self._createOptionsBox()
+        self._createResolutionBox()
 
         # Create submit button
         self.applyButton = QPushButton("Apply Changes")
@@ -130,7 +116,7 @@ class DomainDock(PlotterDock):
         self.optionsWidget.setLayout(self.dockLayout)
         self.setWidget(self.optionsWidget)
 
-    def createOriginBox(self):
+    def _createOriginBox(self):
 
         # X Origin
         self.xOrBox = QDoubleSpinBox()
@@ -168,7 +154,7 @@ class DomainDock(PlotterDock):
         self.originGroupBox = QGroupBox('Origin')
         self.originGroupBox.setLayout(self.orLayout)
 
-    def createOptionsBox(self):
+    def _createOptionsBox(self):
 
         # Width
         self.widthBox = QDoubleSpinBox(self)
@@ -233,7 +219,7 @@ class DomainDock(PlotterDock):
         self.optionsGroupBox = QGroupBox('Options')
         self.optionsGroupBox.setLayout(self.opLayout)
 
-    def createResolutionBox(self):
+    def _createResolutionBox(self):
 
         # Horizontal Resolution
         self.hResBox = QSpinBox(self)
@@ -306,14 +292,10 @@ class DomainDock(PlotterDock):
         self.basisBox.setCurrentText(self.model.activeView.basis)
 
     def updateAspectLock(self):
-        if self.model.activeView.aspectLock:
-            self.ratioCheck.setChecked(True)
-            self.vResBox.setDisabled(True)
-            self.vResLabel.setDisabled(True)
-        else:
-            self.ratioCheck.setChecked(False)
-            self.vResBox.setDisabled(False)
-            self.vResLabel.setDisabled(False)
+        aspect_lock = bool(self.model.activeView.aspectLock)
+        self.ratioCheck.setChecked(aspect_lock)
+        self.vResBox.setDisabled(aspect_lock)
+        self.vResLabel.setDisabled(aspect_lock)
 
     def updateHRes(self):
         self.hResBox.setValue(self.model.activeView.h_res)
@@ -334,14 +316,7 @@ class DomainDock(PlotterDock):
     def resizeEvent(self, event):
         self.mw.resizeEvent(event)
 
-    def hideEvent(self, event):
-        self.mw.resizeEvent(event)
-
-    def showEvent(self, event):
-        self.mw.resizeEvent(event)
-
-    def moveEvent(self, event):
-        self.mw.resizeEvent(event)
+    hideEvent = showEvent = moveEvent = resizeEvent
 
 
 class TallyDock(PlotterDock):
@@ -399,7 +374,7 @@ class TallyDock(PlotterDock):
         self.scroll.setWidget(self.widget)
         self.setWidget(self.scroll)
 
-    def create_filter_tree(self, spatial_filters):
+    def _createFilterTree(self, spatial_filters):
         av = self.model.activeView
         tally = self.model.statepoint.tallies[av.selectedTally]
         filters = tally.filters
@@ -419,10 +394,10 @@ class TallyDock(PlotterDock):
         self.filter_map = {}
         self.bin_map = {}
 
-        for filter in filters:
-            filter_label = str(type(filter)).split(".")[-1][:-2]
+        for tally_filter in filters:
+            filter_label = str(type(tally_filter)).split(".")[-1][:-2]
             filter_item = QTreeWidgetItem(self.filterTree, (filter_label,))
-            self.filter_map[filter] = filter_item
+            self.filter_map[tally_filter] = filter_item
 
             # make checkable
             if not spatial_filters:
@@ -432,7 +407,7 @@ class TallyDock(PlotterDock):
                 filter_item.setFlags(filter_item.flags() | QtCore.Qt.ItemIsTristate | QtCore.Qt.ItemIsUserCheckable)
             filter_item.setCheckState(0, QtCore.Qt.Unchecked)
 
-            if isinstance(filter, MeshFilter):
+            if isinstance(tally_filter, MeshFilter):
                 filter_item.setCheckState(0, QtCore.Qt.Checked)
                 filter_item.setFlags(QtCore.Qt.ItemIsUserCheckable)
                 filter_item.setToolTip(0, "All Mesh bins are selected automatically")
@@ -444,7 +419,7 @@ class TallyDock(PlotterDock):
                 else:
                     return bin
 
-            for bin in sorted(filter.bins, key=_bin_sort_val):
+            for bin in sorted(tally_filter.bins, key=_bin_sort_val):
                 item = QTreeWidgetItem(filter_item, [str(bin),])
                 if not spatial_filters:
                     item.setFlags(QtCore.Qt.ItemIsUserCheckable)
@@ -452,7 +427,8 @@ class TallyDock(PlotterDock):
                 else:
                     item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
                 item.setCheckState(0, QtCore.Qt.Unchecked)
-                bin = bin if not hasattr(bin, '__iter__') else tuple(bin)
+
+                bin = bin if not isinstance(bin, Iterable) else tuple(bin)
                 self.bin_map[filter, bin] = item
 
             # start with all filters selected if spatial filters are present
@@ -486,16 +462,14 @@ class TallyDock(PlotterDock):
             tally = self.model.statepoint.tallies[av.selectedTally]
 
             # populate filters
-            filter_types = set()
-            for filter in tally.filters:
-                filter_types.add(type(filter))
+            filter_types = {type(f) for f in tally.filters}
             spatial_filters = bool(filter_types.intersection(_SPATIAL_FILTERS))
 
             if not spatial_filters:
                 self.filter_description = QLabel("(No Spatial Filters)")
                 self.tallySelectorLayout.addRow(self.filter_description)
 
-            self.create_filter_tree(spatial_filters)
+            self._createFilterTree(spatial_filters)
 
             self.tallySelectorLayout.addRow(self.treeExpander)
             self.tallySelectorLayout.addRow(HorizontalLine())
@@ -536,16 +510,6 @@ class TallyDock(PlotterDock):
                     ql.setFlags(ql.flags() | QtCore.Qt.ItemIsUserCheckable)
                     ql.setFlags(ql.flags() & ~QtCore.Qt.ItemIsSelectable)
                 self.score_map[score] = ql
-                # add inelastic scattering score to unit dictionary if needed
-                if score not in score_units:
-                    if not re.match("\(n,n[1-9]+\)", score):
-                        msg_box = QMessageBox()
-                        msg_box.setText("Warning: The score {} is not recognized".format(score))
-                        msg_box.setIcon(QMessageBox.Warning)
-                        msg_box.setStandardButtons(QMessageBox.Ok)
-                        msg_box.exec_()
-                    else:
-                        score_units[score] = reaction_units
                 self.scoresListWidget.addItem(ql)
 
             # select the first score item by default
@@ -669,16 +633,14 @@ class TallyDock(PlotterDock):
         self.tallyColorForm.update()
 
         if self.model.statepoint:
-            tally_w_name = 'Tally {} "{}"'
-            tally_no_name = 'Tally {}'
             self.tallySelector.clear()
             self.tallySelector.setEnabled(True)
             self.tallySelector.addItem("None")
             for idx, tally in enumerate(self.model.statepoint.tallies.values()):
                 if tally.name == "":
-                    self.tallySelector.addItem(tally_no_name.format(tally.id), userData=tally.id)
+                    self.tallySelector.addItem('Tally {}'.format(tally.id), userData=tally.id)
                 else:
-                    self.tallySelector.addItem(tally_w_name.format(tally.id, tally.name), userData=tally.id)
+                    self.tallySelector.addItem('Tally {} "{}"'.format(tally.id, tally.name), userData=tally.id)
                 self.tally_map[idx] = tally
             self.updateSelectedTally()
             self.updateMinMax()
@@ -733,8 +695,6 @@ class ColorForm(QWidget):
         levels in the contour plot.
     """
     def __init__(self, model, mw, field, colormaps=None):
-        """
-        """
         super().__init__()
 
         self.model = model
@@ -751,6 +711,8 @@ class ColorForm(QWidget):
         # Alpha value
         self.alphaBox = QDoubleSpinBox()
         self.alphaBox.setDecimals(2)
+        self.alphaBox.setRange(0, 1)
+        self.alphaBox.setSingleStep(0.05)
         alpha_connector = partial(self.mw.editTallyAlpha)
         self.alphaBox.valueChanged.connect(alpha_connector)
 
@@ -831,12 +793,9 @@ class ColorForm(QWidget):
         self.dataIndicatorCheckBox.setChecked(cv.tallyDataIndicator)
 
     def setMinMaxEnabled(self, enable):
-        if enable:
-            self.minBox.setEnabled(True)
-            self.maxBox.setEnabled(True)
-        else:
-            self.minBox.setEnabled(False)
-            self.maxBox.setEnabled(False)
+        enable = bool(enable)
+        self.minBox.setEnabled(enable)
+        self.maxBox.setEnabled(enable)
 
     def updateMinMax(self):
         cv = self.model.currentView

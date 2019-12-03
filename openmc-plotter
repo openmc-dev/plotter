@@ -506,9 +506,14 @@ class MainWindow(QMainWindow):
             try:
                 self.model.openStatePoint(filename)
                 message = 'Opened statepoint file: {}'
-            except:
-
+            except (FileNotFoundError, OSError):
                 message = 'Error opening statepoint file: {}'
+                                msg_box = QMessageBox()
+                msg = "Could open statepoint file: \n\n {} \n"
+                msg_box.setText(msg.format(filename))
+                msg_box.setIcon(QMessageBox.Warning)
+                msg_box.setStandardButtons(QMessageBox.Ok)
+                msg_box.exec_()
             finally:
                 self.statusBar().showMessage(message.format(filename), 5000)
             self.updateDataMenu()
@@ -1021,7 +1026,6 @@ class MainWindow(QMainWindow):
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.exec_()
                 self.model.statepoint = None
-
 
             self.model.currentView = model.currentView
             self.model.activeView = copy.deepcopy(model.currentView)
