@@ -64,7 +64,7 @@ class Expander(QtWidgets.QWidget):
         row = 0
         mainLayout.addWidget(self.toggleButton, row, 0, 1, 1, QtCore.Qt.AlignLeft)
         mainLayout.addWidget(self.headerLine, row, 2, 1, 1)
-        row += 1
+        row = 1
         mainLayout.addWidget(self.contentArea, row, 0, 1, 3)
         self.setLayout(self.mainLayout)
 
@@ -99,7 +99,7 @@ class Expander(QtWidgets.QWidget):
         self.contentArea.setLayout(contentLayout)
         collapsedHeight = self.sizeHint().height() - self.contentArea.maximumHeight()
         contentHeight = contentLayout.sizeHint().height()
-        for i in range(self.toggleAnimation.animationCount()-1):
+        for i in range(self.toggleAnimation.animationCount() - 1):
             expandAnimation = self.toggleAnimation.animationAt(i)
             expandAnimation.setDuration(self.animationDuration)
             expandAnimation.setStartValue(collapsedHeight)

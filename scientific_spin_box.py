@@ -50,7 +50,7 @@ class ScientificDoubleSpinBox(QDoubleSpinBox):
     def textFromValue(self, value):
         """Modified form of the 'g' format specifier."""
         flt_str = "{:g}".format(value).replace("e+", "e")
-        flt_str = re.sub("e(-?)0*(\d+)", r"e\1\2", flt_str)
+        flt_str = re.sub(r"e(-?)0*(\d+)", r"e\1\2", flt_str)
         return flt_str
 
     def stepBy(self, steps):

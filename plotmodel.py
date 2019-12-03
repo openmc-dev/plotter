@@ -107,7 +107,7 @@ class PlotModel():
         elif isinstance(statepoint, str):
             self._statepoint = StatePointModel(statepoint, open_file=True)
         else:
-            raise AttributeError("Invalid statepoint object")
+            raise TypeError("Invalid statepoint object")
 
         if self._statepoint and not self._statepoint.is_open:
             self._statepoint.open()

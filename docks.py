@@ -12,10 +12,8 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QDockWidget, QItemDelegate, QHeaderView,
                                QSlider, QScrollArea, QTextEdit, QListWidget,
                                QListWidgetItem, QTreeWidget, QTreeWidgetItem)
-
 from matplotlib import cm as mcolormaps
 import numpy as np
-
 from openmc.filter import (UniverseFilter, MaterialFilter, CellFilter,
                            SurfaceFilter, MeshFilter, MeshSurfaceFilter)
 
@@ -50,7 +48,7 @@ productions = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
 
 score_units = {}
 score_units.update({reaction : reaction_units for reaction in reactions})
-score_units.update({production : production_units for production in productions})
+score_units.update({production: production_units for production in productions})
 score_units['flux'] = 'Particle-cm/Particle'
 score_units['current'] = 'Particles per source Particle'
 score_units['events'] = 'Events per Source Particle'
@@ -60,7 +58,7 @@ score_units['heating-local'] = energy_units
 score_units['kappa-fission'] = energy_units
 score_units['fission-q-prompt'] = energy_units
 score_units['fission-q-recoverable'] = energy_units
-score_units['decay-rate'] = 'Seconds^-1'
+score_units['decay-rate'] = 's^-1'
 score_units['damage-energy'] = energy_units
 
 tally_values = {'Mean': 'mean',
@@ -116,7 +114,7 @@ class DomainDock(PlotterDock):
 
         # Create Layout
         self.dockLayout = QVBoxLayout()
-        self.dockLayout.addWidget(QLabel("Geometry & Properties"))
+        self.dockLayout.addWidget(QLabel("Geometry/Properties"))
         self.dockLayout.addWidget(HorizontalLine())
         self.dockLayout.addWidget(self.originGroupBox)
         self.dockLayout.addWidget(self.optionsGroupBox)
@@ -423,7 +421,7 @@ class TallyDock(PlotterDock):
 
         for filter in filters:
             filter_label = str(type(filter)).split(".")[-1][:-2]
-            filter_item = QTreeWidgetItem(self.filterTree, [filter_label,])
+            filter_item = QTreeWidgetItem(self.filterTree, (filter_label,))
             self.filter_map[filter] = filter_item
 
             # make checkable
@@ -455,7 +453,7 @@ class TallyDock(PlotterDock):
                     item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
                 item.setCheckState(0, QtCore.Qt.Unchecked)
                 bin = bin if not hasattr(bin, '__iter__') else tuple(bin)
-                self.bin_map[(filter, bin)] = item
+                self.bin_map[filter, bin] = item
 
             # start with all filters selected if spatial filters are present
             if spatial_filters:
@@ -491,7 +489,7 @@ class TallyDock(PlotterDock):
             filter_types = set()
             for filter in tally.filters:
                 filter_types.add(type(filter))
-            spatial_filters = bool(len(filter_types.intersection(_SPATIAL_FILTERS)))
+            spatial_filters = bool(filter_types.intersection(_SPATIAL_FILTERS))
 
             if not spatial_filters:
                 self.filter_description = QLabel("(No Spatial Filters)")
@@ -618,7 +616,7 @@ class TallyDock(PlotterDock):
                 applied_scores.append(score)
         self.model.appliedScores = tuple(applied_scores)
 
-        if len(applied_scores) == 0:
+        if not applied_scores:
             # if no scores are selected, enable all scores again
             for score, score_box in self.score_map.items():
                 sunits = score_units[score]
@@ -626,7 +624,7 @@ class TallyDock(PlotterDock):
                 score_box.setFlags(empty_item.flags() | QtCore.Qt.ItemIsUserCheckable)
                 score_box.setFlags(empty_item.flags() & ~QtCore.Qt.ItemIsSelectable)
         elif 'total' in applied_scores:
-            self.model.appliedScores = ['total',]
+            self.model.appliedScores = ('total',)
             # if total is selected, disable all other scores
             for score, score_box in self.score_map.items():
                 if score != 'total':
@@ -658,7 +656,7 @@ class TallyDock(PlotterDock):
                 if nuclide != 'total':
                     nuclide_box.setFlags(QtCore.Qt.ItemIsUserCheckable)
                     nuclide_box.setToolTip("De-select 'total' to enable other nuclides")
-        elif len(applied_nuclides) == 0:
+        elif not applied_nuclides:
             # if no nuclides are selected, enable all nuclides again
             for nuclide, nuclide_box in self.nuclide_map.items():
                 empty_item = QListWidgetItem()
@@ -696,13 +694,13 @@ class ColorForm(QWidget):
     Attributes
     ----------
 
-    model : PlotModel instance
+    model : PlotModel
         The model instance used when updating information on the form.
-    colormapBox : QComboBox instance
+    colormapBox : QComboBox
         Holds the string of the matplotlib colorbar being used
-    visibilityBox : QCheckBox instance
+    visibilityBox : QCheckBox
         Indicator for whether or not the field should be visible
-    alphaBox : QDoubleSpinBox instance
+    alphaBox : QDoubleSpinBox
         Holds the alpha value for the displayed field data
     colormapBox : QComboBox
         Selector for colormap
