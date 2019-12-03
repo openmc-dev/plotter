@@ -34,7 +34,7 @@ productions = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
                'nu-scatter', 'H1-production', 'H2-production',
                'H3-production', 'He3-production', 'He4-production')
 
-_SCORE_UNITS = {production: production_units for production in productions}
+_SCORE_UNITS = {production: _PRODUCTION_UNITS for production in productions}
 _SCORE_UNITS['flux'] = 'Particle-cm/Particle'
 _SCORE_UNITS['current'] = 'Particles per source Particle'
 _SCORE_UNITS['events'] = 'Events per Source Particle'
@@ -299,7 +299,7 @@ class PlotModel():
         tally_value = _TALLY_VALUES[view.tallyValue]
 
         # check score units
-        units = {_SCORE_UNITS.get(score, reaction_units) for score in scores}
+        units = {_SCORE_UNITS.get(score, _REACTION_UNITS) for score in scores}
 
         if len(units) != 1:
             msg_box = QMessageBox()

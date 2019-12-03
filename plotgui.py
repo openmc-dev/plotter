@@ -1,4 +1,3 @@
-from collections import Iterable, defaultdict
 from functools import partial
 
 from PySide2 import QtCore, QtGui
@@ -13,15 +12,12 @@ from matplotlib import lines as mlines
 from matplotlib import cm as mcolormaps
 from matplotlib.colors import SymLogNorm
 import numpy as np
-import openmc
 
 from plot_colors import rgb_normalize, invert_rgb
 from plotmodel import DomainDelegate
 from plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
 from scientific_spin_box import ScientificDoubleSpinBox
-from docks import score_units, tally_values, reaction_units
 from custom_widgets import HorizontalLine
-
 
 if is_pyqt5():
     from matplotlib.backends.backend_qt5agg import FigureCanvas

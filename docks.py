@@ -599,10 +599,10 @@ class TallyDock(PlotterDock):
                     score_box.setToolTip("De-select 'total' to enable other scores")
         else:
             # get units of applied scores
-            selected_units = _SCORE_UNITS.get([applied_scores[0], reaction_units)
+            selected_units = _SCORE_UNITS.get(applied_scores[0], _REACTION_UNITS)
             # disable scores with incompatible units
             for score, score_box in self.score_map.items():
-                sunits = _SCORE_UNITS.get(score, reaction_units)
+                sunits = _SCORE_UNITS.get(score, _REACTION_UNITS)
                 if sunits != selected_units:
                     score_box.setFlags(QtCore.Qt.ItemIsUserCheckable)
                     score_box.setToolTip("Score is incompatible with currently selected scores")
