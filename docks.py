@@ -14,8 +14,8 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QListWidgetItem, QTreeWidget, QTreeWidgetItem)
 from matplotlib import cm as mcolormaps
 import numpy as np
-from openmc.filter import (UniverseFilter, MaterialFilter, CellFilter,
-                           SurfaceFilter, MeshFilter, MeshSurfaceFilter)
+from openmc import (UniverseFilter, MaterialFilter, CellFilter,
+                    SurfaceFilter, MeshFilter, MeshSurfaceFilter)
 
 from custom_widgets import HorizontalLine, Expander
 from scientific_spin_box import ScientificDoubleSpinBox
@@ -429,7 +429,7 @@ class TallyDock(PlotterDock):
                 item.setCheckState(0, QtCore.Qt.Unchecked)
 
                 bin = bin if not isinstance(bin, Iterable) else tuple(bin)
-                self.bin_map[filter, bin] = item
+                self.bin_map[tally_filter, bin] = item
 
             # start with all filters selected if spatial filters are present
             if spatial_filters:
@@ -596,10 +596,10 @@ class TallyDock(PlotterDock):
                     score_box.setToolTip("De-select 'total' to enable other scores")
         else:
             # get units of applied scores
-            selected_units = score_units[applied_scores[0]]
+            selected_units = score_units.get(applied_scores[0], reaction_units)
             # disable scores with incompatible units
             for score, score_box in self.score_map.items():
-                sunits = score_units[score]
+                sunits = score_units.get(score, reaction_units)
                 if sunits != selected_units:
                     score_box.setFlags(QtCore.Qt.ItemIsUserCheckable)
                     score_box.setToolTip("Score is incompatible with currently selected scores")

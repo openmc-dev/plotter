@@ -508,7 +508,7 @@ class MainWindow(QMainWindow):
                 message = 'Opened statepoint file: {}'
             except (FileNotFoundError, OSError):
                 message = 'Error opening statepoint file: {}'
-                                msg_box = QMessageBox()
+                msg_box = QMessageBox()
                 msg = "Could open statepoint file: \n\n {} \n"
                 msg_box.setText(msg.format(filename))
                 msg_box.setIcon(QMessageBox.Warning)
