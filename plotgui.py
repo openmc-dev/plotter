@@ -835,10 +835,11 @@ class PlotImage(FigureCanvas):
         data_max = np.max(data)
 
         # set image data, reverse y-axis
-        image_data = data[::-1,...]
+        image_data = data[::-1, ...]
 
         # return data extents (in cm) for the tally
-        extents = [mesh.lower_left[h_ind], mesh.upper_right[h_ind], mesh.lower_left[v_ind], mesh.upper_right[v_ind]]
+        extents = [mesh.lower_left[h_ind], mesh.upper_right[h_ind],
+                   mesh.lower_left[v_ind], mesh.upper_right[v_ind]]
 
         return image_data, extents, data_min, data_max
 
@@ -1201,8 +1202,9 @@ class ColorDialog(QDialog):
     def updateColorMaps(self):
         cmaps = self.model.activeView.colormaps
         for key, val in cmaps.items():
-            idx = self.tabs[key].colormapBox.findText(val,
-                                                      QtCore.Qt.MatchFixedString)
+            idx = self.tabs[key].colormapBox.findText(
+                    val,
+                    QtCore.Qt.MatchFixedString)
             if idx >= 0:
                 self.tabs[key].colormapBox.setCurrentIndex(idx)
 
