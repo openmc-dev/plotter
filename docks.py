@@ -19,35 +19,10 @@ from openmc import (UniverseFilter, MaterialFilter, CellFilter,
 
 from custom_widgets import HorizontalLine, Expander
 from scientific_spin_box import ScientificDoubleSpinBox
+from plotmodel import _SCORE_UNITS, _TALLY_VALUES
 
 _SPATIAL_FILTERS = (UniverseFilter, MaterialFilter, CellFilter,
                     SurfaceFilter, MeshFilter, MeshSurfaceFilter)
-
-reaction_units = 'Reactions per Source Particle'
-flux_units = 'Particle-cm per Source Particle'
-production_units = 'Particles Produced per Source Particle'
-energy_units = 'eV per Source Particle'
-
-productions = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
-               'nu-scatter', 'H1-production', 'H2-production',
-               'H3-production', 'He3-production', 'He4-production')
-
-score_units = {production: production_units for production in productions}
-score_units['flux'] = 'Particle-cm per Source Particle'
-score_units['current'] = 'Particles per Source Particle'
-score_units['events'] = 'Events per Source Particle'
-score_units['inverse-velocity'] = 'Particle-seconds per Source Particle'
-score_units['heating'] = energy_units
-score_units['heating-local'] = energy_units
-score_units['kappa-fission'] = energy_units
-score_units['fission-q-prompt'] = energy_units
-score_units['fission-q-recoverable'] = energy_units
-score_units['decay-rate'] = 's^-1'
-score_units['damage-energy'] = energy_units
-
-tally_values = {'Mean': 'mean',
-                'Std. Dev.': 'std_dev',
-                'Rel. Error': 'rel_err'}
 
 
 class PlotterDock(QDockWidget):
@@ -481,7 +456,7 @@ class TallyDock(PlotterDock):
             # value selection
             self.tallySelectorLayout.addRow(QLabel("Value:"))
             self.valueBox = QComboBox(self)
-            self.values = tuple(tally_values.keys())
+            self.values = tuple(_TALLY_VALUES.keys())
             for value in self.values:
                 self.valueBox.addItem(value)
             self.tallySelectorLayout.addRow(self.valueBox)
@@ -602,10 +577,10 @@ class TallyDock(PlotterDock):
                     score_box.setToolTip("De-select 'total' to enable other scores")
         else:
             # get units of applied scores
-            selected_units = score_units.get(applied_scores[0], reaction_units)
+            selected_units = _SCORE_UNITS.get([applied_scores[0], reaction_units)
             # disable scores with incompatible units
             for score, score_box in self.score_map.items():
-                sunits = score_units.get(score, reaction_units)
+                sunits = _SCORE_UNITS.get(score, reaction_units)
                 if sunits != selected_units:
                     score_box.setFlags(QtCore.Qt.ItemIsUserCheckable)
                     score_box.setToolTip("Score is incompatible with currently selected scores")

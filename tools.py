@@ -1,6 +1,16 @@
 from PySide2 import QtCore, QtGui, QtWidgets
+import numpy as np
+import copy
 from scientific_spin_box import ScientificDoubleSpinBox
-from common_widgets import HorizontalLine
+from custom_widgets import HorizontalLine
+
+import openmc
+
+try:
+    import vtk
+    _HAVE_VTK = True
+except ImportError:
+    _HAVE_VTK = False
 
 class ExportTallyDataDialog(QtWidgets.QDialog):
 
@@ -72,8 +82,15 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         self.layout.addWidget(HorizontalLine(), 3, 0, 1, 6)
 
         self.xResBox = QtWidgets.QSpinBox()
+        self.xResBox.setMaximum(1E6)
+        self.xResBox.setMinimum(0)
         self.yResBox = QtWidgets.QSpinBox()
+        self.yResBox.setMaximum(1E6)
+        self.yResBox.setMinimum(0)
         self.zResBox = QtWidgets.QSpinBox()
+        self.zResBox.setMaximum(1E6)
+        self.zResBox.setMinimum(0)
+
 
         self.layout.addWidget(QtWidgets.QLabel("X steps:"), 4, 0)
         self.layout.addWidget(self.xResBox, 4, 1)
@@ -83,5 +100,94 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         self.layout.addWidget(self.zResBox, 4, 5)
 
         self.exportButton = QtWidgets.QPushButton("Export")
+        self.exportButton.clicked.connect(self.export_data)
+        self.exportButton.setEnabled(_HAVE_VTK)
 
         self.layout.addWidget(self.exportButton, 5, 0)
+
+        if tally.contains_filter(openmc.MeshFilter):
+
+            mesh_filter = tally.find_filter(openmc.MeshFilter)
+            mesh = mesh_filter.mesh
+            assert(mesh.n_dimension == 3)
+
+            llc = mesh.lower_left
+            self.xminBox.setValue(llc[0])
+            self.yminBox.setValue(llc[1])
+            self.zminBox.setValue(llc[2])
+
+            urc = mesh.upper_right
+            self.xmaxBox.setValue(urc[0])
+            self.ymaxBox.setValue(urc[1])
+            self.zmaxBox.setValue(urc[2])
+
+            dims = mesh.dimension
+            self.xResBox.setValue(dims[0])
+            self.yResBox.setValue(dims[1])
+            self.zResBox.setValue(dims[2])
+
+            self.xminBox.setEnabled(False)
+            self.xminBox.setToolTip("Using MeshFilter to set bounds automatically.")
+            self.xmaxBox.setEnabled(False)
+            self.xmaxBox.setToolTip("Using MeshFilter to set bounds automatically.")
+            self.yminBox.setEnabled(False)
+            self.yminBox.setToolTip("Using MeshFilter to set bounds automatically.")
+            self.ymaxBox.setEnabled(False)
+            self.ymaxBox.setToolTip("Using MeshFilter to set bounds automatically.")
+            self.zminBox.setEnabled(False)
+            self.zminBox.setToolTip("Using MeshFilter to set bounds automatically.")
+            self.zmaxBox.setEnabled(False)
+            self.zmaxBox.setToolTip("Using MeshFilter to set bounds automatically.")
+
+
+            self.xResBox.setEnabled(False)
+            self.xResBox.setToolTip("Using MeshFilter to set resolution automatically.")
+            self.yResBox.setEnabled(False)
+            self.yResBox.setToolTip("Using MeshFilter to set resolution automatically.")
+            self.zResBox.setEnabled(False)
+            self.zResBox.setToolTip("Using MeshFilter to set resolution automatically.")
+
+    def export_data(self):
+
+        # collect necessary information from the export box
+        llc = np.array((self.xminBox.value(), self.yminBox.value(), self.zminBox.value()))
+        urc = np.array((self.xmaxBox.value(), self.ymaxBox.value(), self.zmaxBox.value()))
+        res = np.array((self.xResBox.value(), self.yResBox.value(), self.zResBox.value()))
+        dx, dy, dz = (urc - llc) / res
+
+        # create empty array to store our values
+        data = np.zeros(res[::-1], dtype=float)
+
+        # get a copy of the current view
+        view = copy.deepcopy(self.model.currentView)
+
+        # get a view of the tally data for each x,y slice:
+
+        x0, y0, z0 = (llc + urc) / 2.0
+        view.width = urc[0] - llc[0]
+        view.height = urc[1] - llc[1]
+        view.h_res = res[0]
+        view.v_res = res[1]
+
+        z0 = llc[2] + dz / 2.0
+        for k in range(res[2]):
+            z = z0 + k * dz
+            view.origin = (x0, y0, z)
+            view.basis = 'xy'
+
+            image_data = self.model.create_tally_image(view)
+            data[k, :,:] = image_data[0]
+
+        vtk_image = vtk.vtkImageData()
+        vtk_image.SetDimensions(res + 1)
+        vtk_image.SetSpacing(dx, dy, dz)
+        vtk_image.SetOrigin(llc)
+        vtk_data = vtk.vtkDoubleArray()
+        vtk_data.SetName("tally_data")
+        vtk_data.SetArray(data, data.size, True)
+        vtk_image.GetCellData().AddArray(vtk_data)
+
+        writer = vtk.vtkXMLImageDataWriter()
+        writer.SetInputData(vtk_image)
+        writer.SetFileName("test_data.vti")
+        writer.Write()

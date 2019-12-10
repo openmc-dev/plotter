@@ -23,6 +23,32 @@ _OVERLAP = -3
 _MODEL_PROPERTIES = ('temperature', 'density')
 _PROPERTY_INDICES = {'temperature': 0, 'density': 1}
 
+reaction_units = 'Reactions per Source Particle'
+flux_units = 'Particle-cm per Source Particle'
+production_units = 'Particles Produced per Source Particle'
+energy_units = 'eV per Source Particle'
+
+productions = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
+               'nu-scatter', 'H1-production', 'H2-production',
+               'H3-production', 'He3-production', 'He4-production')
+
+_SCORE_UNITS = {production: production_units for production in productions}
+_SCORE_UNITS['flux'] = 'Particle-cm/Particle'
+_SCORE_UNITS['current'] = 'Particles per source Particle'
+_SCORE_UNITS['events'] = 'Events per Source Particle'
+_SCORE_UNITS['inverse-velocity'] = 'Particle-seconds per Source Particle'
+_SCORE_UNITS['heating'] = energy_units
+_SCORE_UNITS['heating-local'] = energy_units
+_SCORE_UNITS['kappa-fission'] = energy_units
+_SCORE_UNITS['fission-q-prompt'] = energy_units
+_SCORE_UNITS['fission-q-recoverable'] = energy_units
+_SCORE_UNITS['decay-rate'] = 'Seconds^-1'
+_SCORE_UNITS['damage-energy'] = energy_units
+
+_TALLY_VALUES = {'Mean': 'mean',
+                 'Std. Dev.': 'std_dev',
+                 'Rel. Error': 'rel_err'}
+
 
 class PlotModel():
     """ Geometry and plot settings for OpenMC Plot Explorer model
@@ -244,6 +270,269 @@ class PlotModel():
     def storeCurrent(self):
         """ Add current view to previousViews list """
         self.previousViews.append(copy.deepcopy(self.currentView))
+
+    def create_tally_image(self, view=None):
+        if view is None:
+            view = self.currentView
+
+        tally_id = view.selectedTally
+
+        scores = self.appliedScores
+        nuclides = self.appliedNuclides
+
+        tally_selected = view.selectedTally is not None
+        tally_visible = view.tallyDataVisible
+        visible_selection = bool(scores) and bool(nuclides)
+
+        if not tally_selected or not tally_visible or not visible_selection:
+            return (None, None, None, None, None)
+
+        tally = self.statepoint.tallies[tally_id]
+
+        tally_value = _TALLY_VALUES[view.tallyValue]
+
+        # check score units
+        units = {_SCORE_UNITS.get(score, reaction_units) for score in scores}
+
+        if len(units) != 1:
+            msg_box = QMessageBox()
+            unit_str = " ".join(units)
+            msg = "The scores selected have incompatible units:\n"
+            for unit in units:
+                msg += "  - {}\n".format(unit)
+            msg_box.setText(msg)
+            msg_box.setIcon(QMessageBox.Information)
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.exec_()
+            return (None, None, None, None, None)
+
+        units_out = list(units)[0]
+
+        if tally.contains_filter(openmc.MeshFilter):
+            if tally_value == 'rel_err':
+                mean_data = self._create_tally_mesh_image(tally, 'mean', scores, nuclides, view) + (units_out,)
+                dev_data = self._create_tally_mesh_image(tally, 'std_dev', scores, nuclides, view) + (units_out,)
+                image_data = dev_data[0] / mean_data[0]
+                image_data = np.nan_to_num(image_data, nan=0.0, posinf=0.0, neginf=0.0)
+                extents = mean_data[1]
+                data_min = np.min(image_data)
+                data_max = np.max(image_data)
+                return image_data, extents, data_min, data_max, units_out
+            else:
+                return self._create_tally_mesh_image(tally, tally_value, scores, nuclides, view) + (units_out,)
+        else:
+            if tally_value == 'rel_err':
+                mean_data = self._create_tally_domain_image(tally, 'mean', scores, nuclides, view) + (units_out,)
+                dev_data = self._create_tally_domain_image(tally, 'std_dev', scores, nuclides, view) + (units_out,)
+                image_data = dev_data[0] / mean_data[0]
+                image_data = np.nan_to_num(image_data, nan=0.0, posinf=0.0, neginf=0.0)
+                extents = mean_data[1]
+                data_min = np.min(image_data)
+                data_max = np.max(image_data)
+                return image_data, extents, data_min, data_max, units_out
+            else:
+                return self._create_tally_domain_image(tally, tally_value, scores, nuclides, view) + (units_out,)
+
+    def _create_tally_domain_image(self, tally, tally_value, scores, nuclides, view=None):
+        # data resources used throughout
+        if view is None:
+            view = self.currentView
+        sp = self.statepoint
+
+        data = tally.get_reshaped_data(tally_value)
+        data_out = np.full(self.ids.shape, -1.0)
+
+        def _do_op(array, tally_value, ax=0):
+            if tally_value == 'mean':
+                return np.sum(array, axis=ax)
+            elif tally_value == 'std_dev':
+                return np.sqrt(np.sum(array**2, axis=ax))
+
+        # data structure for tracking which spatial
+        # filter bins are enabled
+        spatial_filter_bins = defaultdict(list)
+        n_spatial_filters = 0
+               for filter_idx, tally_filter in enumerate(tally.filters):
+            filter_check_state = self.mw.tallyDock.filter_map[tally_filter].checkState(0)
+
+            if filter_check_state != QtCore.Qt.Unchecked:
+
+                selected_bins = []
+                for idx, bin in enumerate(tally_filter.bins):
+                    bin = bin if not hasattr(bin, '__iter__') else tuple(bin)
+                    bin_check_state = self.mw.tallyDock.bin_map[tally_filter, bin].checkState(0)
+                    if bin_check_state == QtCore.Qt.Checked:
+                        selected_bins.append(idx)
+
+                if type(tally_filter) in self._supported_spatial_filters:
+                    spatial_filter_bins[tally_filter] = selected_bins
+                    n_spatial_filters += 1
+                else:
+                    slc = [slice(None)] * len(data.shape)
+                    slc[n_spatial_filters] = selected_bins
+                    slc = tuple(slc)
+                    data = _do_op(data[slc], tally_value, n_spatial_filters)
+            else:
+                data[:,...] = 0.0
+                data = _do_op(data, tally_value, n_spatial_filters)
+
+        # filter by selected scores
+        selected_scores = []
+        for idx, score in enumerate(tally.scores):
+            if score in scores:
+                selected_scores.append(idx)
+        data = _do_op(data[..., np.array(selected_scores)], tally_value, -1)
+
+        # filter by selected nuclides
+        selected_nuclides = []
+        for idx, nuclide in enumerate(tally.nuclides):
+            if nuclide in nuclides:
+                selected_nuclides.append(idx)
+        data = _do_op(data[..., np.array(selected_nuclides)], tally_value, -1)
+
+        # get data limits
+        data_min = np.min(data)
+        data_max = np.max(data)
+
+        # for all combinations of spatial bins, create a mask
+        # and set image data values
+        spatial_filters = list(spatial_filter_bins.keys())
+        spatial_bins = list(spatial_filter_bins.values())
+        for bin_indices in itertools.product(*spatial_bins):
+            # look up the tally value
+            tally_val = data[bin_indices]
+            if tally_val == 0.0:
+                continue
+
+            # generate a mask with the correct size
+            mask = np.full(self.model.ids.shape, True, dtype=bool)
+
+            for tally_filter, bin_idx in zip(spatial_filters, bin_indices):
+                bin = tally_filter.bins[bin_idx]
+                if isinstance(tally_filter, openmc.CellFilter):
+                    mask &= self.model.cell_ids == bin
+                elif isinstance(tally_filter, openmc.MaterialFilter):
+                    mask &= self.model.mat_ids == bin
+                elif isinstance(tally_filter, openmc.UniverseFilter):
+                    # get the statepoint summary
+                    univ_cells = self.model.statepoint.universes[bin].cells
+                    for cell in univ_cells:
+                        mask &= self.model.cell_ids == cell
+            # set image data values
+            data_out[mask] = tally_val
+
+        # mask out invalid values
+        image_data = np.ma.masked_where(data_out < 0.0, data_out)
+
+        return image_data, None, data_min, data_max
+
+    def _create_tally_mesh_image(self, tally, tally_value, scores, nuclides, view=None):
+        # some variables used throughout
+        if view is None:
+            cv = self.currentView
+
+        sp = self.statepoint
+        mesh = tally.find_filter(openmc.MeshFilter).mesh
+
+        def _do_op(array, tally_value, ax=0):
+            if tally_value == 'mean':
+                return np.sum(array, axis=ax)
+            elif tally_value == 'std_dev':
+                return np.sqrt(np.sum(array**2, axis=ax))
+
+        # start with reshaped data
+        data = tally.get_reshaped_data(tally_value)
+
+        # determine basis indices
+        if view.basis == 'xy':
+            h_ind = 0
+            v_ind = 1
+            ax = 2
+        elif view.basis == 'yz':
+            h_ind = 1
+            v_ind = 2
+            ax = 0
+        else:
+            h_ind = 0
+            v_ind = 2
+            ax = 1
+
+        # reduce data to the visible slice of the mesh values
+        k = int((view.origin[ax] - mesh.lower_left[ax]) // mesh.width[ax])
+
+        # setup slice
+        data_slice = [None, None, None]
+        data_slice[h_ind] = slice(mesh.dimension[h_ind])
+        data_slice[v_ind] = slice(mesh.dimension[v_ind])
+        data_slice[ax] = k
+
+        if k < 0 or k > mesh.dimension[ax]:
+            return (None, None, None, None)
+
+        # move mesh axes to the end of the filters
+        filter_idx = [ type(filter) for filter in tally.filters ].index(openmc.MeshFilter)
+        data = np.moveaxis(data, filter_idx, -1)
+
+        # reshape data (with zyx ordering for mesh data)
+        data = data.reshape(data.shape[:-1] + tuple(mesh.dimension[::-1]))
+        data = data[..., data_slice[2], data_slice[1], data_slice[0]]
+
+        # sum over the rest of the tally filters
+        for filter_idx, tally_filter in enumerate(tally.filters):
+            if type(tally_filter) == openmc.MeshFilter:
+                continue
+
+            filter_check_state = self.mw.tallyDock.filter_map[tally_filter].checkState(0)
+
+            if filter_check_state != QtCore.Qt.Unchecked:
+                selected_bins = []
+                for idx, bin in enumerate(tally_filter.bins):
+                    if isinstance(bin, Iterable):
+                        bin = tuple(bin)
+                    # see if the bin is checked
+                    bin_check_state = self.mw.tallyDock.bin_map[tally_filter, bin].checkState(0)
+                    if bin_check_state == QtCore.Qt.Checked:
+                        selected_bins.append(idx)
+                # sum filter data for the selected bins
+                data = data[np.array(selected_bins)].sum(axis=0)
+            else:
+                # if the filter is completely unselected,
+                # set all of it's data to zero and remove the axis
+                data[:,...] = 0.0
+                data = _do_op(data, tally_value)
+
+        # filter by selected nuclides
+        if not nuclides:
+            data = 0.0
+
+        selected_nuclides = []
+        for idx, nuclide in enumerate(tally.nuclides):
+            if nuclide in nuclides:
+                selected_nuclides.append(idx)
+        data = _do_op(data[np.array(selected_nuclides)], tally_value)
+
+        # filter by selected scores
+        if not scores:
+            data = 0.0
+
+        selected_scores = []
+        for idx, score in enumerate(tally.scores):
+            if score in scores:
+                selected_scores.append(idx)
+        data = _do_op(data[np.array(selected_scores)], tally_value)
+
+        # get dataset's min/max
+        data_min = np.min(data)
+        data_max = np.max(data)
+
+        # set image data, reverse y-axis
+        image_data = data[::-1, ...]
+
+        # return data extents (in cm) for the tally
+        extents = [mesh.lower_left[h_ind], mesh.upper_right[h_ind],
+                   mesh.lower_left[v_ind], mesh.upper_right[v_ind]]
+
+        return image_data, extents, data_min, data_max
 
 
 class PlotView(openmc.lib.plot._PlotBase):
