@@ -699,7 +699,6 @@ class PlotImage(FigureCanvas):
                 selected_nuclides.append(idx)
         data = _do_op(data[..., np.array(selected_nuclides)], tally_value, -1)
 
-
         # get data limits
         data_min = np.min(data)
         data_max = np.max(data)
