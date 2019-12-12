@@ -35,9 +35,9 @@ else:
 
 class PlotImage(FigureCanvas):
 
-    def __init__(self, model, parent, main):
+    def __init__(self, model, parent, main_window):
 
-        self.figure = Figure(dpi=main.logicalDpiX())
+        self.figure = Figure(dpi=main_window.logicalDpiX())
         super().__init__(self.figure)
 
         FigureCanvas.setSizePolicy(self,
@@ -46,7 +46,7 @@ class PlotImage(FigureCanvas):
 
         FigureCanvas.updateGeometry(self)
         self.model = model
-        self.mw = main
+        self.main_window = main_window
         self.parent = parent
 
         self.rubber_band = QRubberBand(QRubberBand.Rectangle, self)
@@ -68,14 +68,14 @@ class PlotImage(FigureCanvas):
 
     def enterEvent(self, event):
         self.setCursor(QtCore.Qt.CrossCursor)
-        self.mw.coord_label.show()
+        self.main_window.coord_label.show()
 
     def leaveEvent(self, event):
-        self.mw.coord_label.hide()
-        self.mw.statusBar().showMessage("")
+        self.main_window.coord_label.hide()
+        self.main_window.statusBar().showMessage("")
 
     def mousePressEvent(self, event):
-        self.mw.coord_label.hide()
+        self.main_window.coord_label.hide()
         position = event.pos()
         # Set rubber band absolute and relative position
         self.band_origin = position
@@ -99,15 +99,15 @@ class PlotImage(FigureCanvas):
 
         # set coordinate label if pointer is in the axes
         if self.parent.underMouse():
-            self.mw.coord_label.show()
-            self.mw.showCoords(xPlotCoord, yPlotCoord)
+            self.main_window.coord_label.show()
+            self.main_window.showCoords(xPlotCoord, yPlotCoord)
         else:
-            self.mw.coord_label.hide()
+            self.main_window.coord_label.hide()
 
         return (xPlotCoord, yPlotCoord)
 
     def _resize(self):
-        z = self.mw.zoom / 100.0
+        z = self.main_window.zoom / 100.0
         # manage scroll bars
         if z <= 1.0:
             self.parent.verticalScrollBar().hide()
@@ -228,7 +228,7 @@ class PlotImage(FigureCanvas):
 
     def mouseDoubleClickEvent(self, event):
         xCenter, yCenter = self.getPlotCoords(event.pos())
-        self.mw.editPlotOrigin(xCenter, yCenter, apply=True)
+        self.main_window.editPlotOrigin(xCenter, yCenter, apply=True)
 
     def mouseMoveEvent(self, event):
         cv = self.model.currentView
@@ -284,9 +284,10 @@ class PlotImage(FigureCanvas):
             self.updateDataIndicatorValue(0.0)
 
         if domainInfo:
-            self.mw.statusBar().showMessage(" " + domainInfo + "      " + tallyInfo)
+            self.main_window.statusBar().showMessage(
+                " " + domainInfo + "      " + tallyInfo)
         else:
-            self.mw.statusBar().showMessage(" " + tallyInfo)
+            self.main_window.statusBar().showMessage(" " + tallyInfo)
 
         # Update rubber band and values if mouse button held down
         if event.buttons() == QtCore.Qt.LeftButton:
@@ -302,7 +303,7 @@ class PlotImage(FigureCanvas):
             # Update plot X Origin
             xCenter = (self.x_plot_origin + xPlotPos) / 2
             yCenter = (self.y_plot_origin + yPlotPos) / 2
-            self.mw.editPlotOrigin(xCenter, yCenter)
+            self.main_window.editPlotOrigin(xCenter, yCenter)
 
             modifiers = event.modifiers()
 
@@ -318,31 +319,31 @@ class PlotImage(FigureCanvas):
                 width = max(abs(self.x_plot_origin - xPlotPos), 0.1)
                 height = max(abs(self.y_plot_origin - yPlotPos), 0.1)
 
-            self.mw.editWidth(width)
-            self.mw.editHeight(height)
+            self.main_window.editWidth(width)
+            self.main_window.editHeight(height)
 
     def mouseReleaseEvent(self, event):
 
         if self.rubber_band.isVisible():
             self.rubber_band.hide()
-            self.mw.applyChanges()
+            self.main_window.applyChanges()
         else:
-            self.mw.revertDockControls()
+            self.main_window.revertDockControls()
 
     def wheelEvent(self, event):
 
         if event.delta() and event.modifiers() == QtCore.Qt.ShiftModifier:
             numDegrees = event.delta() / 8
 
-            if 24 < self.mw.zoom + numDegrees < 5001:
-                self.mw.editZoom(self.mw.zoom + numDegrees)
+            if 24 < self.main_window.zoom + numDegrees < 5001:
+                self.main_window.editZoom(self.main_window.zoom + numDegrees)
 
     def contextMenuEvent(self, event):
 
         self.menu.clear()
 
-        self.mw.undoAction.setText('&Undo ({})'.format(len(self.model.previousViews)))
-        self.mw.redoAction.setText('&Redo ({})'.format(len(self.model.subsequentViews)))
+        self.main_window.undoAction.setText('&Undo ({})'.format(len(self.model.previousViews)))
+        self.main_window.redoAction.setText('&Redo ({})'.format(len(self.model.subsequentViews)))
 
         id, properties, domain, domain_kind = self.getIDinfo(event)
 
@@ -350,8 +351,8 @@ class PlotImage(FigureCanvas):
 
         # always provide undo option
         self.menu.addSeparator()
-        self.menu.addAction(self.mw.undoAction)
-        self.menu.addAction(self.mw.redoAction)
+        self.menu.addAction(self.main_window.undoAction)
+        self.menu.addAction(self.main_window.redoAction)
         self.menu.addSeparator()
 
         if int(id) not in (_NOT_FOUND, _OVERLAP) and \
@@ -369,7 +370,7 @@ class PlotImage(FigureCanvas):
             colorAction.setDisabled(cv.highlighting)
             colorAction.setToolTip('Edit {} color'.format(domain_kind))
             colorAction.setStatusTip('Edit {} color'.format(domain_kind))
-            domain_color_connector = partial(self.mw.editDomainColor,
+            domain_color_connector = partial(self.main_window.editDomainColor,
                                              domain_kind,
                                              id)
             colorAction.triggered.connect(domain_color_connector)
@@ -380,7 +381,7 @@ class PlotImage(FigureCanvas):
             maskAction.setDisabled(not cv.masking)
             maskAction.setToolTip('Toggle {} mask'.format(domain_kind))
             maskAction.setStatusTip('Toggle {} mask'.format(domain_kind))
-            mask_connector = partial(self.mw.toggleDomainMask,
+            mask_connector = partial(self.main_window.toggleDomainMask,
                                      kind=domain_kind,
                                      id=id)
             maskAction.toggled.connect(mask_connector)
@@ -391,14 +392,14 @@ class PlotImage(FigureCanvas):
             highlightAction.setDisabled(not cv.highlighting)
             highlightAction.setToolTip('Toggle {} highlight'.format(domain_kind))
             highlightAction.setStatusTip('Toggle {} highlight'.format(domain_kind))
-            highlight_connector = partial(self.mw.toggleDomainHighlight,
+            highlight_connector = partial(self.main_window.toggleDomainHighlight,
                                           kind=domain_kind,
                                           id=id)
             highlightAction.toggled.connect(highlight_connector)
 
         else:
-            self.menu.addAction(self.mw.undoAction)
-            self.menu.addAction(self.mw.redoAction)
+            self.menu.addAction(self.main_window.undoAction)
+            self.menu.addAction(self.main_window.redoAction)
 
             if cv.colorby not in _MODEL_PROPERTIES:
                 self.menu.addSeparator()
@@ -406,38 +407,40 @@ class PlotImage(FigureCanvas):
                     bgColorAction = self.menu.addAction('Edit Background Color...')
                     bgColorAction.setToolTip('Edit background color')
                     bgColorAction.setStatusTip('Edit plot background color')
-                    connector = partial(self.mw.editBackgroundColor, apply=True)
+                    connector = partial(self.main_window.editBackgroundColor,
+                                        apply=True)
                     bgColorAction.triggered.connect(connector)
                 elif int(id) == _OVERLAP:
                     olapColorAction = self.menu.addAction('Edit Overlap Color...')
                     olapColorAction.setToolTip('Edit overlap color')
                     olapColorAction.setStatusTip('Edit plot overlap color')
-                    connector = partial(self.mw.editOverlapColor, apply=True)
+                    connector = partial(self.main_window.editOverlapColor,
+                                        apply=True)
                     olapColorAction.triggered.connect(connector)
 
         self.menu.addSeparator()
-        self.menu.addAction(self.mw.saveImageAction)
-        self.menu.addAction(self.mw.saveViewAction)
-        self.menu.addAction(self.mw.openAction)
+        self.menu.addAction(self.main_window.saveImageAction)
+        self.menu.addAction(self.main_window.saveViewAction)
+        self.menu.addAction(self.main_window.openAction)
         self.menu.addSeparator()
-        self.menu.addMenu(self.mw.basisMenu)
-        self.menu.addMenu(self.mw.colorbyMenu)
+        self.menu.addMenu(self.main_window.basisMenu)
+        self.menu.addMenu(self.main_window.colorbyMenu)
         self.menu.addSeparator()
         if domain_kind.lower() not in ('density', 'temperature'):
-            self.menu.addAction(self.mw.maskingAction)
-            self.menu.addAction(self.mw.highlightingAct)
-            self.menu.addAction(self.mw.overlapAct)
+            self.menu.addAction(self.main_window.maskingAction)
+            self.menu.addAction(self.main_window.highlightingAct)
+            self.menu.addAction(self.main_window.overlapAct)
             self.menu.addSeparator()
-        self.menu.addAction(self.mw.dockAction)
+        self.menu.addAction(self.main_window.dockAction)
 
-        self.mw.maskingAction.setChecked(cv.masking)
-        self.mw.highlightingAct.setChecked(cv.highlighting)
-        self.mw.overlapAct.setChecked(cv.color_overlaps)
+        self.main_window.maskingAction.setChecked(cv.masking)
+        self.main_window.highlightingAct.setChecked(cv.highlighting)
+        self.main_window.overlapAct.setChecked(cv.color_overlaps)
 
-        if self.mw.dock.isVisible():
-            self.mw.dockAction.setText('Hide &Dock')
+        if self.main_window.dock.isVisible():
+            self.main_window.dockAction.setText('Hide &Dock')
         else:
-            self.mw.dockAction.setText('Show &Dock')
+            self.main_window.dockAction.setText('Show &Dock')
 
         self.menu.exec_(event.globalPos())
 
@@ -458,10 +461,10 @@ class PlotImage(FigureCanvas):
 
         # set data extents for automatic reporting of pointer location
         # in model units
-        data_bounds = [cv.origin[self.mw.xBasis] - cv.width/2.,
-                       cv.origin[self.mw.xBasis] + cv.width/2.,
-                       cv.origin[self.mw.yBasis] - cv.height/2.,
-                       cv.origin[self.mw.yBasis] + cv.height/2.]
+        data_bounds = [cv.origin[self.main_window.xBasis] - cv.width/2.,
+                       cv.origin[self.main_window.xBasis] + cv.width/2.,
+                       cv.origin[self.main_window.yBasis] - cv.height/2.,
+                       cv.origin[self.main_window.yBasis] + cv.height/2.]
 
         # make sure we have a domain image to load
         if not hasattr(self.model, 'image'):
@@ -596,7 +599,7 @@ class PlotImage(FigureCanvas):
 
             self.tally_data_indicator.set_visible(cv.tallyDataIndicator)
 
-            self.mw.updateTallyMinMax()
+            self.main_window.updateTallyMinMax()
 
             self.tally_colorbar.mappable.set_clim(data_min, data_max)
             self.tally_colorbar.set_label(units,
@@ -622,10 +625,10 @@ class PlotImage(FigureCanvas):
         # draw outlines as isocontours
         if cv.outlines:
             # set data extents for automatic reporting of pointer location
-            data_bounds = [cv.origin[self.mw.xBasis] - cv.width/2.,
-                           cv.origin[self.mw.xBasis] + cv.width/2.,
-                           cv.origin[self.mw.yBasis] - cv.height/2.,
-                           cv.origin[self.mw.yBasis] + cv.height/2.]
+            data_bounds = [cv.origin[self.main_window.xBasis] - cv.width/2.,
+                           cv.origin[self.main_window.xBasis] + cv.width/2.,
+                           cv.origin[self.main_window.yBasis] - cv.height/2.,
+                           cv.origin[self.main_window.yBasis] + cv.height/2.]
             levels = np.unique(self.model.ids)
             self.contours = self.ax.contour(self.model.ids,
                                             origin='upper',
@@ -661,15 +664,16 @@ class PlotImage(FigureCanvas):
         # filter bins are enabled
         spatial_filter_bins = defaultdict(list)
         n_spatial_filters = 0
+        filter_map = self.main_window.tallyDock.filter_map
         for filter_idx, tally_filter in enumerate(tally.filters):
-            filter_check_state = self.mw.tallyDock.filter_map[tally_filter].checkState(0)
+            filter_check_state = filter_map[tally_filter].checkState(0)
 
             if filter_check_state != QtCore.Qt.Unchecked:
 
                 selected_bins = []
                 for idx, bin in enumerate(tally_filter.bins):
                     bin = bin if not hasattr(bin, '__iter__') else tuple(bin)
-                    bin_check_state = self.mw.tallyDock.bin_map[tally_filter, bin].checkState(0)
+                    bin_check_state = self.main_window.tallyDock.bin_map[tally_filter, bin].checkState(0)
                     if bin_check_state == QtCore.Qt.Checked:
                         selected_bins.append(idx)
 
@@ -786,19 +790,20 @@ class PlotImage(FigureCanvas):
         data = data[..., data_slice[2], data_slice[1], data_slice[0]]
 
         # sum over the rest of the tally filters
+        filter_map = self.main_window.tallyDock.filter_map
         for filter_idx, tally_filter in enumerate(tally.filters):
             if type(tally_filter) == openmc.MeshFilter:
                 continue
 
-            filter_check_state = self.mw.tallyDock.filter_map[tally_filter].checkState(0)
-
+            filter_check_state = filter_map[tally_filter].checkState(0)
             if filter_check_state != QtCore.Qt.Unchecked:
                 selected_bins = []
+                bin_map = self.main_window.tallyDock.bin_map
                 for idx, bin in enumerate(tally_filter.bins):
                     if isinstance(bin, Iterable):
                         bin = tuple(bin)
                     # see if the bin is checked
-                    bin_check_state = self.mw.tallyDock.bin_map[tally_filter, bin].checkState(0)
+                    bin_check_state = bin_map[tally_filter, bin].checkState(0)
                     if bin_check_state == QtCore.Qt.Checked:
                         selected_bins.append(idx)
                 # sum filter data for the selected bins
@@ -983,7 +988,7 @@ class ColorDialog(QDialog):
 
         self.model = model
         self.FM = FM
-        self.mw = parent
+        self.main_window = parent
 
         self.createDialogLayout()
 
@@ -991,8 +996,8 @@ class ColorDialog(QDialog):
 
         self.createGeneralTab()
 
-        self.cellTable = self.createDomainTable(self.mw.cellsModel)
-        self.matTable = self.createDomainTable(self.mw.materialsModel)
+        self.cellTable = self.createDomainTable(self.main_window.cellsModel)
+        self.matTable = self.createDomainTable(self.main_window.materialsModel)
         self.tabs = {'cell': self.createDomainTab(self.cellTable),
                      'material': self.createDomainTab(self.matTable),
                      'temperature': self.createPropertyTab('temperature'),
@@ -1016,41 +1021,43 @@ class ColorDialog(QDialog):
 
     def createGeneralTab(self):
 
+        main_window = self.main_window
+
         # Masking options
         self.maskingCheck = QCheckBox('')
-        self.maskingCheck.stateChanged.connect(self.mw.toggleMasking)
+        self.maskingCheck.stateChanged.connect(main_window.toggleMasking)
 
         self.maskColorButton = QPushButton()
         self.maskColorButton.setCursor(QtCore.Qt.PointingHandCursor)
         self.maskColorButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
         self.maskColorButton.setFixedHeight(self.FM.height() * 1.5)
-        self.maskColorButton.clicked.connect(self.mw.editMaskingColor)
+        self.maskColorButton.clicked.connect(main_window.editMaskingColor)
 
         # Highlighting options
         self.hlCheck = QCheckBox('')
-        self.hlCheck.stateChanged.connect(self.mw.toggleHighlighting)
+        self.hlCheck.stateChanged.connect(main_window.toggleHighlighting)
 
         self.hlColorButton = QPushButton()
         self.hlColorButton.setCursor(QtCore.Qt.PointingHandCursor)
         self.hlColorButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
         self.hlColorButton.setFixedHeight(self.FM.height() * 1.5)
-        self.hlColorButton.clicked.connect(self.mw.editHighlightColor)
+        self.hlColorButton.clicked.connect(main_window.editHighlightColor)
 
         self.alphaBox = QDoubleSpinBox()
         self.alphaBox.setRange(0, 1)
         self.alphaBox.setSingleStep(.05)
-        self.alphaBox.valueChanged.connect(self.mw.editAlpha)
+        self.alphaBox.valueChanged.connect(main_window.editAlpha)
 
         self.seedBox = QSpinBox()
         self.seedBox.setRange(1, 999)
-        self.seedBox.valueChanged.connect(self.mw.editSeed)
+        self.seedBox.valueChanged.connect(main_window.editSeed)
 
         # General options
         self.bgButton = QPushButton()
         self.bgButton.setCursor(QtCore.Qt.PointingHandCursor)
         self.bgButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
         self.bgButton.setFixedHeight(self.FM.height() * 1.5)
-        self.bgButton.clicked.connect(self.mw.editBackgroundColor)
+        self.bgButton.clicked.connect(main_window.editBackgroundColor)
 
         self.colorbyBox = QComboBox(self)
         self.colorbyBox.addItem("material")
@@ -1060,20 +1067,20 @@ class ColorDialog(QDialog):
 
         # Overlap plotting
         self.overlapCheck = QCheckBox('', self)
-        overlap_connector = partial(self.mw.toggleOverlaps)
+        overlap_connector = partial(main_window.toggleOverlaps)
         self.overlapCheck.stateChanged.connect(overlap_connector)
 
         self.overlapColorButton = QPushButton()
         self.overlapColorButton.setCursor(QtCore.Qt.PointingHandCursor)
         self.overlapColorButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
         self.overlapColorButton.setFixedHeight(self.FM.height() * 1.5)
-        self.overlapColorButton.clicked.connect(self.mw.editOverlapColor)
+        self.overlapColorButton.clicked.connect(main_window.editOverlapColor)
 
-        self.colorbyBox.currentTextChanged[str].connect(self.mw.editColorBy)
+        self.colorbyBox.currentTextChanged[str].connect(main_window.editColorBy)
 
         self.colorResetButton = QPushButton("&Reset Colors")
         self.colorResetButton.setCursor(QtCore.Qt.PointingHandCursor)
-        self.colorResetButton.clicked.connect(self.mw.resetColors)
+        self.colorResetButton.clicked.connect(main_window.resetColors)
 
         formLayout = QFormLayout()
         formLayout.setAlignment(QtCore.Qt.AlignHCenter)
@@ -1137,7 +1144,8 @@ class ColorDialog(QDialog):
 
         propertyTab.minMaxCheckBox = QCheckBox()
         propertyTab.minMaxCheckBox.setCheckable(True)
-        connector1 = partial(self.mw.toggleUserMinMax, property=property_kind)
+        connector1 = partial(self.main_window.toggleUserMinMax,
+                             property=property_kind)
         propertyTab.minMaxCheckBox.stateChanged.connect(connector1)
 
         propertyTab.minBox = ScientificDoubleSpinBox(self)
@@ -1147,10 +1155,10 @@ class ColorDialog(QDialog):
         propertyTab.maxBox.setMaximum(1E9)
         propertyTab.maxBox.setMinimum(0)
 
-        connector2 = partial(self.mw.editColorbarMin,
+        connector2 = partial(self.main_window.editColorbarMin,
                              property_type=property_kind)
         propertyTab.minBox.valueChanged.connect(connector2)
-        connector3 = partial(self.mw.editColorbarMax,
+        connector3 = partial(self.main_window.editColorbarMax,
                              property_type=property_kind)
         propertyTab.maxBox.valueChanged.connect(connector3)
 
@@ -1159,19 +1167,20 @@ class ColorDialog(QDialog):
         for cmap in cmaps:
             propertyTab.colormapBox.addItem(cmap)
 
-        connector = partial(self.mw.editColorMap, property_type=property_kind)
+        connector = partial(self.main_window.editColorMap,
+                            property_type=property_kind)
 
         propertyTab.colormapBox.currentTextChanged[str].connect(connector)
 
         propertyTab.dataIndicatorCheckBox = QCheckBox()
         propertyTab.dataIndicatorCheckBox.setCheckable(True)
-        connector4 = partial(self.mw.toggleDataIndicatorCheckBox,
+        connector4 = partial(self.main_window.toggleDataIndicatorCheckBox,
                              property=property_kind)
         propertyTab.dataIndicatorCheckBox.stateChanged.connect(connector4)
 
         propertyTab.colorBarScaleCheckBox = QCheckBox()
         propertyTab.colorBarScaleCheckBox.setCheckable(True)
-        connector5 = partial(self.mw.toggleColorbarScale,
+        connector5 = partial(self.main_window.toggleColorbarScale,
                              property=property_kind)
         propertyTab.colorBarScaleCheckBox.stateChanged.connect(connector5)
 
@@ -1226,7 +1235,7 @@ class ColorDialog(QDialog):
     def createButtonBox(self):
 
         applyButton = QPushButton("Apply Changes")
-        applyButton.clicked.connect(self.mw.applyChanges)
+        applyButton.clicked.connect(self.main_window.applyChanges)
         closeButton = QPushButton("Close")
         closeButton.clicked.connect(self.hide)
 
@@ -1330,5 +1339,5 @@ class ColorDialog(QDialog):
         self.overlapCheck.setEnabled(colorby in ("cell", "material"))
 
     def updateDomainTabs(self):
-        self.cellTable.setModel(self.mw.cellsModel)
-        self.matTable.setModel(self.mw.materialsModel)
+        self.cellTable.setModel(self.main_window.cellsModel)
+        self.matTable.setModel(self.main_window.materialsModel)

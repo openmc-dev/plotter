@@ -65,19 +65,20 @@ class MainWindow(QMainWindow):
         self.plotIm = PlotImage(self.model, self.frame, self)
         self.frame.setWidget(self.plotIm)
 
+        font_metric = QtGui.QFontMetricsF(app.font())
         # Dock
-        self.dock = DomainDock(self.model, FM, self)
+        self.dock = DomainDock(self.model, font_metric, self)
         self.dock.setObjectName("Domain Options Dock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
 
         # Tally Dock
-        self.tallyDock = TallyDock(self.model, FM, self)
+        self.tallyDock = TallyDock(self.model, font_metric, self)
         self.tallyDock.update()
         self.tallyDock.setObjectName("Tally Options Dock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.tallyDock)
 
         # Color DialogtallyDock
-        self.colorDialog = ColorDialog(self.model, FM, self)
+        self.colorDialog = ColorDialog(self.model, font_metric, self)
         self.colorDialog.hide()
 
         # Restore Window Settings
@@ -1168,7 +1169,6 @@ if __name__ == '__main__':
                        QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
     app.processEvents()
 
-    FM = QtGui.QFontMetricsF(app.font())
     mainWindow = MainWindow()
     # connect splashscreen to main window, close when main window opens
     mainWindow.loadGui()

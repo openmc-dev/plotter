@@ -54,12 +54,12 @@ class PlotterDock(QDockWidget):
     """
     Dock widget with common settings for the plotting application
     """
-    def __init__(self, model, FM, parent=None):
+    def __init__(self, model, font_metric, parent=None):
         super().__init__(parent)
 
         self.model = model
-        self.FM = FM
-        self.mw = parent
+        self.font_metric = font_metric
+        self.main_window = parent
 
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
@@ -68,8 +68,8 @@ class DomainDock(PlotterDock):
     """
     Domain options dock
     """
-    def __init__(self, model, FM, parent=None):
-        super().__init__(model, FM, parent)
+    def __init__(self, model, font_metric, parent=None):
+        super().__init__(model, font_metric, parent)
 
         self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea)
 
@@ -81,8 +81,8 @@ class DomainDock(PlotterDock):
         # Create submit button
         self.applyButton = QPushButton("Apply Changes")
         # Mac bug fix
-        self.applyButton.setMinimumHeight(self.FM.height() * 1.6)
-        self.applyButton.clicked.connect(self.mw.applyChanges)
+        self.applyButton.setMinimumHeight(self.font_metric.height() * 1.6)
+        self.applyButton.clicked.connect(self.main_window.applyChanges)
 
         # Create Zoom box
         self.zoomBox = QSpinBox()
@@ -90,7 +90,7 @@ class DomainDock(PlotterDock):
         self.zoomBox.setRange(25, 2000)
         self.zoomBox.setValue(100)
         self.zoomBox.setSingleStep(25)
-        self.zoomBox.valueChanged.connect(self.mw.editZoom)
+        self.zoomBox.valueChanged.connect(self.main_window.editZoom)
         self.zoomLayout = QHBoxLayout()
         self.zoomLayout.addWidget(QLabel('Zoom:'))
         self.zoomLayout.addWidget(self.zoomBox)
@@ -122,7 +122,7 @@ class DomainDock(PlotterDock):
         self.xOrBox = QDoubleSpinBox()
         self.xOrBox.setDecimals(9)
         self.xOrBox.setRange(-99999, 99999)
-        xbox_connector = partial(self.mw.editSingleOrigin,
+        xbox_connector = partial(self.main_window.editSingleOrigin,
                                  dimension=0)
         self.xOrBox.valueChanged.connect(xbox_connector)
 
@@ -130,7 +130,7 @@ class DomainDock(PlotterDock):
         self.yOrBox = QDoubleSpinBox()
         self.yOrBox.setDecimals(9)
         self.yOrBox.setRange(-99999, 99999)
-        ybox_connector = partial(self.mw.editSingleOrigin,
+        ybox_connector = partial(self.main_window.editSingleOrigin,
                                  dimension=1)
         self.yOrBox.valueChanged.connect(ybox_connector)
 
@@ -138,7 +138,7 @@ class DomainDock(PlotterDock):
         self.zOrBox = QDoubleSpinBox()
         self.zOrBox.setDecimals(9)
         self.zOrBox.setRange(-99999, 99999)
-        zbox_connector = partial(self.mw.editSingleOrigin,
+        zbox_connector = partial(self.main_window.editSingleOrigin,
                                  dimension=2)
         self.zOrBox.valueChanged.connect(zbox_connector)
 
@@ -159,12 +159,12 @@ class DomainDock(PlotterDock):
         # Width
         self.widthBox = QDoubleSpinBox(self)
         self.widthBox.setRange(.1, 99999)
-        self.widthBox.valueChanged.connect(self.mw.editWidth)
+        self.widthBox.valueChanged.connect(self.main_window.editWidth)
 
         # Height
         self.heightBox = QDoubleSpinBox(self)
         self.heightBox.setRange(.1, 99999)
-        self.heightBox.valueChanged.connect(self.mw.editHeight)
+        self.heightBox.valueChanged.connect(self.main_window.editHeight)
 
         # ColorBy
         self.colorbyBox = QComboBox(self)
@@ -172,7 +172,8 @@ class DomainDock(PlotterDock):
         self.colorbyBox.addItem("cell")
         self.colorbyBox.addItem("temperature")
         self.colorbyBox.addItem("density")
-        self.colorbyBox.currentTextChanged[str].connect(self.mw.editColorBy)
+        self.colorbyBox.currentTextChanged[str].connect(
+            self.main_window.editColorBy)
 
         # Alpha
         self.domainAlphaBox = QDoubleSpinBox(self)
@@ -180,27 +181,28 @@ class DomainDock(PlotterDock):
         self.domainAlphaBox.setSingleStep(0.05)
         self.domainAlphaBox.setDecimals(2)
         self.domainAlphaBox.setRange(0.0, 1.0)
-        self.domainAlphaBox.valueChanged.connect(self.mw.editPlotAlpha)
+        self.domainAlphaBox.valueChanged.connect(self.main_window.editPlotAlpha)
 
         # Visibility
         self.visibilityBox = QCheckBox(self)
-        self.visibilityBox.stateChanged.connect(self.mw.editPlotVisibility)
+        self.visibilityBox.stateChanged.connect(
+            self.main_window.editPlotVisibility)
 
         # Outlines
         self.outlinesBox = QCheckBox(self)
-        self.outlinesBox.stateChanged.connect(self.mw.toggleOutlines)
+        self.outlinesBox.stateChanged.connect(self.main_window.toggleOutlines)
 
         # Basis
         self.basisBox = QComboBox(self)
         self.basisBox.addItem("xy")
         self.basisBox.addItem("xz")
         self.basisBox.addItem("yz")
-        self.basisBox.currentTextChanged.connect(self.mw.editBasis)
+        self.basisBox.currentTextChanged.connect(self.main_window.editBasis)
 
         # Advanced Color Options
         self.colorOptionsButton = QPushButton('Color Options...')
-        self.colorOptionsButton.setMinimumHeight(self.FM.height() * 1.6)
-        self.colorOptionsButton.clicked.connect(self.mw.showColorDialog)
+        self.colorOptionsButton.setMinimumHeight(self.font_metric.height() * 1.6)
+        self.colorOptionsButton.clicked.connect(self.main_window.showColorDialog)
 
         # Options Form Layout
         self.opLayout = QFormLayout()
@@ -226,7 +228,7 @@ class DomainDock(PlotterDock):
         self.hResBox.setRange(1, 99999)
         self.hResBox.setSingleStep(25)
         self.hResBox.setSuffix(' px')
-        self.hResBox.valueChanged.connect(self.mw.editHRes)
+        self.hResBox.valueChanged.connect(self.main_window.editHRes)
 
         # Vertical Resolution
         self.vResLabel = QLabel('Pixel Height:')
@@ -234,11 +236,11 @@ class DomainDock(PlotterDock):
         self.vResBox.setRange(1, 99999)
         self.vResBox.setSingleStep(25)
         self.vResBox.setSuffix(' px')
-        self.vResBox.valueChanged.connect(self.mw.editVRes)
+        self.vResBox.valueChanged.connect(self.main_window.editVRes)
 
         # Ratio checkbox
         self.ratioCheck = QCheckBox("Fixed Aspect Ratio", self)
-        self.ratioCheck.stateChanged.connect(self.mw.toggleAspectLock)
+        self.ratioCheck.stateChanged.connect(self.main_window.toggleAspectLock)
 
         # Resolution Form Layout
         self.resLayout = QFormLayout()
@@ -314,15 +316,15 @@ class DomainDock(PlotterDock):
         self.heightBox.setValue(cv.height)
 
     def resizeEvent(self, event):
-        self.mw.resizeEvent(event)
+        self.main_window.resizeEvent(event)
 
     hideEvent = showEvent = moveEvent = resizeEvent
 
 
 class TallyDock(PlotterDock):
 
-    def __init__(self, model, FM, parent=None):
-        super().__init__(model, FM, parent)
+    def __init__(self, model, font_metric, parent=None):
+        super().__init__(model, font_metric, parent)
 
         self.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
 
@@ -335,10 +337,12 @@ class TallyDock(PlotterDock):
         # Tally selector
         self.tallySelectorLayout = QFormLayout()
         self.tallySelector = QComboBox(self)
-        self.tallySelector.currentTextChanged[str].connect(self.mw.editSelectedTally)
+        self.tallySelector.currentTextChanged[str].connect(
+            self.main_window.editSelectedTally)
         self.tallySelectorLayout.addRow(self.tallySelector)
         self.tallySelectorLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
-        self.tallySelectorLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        self.tallySelectorLayout.setFieldGrowthPolicy(
+            QFormLayout.AllNonFixedFieldsGrow)
 
         # Add selector to its own box
         self.tallyGroupBox = QGroupBox('Selected Tally')
@@ -346,11 +350,11 @@ class TallyDock(PlotterDock):
 
         # Create submit button
         self.applyButton = QPushButton("ApplyChanges")
-        self.applyButton.setMinimumHeight(self.FM.height() * 1.6)
-        self.applyButton.clicked.connect(self.mw.applyChanges)
+        self.applyButton.setMinimumHeight(self.font_metric.height() * 1.6)
+        self.applyButton.clicked.connect(self.main_window.applyChanges)
 
         # Color options section
-        self.tallyColorForm = ColorForm(self.model, self.mw, 'tally')
+        self.tallyColorForm = ColorForm(self.model, self.main_window, 'tally')
         self.scoresGroupBox = Expander(title="Scores:")
         self.scoresListWidget = QListWidget()
         self.nuclidesListWidget = QListWidget()
@@ -481,7 +485,8 @@ class TallyDock(PlotterDock):
             for value in self.values:
                 self.valueBox.addItem(value)
             self.tallySelectorLayout.addRow(self.valueBox)
-            self.valueBox.currentTextChanged[str].connect(self.mw.editTallyValue)
+            self.valueBox.currentTextChanged[str].connect(
+                self.main_window.editTallyValue)
             self.updateTallyValue()
 
             if not spatial_filters:
@@ -490,7 +495,8 @@ class TallyDock(PlotterDock):
 
             # scores
             self.score_map = {}
-            self.scoresListWidget.itemClicked.connect(self.mw.updateScores)
+            self.scoresListWidget.itemClicked.connect(
+                self.main_window.updateScores)
             self.score_map.clear()
             self.scoresListWidget.clear()
 
@@ -525,7 +531,7 @@ class TallyDock(PlotterDock):
 
             # nuclides
             self.nuclide_map = {}
-            self.nuclidesListWidget.itemClicked.connect(self.mw.updateNuclides)
+            self.nuclidesListWidget.itemClicked.connect(self.main_window.updateNuclides)
             self.nuclide_map.clear()
             self.nuclidesListWidget.clear()
 
@@ -694,18 +700,18 @@ class ColorForm(QWidget):
         comma-separated set of values is entered, those values will be used as
         levels in the contour plot.
     """
-    def __init__(self, model, mw, field, colormaps=None):
+    def __init__(self, model, main_window, field, colormaps=None):
         super().__init__()
 
         self.model = model
-        self.mw = mw
+        self.main_window = main_window
         self.field = field
 
         self.layout = QFormLayout()
 
         # Visibility check box
         self.visibilityBox = QCheckBox()
-        visible_connector = partial(self.mw.toggleTallyVisibility)
+        visible_connector = partial(main_window.toggleTallyVisibility)
         self.visibilityBox.stateChanged.connect(visible_connector)
 
         # Alpha value
@@ -713,7 +719,7 @@ class ColorForm(QWidget):
         self.alphaBox.setDecimals(2)
         self.alphaBox.setRange(0, 1)
         self.alphaBox.setSingleStep(0.05)
-        alpha_connector = partial(self.mw.editTallyAlpha)
+        alpha_connector = partial(main_window.editTallyAlpha)
         self.alphaBox.valueChanged.connect(alpha_connector)
 
         # Color map selector
@@ -722,51 +728,52 @@ class ColorForm(QWidget):
             colormaps = sorted(m for m in mcolormaps.datad if not m.endswith("_r"))
         for colormap in colormaps:
             self.colormapBox.addItem(colormap)
-        cmap_connector = partial(self.mw.editTallyDataColormap)
+        cmap_connector = partial(main_window.editTallyDataColormap)
         self.colormapBox.currentTextChanged[str].connect(cmap_connector)
 
         # Data indicator line check box
         self.dataIndicatorCheckBox = QCheckBox()
-        data_indicator_connector = partial(self.mw.toggleTallyDataIndicator)
+        data_indicator_connector = partial(main_window.toggleTallyDataIndicator)
         self.dataIndicatorCheckBox.stateChanged.connect(data_indicator_connector)
 
         # User specified min/max check box
         self.userMinMaxBox = QCheckBox()
-        minmax_connector = partial(self.mw.toggleTallyDataUserMinMax)
+        minmax_connector = partial(main_window.toggleTallyDataUserMinMax)
         self.userMinMaxBox.stateChanged.connect(minmax_connector)
 
         # Data min spin box
         self.minBox = ScientificDoubleSpinBox()
         self.minBox.setMinimum(0.0)
-        min_connector = partial(self.mw.editTallyDataMin)
+        min_connector = partial(main_window.editTallyDataMin)
         self.minBox.valueChanged.connect(min_connector)
 
         # Data max spin box
         self.maxBox = ScientificDoubleSpinBox()
         self.maxBox.setMinimum(0.0)
-        max_connector = partial(self.mw.editTallyDataMax)
+        max_connector = partial(main_window.editTallyDataMax)
         self.maxBox.valueChanged.connect(max_connector)
 
         # Linear/Log scaling check box
         self.scaleBox = QCheckBox()
-        scale_connector = partial(self.mw.toggleTallyLogScale)
+        scale_connector = partial(main_window.toggleTallyLogScale)
         self.scaleBox.stateChanged.connect(scale_connector)
 
         # Masking of zero values check box
         self.maskZeroBox = QCheckBox()
-        zero_connector = partial(self.mw.toggleTallyMaskZero)
+        zero_connector = partial(main_window.toggleTallyMaskZero)
         self.maskZeroBox.stateChanged.connect(zero_connector)
 
         # Clip data to min/max check box
         self.clipDataBox = QCheckBox()
-        clip_connector = partial(self.mw.toggleTallyDataClip)
+        clip_connector = partial(main_window.toggleTallyDataClip)
         self.clipDataBox.stateChanged.connect(clip_connector)
 
         # Display data as contour plot check box
         self.contoursBox = QCheckBox()
-        self.contoursBox.stateChanged.connect(self.mw.toggleTallyContours)
+        self.contoursBox.stateChanged.connect(main_window.toggleTallyContours)
         self.contourLevelsLine = QLineEdit()
-        self.contourLevelsLine.textChanged.connect(self.mw.editTallyContourLevels)
+        self.contourLevelsLine.textChanged.connect(
+            main_window.editTallyContourLevels)
 
         # Organize widgets on layout
         self.layout.addRow("Visible:", self.visibilityBox)
