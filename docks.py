@@ -589,7 +589,7 @@ class TallyDock(PlotterDock):
         if not applied_scores:
             # if no scores are selected, enable all scores again
             for score, score_box in self.score_map.items():
-                sunits = score_units[score]
+                sunits = score_units.get(score, reaction_units)
                 empty_item = QListWidgetItem()
                 score_box.setFlags(empty_item.flags() | QtCore.Qt.ItemIsUserCheckable)
                 score_box.setFlags(empty_item.flags() & ~QtCore.Qt.ItemIsSelectable)
