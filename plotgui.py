@@ -1,17 +1,7 @@
-# built-ins
 from collections import Iterable, defaultdict
 from functools import partial
 import itertools
 
-# application modules
-from plot_colors import rgb_normalize, invert_rgb
-from plotmodel import DomainDelegate
-from plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
-from scientific_spin_box import ScientificDoubleSpinBox
-from docks import score_units, tally_values, reaction_units
-from custom_widgets import HorizontalLine
-
-# third-party
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QFormLayout, QComboBox, QSpinBox,
@@ -24,8 +14,15 @@ from matplotlib import lines as mlines
 from matplotlib import cm as mcolormaps
 from matplotlib.colors import SymLogNorm
 import numpy as np
-
 import openmc
+
+from plot_colors import rgb_normalize, invert_rgb
+from plotmodel import DomainDelegate
+from plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
+from scientific_spin_box import ScientificDoubleSpinBox
+from docks import score_units, tally_values, reaction_units
+from custom_widgets import HorizontalLine
+
 
 if is_pyqt5():
     from matplotlib.backends.backend_qt5agg import FigureCanvas
@@ -182,7 +179,6 @@ class PlotImage(FigureCanvas):
 
         # don't look up mesh filter data (for now)
         tally = self.model.statepoint.tallies[cv.selectedTally]
-        filters = tally.filters
 
         # check that the position is in the axes view
         v_res, h_res = self.model.tally_data.shape
@@ -647,10 +643,7 @@ class PlotImage(FigureCanvas):
             return int(line)
 
     def _create_tally_domain_image(self, tally, tally_value, scores, nuclides):
-        # data resources used throughout
-        cv = self.model.currentView
-        sp = self.model.statepoint
-
+        # get tally data as a numpy array
         data = tally.get_reshaped_data(tally_value)
         data_out = np.full(self.model.ids.shape, -1.0)
 
@@ -686,7 +679,7 @@ class PlotImage(FigureCanvas):
                     slc = tuple(slc)
                     data = _do_op(data[slc], tally_value, n_spatial_filters)
             else:
-                data[:,...] = 0.0
+                data[:] = 0.0
                 data = _do_op(data, tally_value, n_spatial_filters)
 
         # filter by selected scores
@@ -709,8 +702,8 @@ class PlotImage(FigureCanvas):
 
         # for all combinations of spatial bins, create a mask
         # and set image data values
-        spatial_filters = list(spatial_filter_bins.keys())
-        spatial_bins = list(spatial_filter_bins.values())
+        spatial_filters = spatial_filter_bins.keys()
+        spatial_bins = spatial_filter_bins.values()
         for bin_indices in itertools.product(*spatial_bins):
 
             # look up the tally value
@@ -743,7 +736,7 @@ class PlotImage(FigureCanvas):
     def _create_tally_mesh_image(self, tally, tally_value, scores, nuclides):
         # some variables used throughout
         cv = self.model.currentView
-        sp = self.model.statepoint
+
         mesh = tally.find_filter(openmc.MeshFilter).mesh
 
         def _do_op(array, tally_value, ax=0):
@@ -811,7 +804,7 @@ class PlotImage(FigureCanvas):
             else:
                 # if the filter is completely unselected,
                 # set all of it's data to zero and remove the axis
-                data[:,...] = 0.0
+                data[:] = 0.0
                 data = _do_op(data, tally_value)
 
         # filter by selected nuclides
@@ -883,7 +876,6 @@ class PlotImage(FigureCanvas):
 
         if len(units) != 1:
             msg_box = QMessageBox()
-            unit_str = " ".join(units)
             msg = "The scores selected have incompatible units:\n"
             for unit in units:
                 msg += "  - {}\n".format(unit)
