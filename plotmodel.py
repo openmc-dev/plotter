@@ -1,22 +1,20 @@
 import copy
-import struct
 import threading
 from ast import literal_eval
 
+from PySide2.QtWidgets import QItemDelegate, QColorDialog, QLineEdit
+from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
+from PySide2.QtGui import QColor
 import openmc
 import openmc.lib
 import numpy as np
-import xml.etree.ElementTree as ET
-from PySide2.QtWidgets import (QTableView, QItemDelegate,
-                               QColorDialog, QLineEdit)
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
-from PySide2.QtGui import QColor
 
+from statepointmodel import StatePointModel
 from plot_colors import random_rgb, reset_seed
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = tuple(range(0, 6))
 
-__VERSION__ = "0.1.1"
+__VERSION__ = "0.2.1"
 
 _VOID_REGION = -1
 _NOT_FOUND = -2
@@ -41,6 +39,10 @@ class PlotModel():
             Mapping of plot coordinates to cell/material ID by pixel
         image : NumPy int array (v_res, h_res, 3)
             The current RGB image data
+        statepoint : StatePointModel
+            Simulation data model used to display tally results
+        applied_filters : tuple of ints
+            IDs of the applied filters for the displayed tally
         previousViews : list of PlotView instances
             List of previously created plot view settings used to undo
             changes made in plot explorer
@@ -68,6 +70,13 @@ class PlotModel():
 
         self.version = __VERSION__
 
+        # default statepoint value
+        self._statepoint = None
+        # default tally/filter info
+        self.appliedFilters = ()
+        self.appliedScores = ()
+        self.appliedNuclides = ()
+
         # reset random number seed for consistent
         # coloring when reloading a model
         reset_seed()
@@ -77,6 +86,27 @@ class PlotModel():
         self.defaultView = self.getDefaultView()
         self.currentView = copy.deepcopy(self.defaultView)
         self.activeView = copy.deepcopy(self.defaultView)
+
+    def openStatePoint(self, filename):
+        self.statepoint = StatePointModel(filename, open_file=True)
+
+    @property
+    def statepoint(self):
+        return self._statepoint
+
+    @statepoint.setter
+    def statepoint(self, statepoint):
+        if statepoint is None:
+            self._statepoint = None
+        elif isinstance(statepoint, StatePointModel):
+            self._statepoint = statepoint
+        elif isinstance(statepoint, str):
+            self._statepoint = StatePointModel(statepoint, open_file=True)
+        else:
+            raise TypeError("Invalid statepoint object")
+
+        if self._statepoint and not self._statepoint.is_open:
+            self._statepoint.open()
 
     def getDefaultView(self):
         """ Generates default PlotView instance for OpenMC geometry
@@ -136,13 +166,16 @@ class PlotModel():
         # empty image data
         image = np.ones((cv.v_res, cv.h_res, 3), dtype=int)
 
+        self.cell_ids = ids[:, :, 0]
+        self.mat_ids = ids[:, :, 1]
+
         # set model ids based on domain
         if cv.colorby == 'cell':
-            self.ids = ids[:, :, 0]
+            self.ids = self.cell_ids
             domain = cv.cells
             source = self.modelCells
         else:
-            self.ids = ids[:, :, 1]
+            self.ids = self.mat_ids
             domain = cv.materials
             source = self.modelMaterials
 
@@ -158,7 +191,7 @@ class PlotModel():
         unique_ids = np.unique(self.ids)
         for id in unique_ids:
             if id == _NOT_FOUND:
-                image[self.ids == id] = cv.plotBackground
+                image[self.ids == id] = cv.domainBackground
             elif id == _OVERLAP:
                 image[self.ids == id] = cv.overlap_color
             else:
@@ -178,6 +211,8 @@ class PlotModel():
         self.image = image
         # set model properties
         self.properties = props
+        # tally data
+        self.tally_data = None
 
         self.properties[self.properties < 0.0] = np.nan
 
@@ -255,7 +290,7 @@ class PlotView(openmc.lib.plot._PlotBase):
     highlightSeed : int
         Random number seed used to generate color scheme when highlighting
         is active
-    plotBackground : 3-tuple of int
+    domainBackground : 3-tuple of int
         RGB color to apply to plot background
     color_overlaps : bool
         Indicator of whether or not overlaps will be shown
@@ -265,8 +300,38 @@ class PlotView(openmc.lib.plot._PlotBase):
         Dictionary of cell view settings by ID
     materials : Dict of DomainView instances
         Dictionary of material view settings by ID
-    plotAlpha: float between 0 and 1
+    domainAlpha : float between 0 and 1
         Alpha value of the geometry plot
+    plotVisibile : bool
+        Controls visibility of geometry
+    outlines: bool
+        Controls visibility of geometry outlines
+    tallyDataColormap : str
+        Name of the colormap used for tally data
+    tallyDataVisible : bool
+        Indicator for whether or not the tally data is visible
+    tallyDataAlpha : float
+        Value of the tally image alpha
+    tallyDataIndicator : bool
+        Indicates whether or not the data indicator is active on the tally colorbar
+    tallyDataMin : float
+        Minimum scale value for tally data
+    tallyDataMax : float
+        Minimum scale value for tally data
+    tallyDataLogScale : bool
+        Indicator of logarithmic scale for tally data
+    tallyMaskZeroValues : bool
+        Indicates whether or not zero values in tally data should be masked
+    clipTallyData: bool
+        Indicates whether or not tally data is clipped by the colorbar min/max
+    tallyValue : str
+        Indicator for what type of value is displayed in plots.
+    tallyContours : bool
+        Indicates whether or not tallies are displayed as contours
+    tallyContourLevels : str
+        Number of contours levels or explicit level values
+    selectedTally : str
+        Label of the currently selected tally
     """
 
     def __init__(self, origin, width, height):
@@ -274,40 +339,55 @@ class PlotView(openmc.lib.plot._PlotBase):
 
         super().__init__()
 
+        # View Parameters
         self.level = -1
         self.origin = origin
         self.width = width
         self.height = height
-
-        self.h_res = 600
-        self.v_res = 600
+        self.h_res = 1000
+        self.v_res = 1000
         self.aspectLock = True
-
         self.basis = 'xy'
-        self.colorby = 'material'
 
+        # Geometry Plot
+        self.colorby = 'material'
         self.masking = True
         self.maskBackground = (0, 0, 0)
         self.highlighting = False
         self.highlightBackground = (80, 80, 80)
         self.highlightAlpha = 0.5
         self.highlightSeed = 1
-        self.plotBackground = (50, 50, 50)
+        self.domainBackground = (50, 50, 50)
         self.overlap_color = (255, 0, 0)
-
-        self.plotAlpha = 1.0
-
+        self.domainAlpha = 1.0
+        self.domainVisible = True
+        self.outlines = False
         self.colormaps = {'temperature': 'Oranges', 'density': 'Greys'}
-
         # set defaults for color dialog
         self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
         self.user_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
         self.use_custom_minmax = {prop: False for prop in _MODEL_PROPERTIES}
         self.data_indicator_enabled = {prop: False for prop in _MODEL_PROPERTIES}
         self.color_scale_log = {prop: False for prop in _MODEL_PROPERTIES}
-
+        # Get model domain info
         self.cells = self.getDomains('cell')
         self.materials = self.getDomains('material')
+
+        # Tally Viz Settings
+        self.tallyDataColormap = 'spectral'
+        self.tallyDataVisible = True
+        self.tallyDataAlpha = 1.0
+        self.tallyDataIndicator = False
+        self.tallyDataUserMinMax = False
+        self.tallyDataMin = 0.0
+        self.tallyDataMax = np.inf
+        self.tallyDataLogScale = False
+        self.tallyMaskZeroValues = False
+        self.clipTallyData = False
+        self.tallyValue = "Mean"
+        self.tallyContours = False
+        self.tallyContourLevels = ""
+        self.selectedTally = None
 
     def __hash__(self):
         return hash(self.__dict__.__str__() + self.__str__())

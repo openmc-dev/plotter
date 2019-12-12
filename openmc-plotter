@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+# built-ins
 import copy
 from functools import partial
 import os
@@ -8,23 +9,23 @@ import pickle
 import signal
 import sys
 from threading import Thread
-import time
 
-import openmc
-import openmc.lib
+# application modules
+from plotmodel import PlotModel, DomainTableModel
+from plotgui import PlotImage, ColorDialog
+from docks import DomainDock, TallyDock
+from overlays import ShortcutsOverlay
+
+# third-party
 from PySide2 import QtCore, QtGui
 from PySide2.QtGui import QKeyEvent
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
-                               QScrollArea, QMenu, QAction, QFileDialog,
-                               QColorDialog, QInputDialog, QSplashScreen,
-                               QWidget, QPushButton, QListWidget,
-                               QListWidgetItem, QTableWidget, QVBoxLayout,
-                               QTableWidgetItem, QGestureEvent)
+                               QScrollArea, QMessageBox, QAction,
+                               QFileDialog, QColorDialog, QInputDialog,
+                               QSplashScreen, QWidget, QGestureEvent)
 
-from plotmodel import PlotModel, DomainTableModel
-from plotgui import PlotImage, ColorDialog, OptionsDock
-
-from overlays import ShortcutsOverlay
+import openmc
+import openmc.lib
 
 
 def _openmcReload():
@@ -32,6 +33,7 @@ def _openmcReload():
     openmc.lib.reset()
     openmc.lib.finalize()
     # initialize geometry (for volume calculation)
+    openmc.lib.settings.output_summary = False
     openmc.lib.init(["-c"])
 
 
@@ -63,13 +65,20 @@ class MainWindow(QMainWindow):
         self.plotIm = PlotImage(self.model, self.frame, self)
         self.frame.setWidget(self.plotIm)
 
+        font_metric = QtGui.QFontMetricsF(app.font())
         # Dock
-        self.dock = OptionsDock(self.model, FM, self)
-        self.dock.setObjectName("OptionsDock")
+        self.dock = DomainDock(self.model, font_metric, self)
+        self.dock.setObjectName("Domain Options Dock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
 
-        # Color Dialog
-        self.colorDialog = ColorDialog(self.model, FM, self)
+        # Tally Dock
+        self.tallyDock = TallyDock(self.model, font_metric, self)
+        self.tallyDock.update()
+        self.tallyDock.setObjectName("Tally Options Dock")
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.tallyDock)
+
+        # Color DialogtallyDock
+        self.colorDialog = ColorDialog(self.model, font_metric, self)
         self.colorDialog.hide()
 
         # Restore Window Settings
@@ -77,6 +86,7 @@ class MainWindow(QMainWindow):
 
         # Create menubar
         self.createMenuBar()
+        self.updateEditMenu()
 
         # Status Bar
         self.coord_label = QLabel()
@@ -90,7 +100,9 @@ class MainWindow(QMainWindow):
         # Load Plot
         self.statusBar().showMessage('Generating Plot...')
         self.dock.updateDock()
+        self.tallyDock.update()
         self.colorDialog.updateDialogValues()
+        self.statusBar().showMessage('')
 
         # Timer allows GUI to render before plot finishes loading
         QtCore.QTimer.singleShot(0, self.plotIm.generatePixmap)
@@ -160,6 +172,15 @@ class MainWindow(QMainWindow):
         self.fileMenu.addAction(self.openAction)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.quitAction)
+
+        # Data Menu
+        self.openStatePointAction = QAction("&Open statepoint...", self)
+        self.openStatePointAction.setToolTip('Open statepoint file')
+        self.openStatePointAction.triggered.connect(self.openStatePoint)
+
+        self.dataMenu = self.mainMenu.addMenu('D&ata')
+        self.dataMenu.addAction(self.openStatePointAction)
+        self.updateDataMenu()
 
         # Edit Menu
         self.applyAction = QAction("&Apply Changes", self)
@@ -272,6 +293,7 @@ class MainWindow(QMainWindow):
 
         self.editMenu.addSeparator()
 
+        # Edit -> Other Options
         self.maskingAction = QAction('Enable &Masking', self)
         self.maskingAction.setShortcut('Ctrl+M')
         self.maskingAction.setCheckable(True)
@@ -296,10 +318,20 @@ class MainWindow(QMainWindow):
         self.overlapAct.setCheckable(True)
         self.overlapAct.setToolTip('Toggle overlapping regions')
         self.overlapAct.setStatusTip('Toggle display of overlapping '
-                                    'regions when enabled')
+                                     'regions when enabled')
         overlap_connector = partial(self.toggleOverlaps, apply=True)
         self.overlapAct.toggled.connect(overlap_connector)
         self.editMenu.addAction(self.overlapAct)
+
+        self.outlineAct = QAction('Enable Domain Outlines', self)
+        self.outlineAct.setShortcut('Ctrl+U')
+        self.outlineAct.setCheckable(True)
+        self.outlineAct.setToolTip('Display Cell/Material Boundaries')
+        self.outlineAct.setStatusTip('Toggle display of domain '
+                                     'outlines when enabled')
+        outline_connector = partial(self.toggleOutlines, apply=True)
+        self.outlineAct.toggled.connect(outline_connector)
+        self.editMenu.addAction(self.outlineAct)
 
         # View Menu
         self.dockAction = QAction('Hide &Dock', self)
@@ -307,6 +339,12 @@ class MainWindow(QMainWindow):
         self.dockAction.setToolTip('Toggle dock visibility')
         self.dockAction.setStatusTip('Toggle dock visibility')
         self.dockAction.triggered.connect(self.toggleDockView)
+
+        self.tallyDockAction = QAction('Tally &Dock', self)
+        self.tallyDockAction.setShortcut("Ctrl+T")
+        self.tallyDockAction.setToolTip('Toggle tally dock visibility')
+        self.tallyDockAction.setStatusTip('Toggle tally dock visibility')
+        self.tallyDockAction.triggered.connect(self.toggleTallyDockView)
 
         self.zoomAction = QAction('&Zoom...', self)
         self.zoomAction.setShortcut('Alt+Shift+Z')
@@ -316,6 +354,7 @@ class MainWindow(QMainWindow):
 
         self.viewMenu = self.mainMenu.addMenu('&View')
         self.viewMenu.addAction(self.dockAction)
+        self.viewMenu.addAction(self.tallyDockAction)
         self.viewMenu.addSeparator()
         self.viewMenu.addAction(self.zoomAction)
         self.viewMenu.aboutToShow.connect(self.updateViewMenu)
@@ -352,6 +391,7 @@ class MainWindow(QMainWindow):
 
         self.maskingAction.setChecked(self.model.currentView.masking)
         self.highlightingAct.setChecked(self.model.currentView.highlighting)
+        self.outlineAct.setChecked(self.model.currentView.outlines)
 
         num_previous_views = len(self.model.previousViews)
         self.undoAction.setText('&Undo ({})'.format(num_previous_views))
@@ -451,6 +491,58 @@ class MainWindow(QMainWindow):
                 message = 'Error loading plot settings. Incompatible model.'
             self.statusBar().showMessage(message, 5000)
 
+    def openStatePoint(self):
+        # check for an alread-open statepoint
+        if self.model.statepoint:
+            msg_box = QMessageBox()
+            msg_box.setText("Please close the current statepoint file before "
+                            "opening a new one.")
+            msg_box.setIcon(QMessageBox.Information)
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.exec_()
+            return
+        filename, ext = QFileDialog.getOpenFileName(self, "Open StatePoint",
+                                                    ".", "statepoint*.h5")
+        if filename:
+            try:
+                self.model.openStatePoint(filename)
+                message = 'Opened statepoint file: {}'
+            except (FileNotFoundError, OSError):
+                message = 'Error opening statepoint file: {}'
+                msg_box = QMessageBox()
+                msg = "Could open statepoint file: \n\n {} \n"
+                msg_box.setText(msg.format(filename))
+                msg_box.setIcon(QMessageBox.Warning)
+                msg_box.setStandardButtons(QMessageBox.Ok)
+                msg_box.exec_()
+            finally:
+                self.statusBar().showMessage(message.format(filename), 5000)
+            self.updateDataMenu()
+            self.tallyDock.update()
+
+    def closeStatePoint(self):
+        # remove the statepoint object and update the data menu
+        filename = self.model.statepoint.filename
+        self.model.statepoint = None
+        self.model.currentView.selectedTally = None
+        self.model.activeView.selectedTally = None
+
+        msg = "Closed statepoint file {}".format(filename)
+        self.statusBar().showMessage(msg)
+        self.updateDataMenu()
+        self.tallyDock.selectTally()
+        self.tallyDock.update()
+        self.plotIm.updatePixmap()
+
+    def updateDataMenu(self):
+        if self.model.statepoint:
+            self.closeStatePointAction = QAction("&Close statepoint", self)
+            self.closeStatePointAction.setToolTip("Close current statepoint")
+            self.closeStatePointAction.triggered.connect(self.closeStatePoint)
+            self.dataMenu.addAction(self.closeStatePointAction)
+        elif hasattr(self, "closeStatePointAction"):
+            self.dataMenu.removeAction(self.closeStatePointAction)
+
     def applyChanges(self):
         if self.model.activeView != self.model.currentView:
             self.statusBar().showMessage('Generating Plot...')
@@ -460,7 +552,7 @@ class MainWindow(QMainWindow):
             self.plotIm.generatePixmap()
             self.resetModels()
             self.showCurrentView()
-
+            self.statusBar().showMessage('')
         else:
             self.statusBar().showMessage('No changes to apply.', 3000)
 
@@ -477,6 +569,7 @@ class MainWindow(QMainWindow):
         if not self.model.previousViews:
             self.undoAction.setDisabled(True)
         self.redoAction.setDisabled(False)
+        self.statusBar().showMessage('')
 
     def redo(self):
         self.statusBar().showMessage('Generating Plot...')
@@ -491,6 +584,7 @@ class MainWindow(QMainWindow):
         if not self.model.subsequentViews:
             self.redoAction.setDisabled(True)
         self.undoAction.setDisabled(False)
+        self.statusBar().showMessage('')
 
     def restoreDefault(self):
         if self.model.currentView != self.model.defaultView:
@@ -507,6 +601,7 @@ class MainWindow(QMainWindow):
             self.colorDialog.updateDialogValues()
 
             self.model.subsequentViews = []
+            self.statusBar().showMessage('')
 
     def editBasis(self, basis, apply=False):
         self.model.activeView.basis = basis
@@ -606,6 +701,18 @@ class MainWindow(QMainWindow):
         self.resizePixmap()
         self.showMainWindow()
 
+    def toggleTallyDockView(self):
+        if self.tallyDock.isVisible():
+            self.tallyDock.hide()
+            if not self.isMaximized() and not self.tallyDock.isFloating():
+                self.resize(self.width() - self.tallyDock.width(), self.height())
+        else:
+            self.tallyDock.setVisible(True)
+            if not self.isMaximized() and not self.tallyDock.isFloating():
+                self.resize(self.width() + self.tallyDock.width(), self.height())
+        self.resizePixmap()
+        self.showMainWindow()
+
     def editZoomAct(self):
         percent, ok = QInputDialog.getInt(self, "Edit Zoom", "Zoom Percent:",
                                           self.dock.zoomBox.value(), 25, 2000)
@@ -632,8 +739,17 @@ class MainWindow(QMainWindow):
         self.model.activeView.origin[dimension] = value
 
     def editPlotAlpha(self, value):
-        self.model.activeView.plotAlpha = value
-        self.dock.updatePlotAlpha()
+        self.model.activeView.domainAlpha = value
+
+    def editPlotVisibility(self, value):
+        self.model.activeView.domainVisible = bool(value)
+
+    def toggleOutlines(self, value, apply=False):
+        self.model.activeView.outlines = bool(value)
+        self.dock.updateOutlines()
+
+        if apply:
+            self.applyChanges()
 
     def editWidth(self, value):
         self.model.activeView.width = value
@@ -700,13 +816,13 @@ class MainWindow(QMainWindow):
             self.applyChanges()
 
     def editBackgroundColor(self, apply=False):
-        current_color = self.model.activeView.plotBackground
+        current_color = self.model.activeView.domainBackground
         dlg = QColorDialog(self)
 
         dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
         if dlg.exec_():
             new_color = dlg.currentColor().getRgb()[:3]
-            self.model.activeView.plotBackground = new_color
+            self.model.activeView.domainBackground = new_color
             self.colorDialog.updateBackgroundColor()
 
         if apply:
@@ -717,8 +833,96 @@ class MainWindow(QMainWindow):
         self.colorDialog.updateDialogValues()
         self.applyChanges()
 
-    # Plot image methods
+    # Tally dock methods
 
+    def editSelectedTally(self, event):
+        av = self.model.activeView
+
+        if event is None or event == "None" or event == "":
+            av.selectedTally = None
+        else:
+            av.selectedTally = int(event.split()[1])
+        self.tallyDock.selectTally(event)
+
+    def editTallyValue(self, event):
+        av = self.model.activeView
+        av.tallyValue = event
+
+    def updateScores(self, state):
+        self.tallyDock.updateScores()
+
+    def updateNuclides(self, state):
+        self.tallyDock.updateNuclides()
+
+    def toggleTallyVisibility(self, state, apply=False):
+        av = self.model.activeView
+        av.tallyDataVisible = bool(state)
+        if apply:
+            self.applyChanges()
+
+    def toggleTallyLogScale(self, state, apply=False):
+        av = self.model.activeView
+        av.tallyDataLogScale = bool(state)
+        if apply:
+            self.applyChanges()
+
+    def toggleTallyMaskZero(self, state):
+        av = self.model.activeView
+        av.tallyMaskZeroValues = bool(state)
+
+    def editTallyAlpha(self, value, apply=False):
+        av = self.model.activeView
+        av.tallyDataAlpha = value
+        if apply:
+            self.applyChanges()
+
+    def toggleTallyContours(self, state):
+        av = self.model.activeView
+        av.tallyContours = bool(state)
+
+    def editTallyContourLevels(self, value):
+        av = self.model.activeView
+        av.tallyContourLevels = value
+
+    def toggleTallyDataIndicator(self, state, apply=False):
+        av = self.model.activeView
+        av.tallyDataIndicator = bool(state)
+        if apply:
+            self.applyChanges()
+
+    def toggleTallyDataClip(self, state):
+        av = self.model.activeView
+        av.clipTallyData = bool(state)
+
+    def toggleTallyDataUserMinMax(self, state, apply=False):
+        av = self.model.activeView
+        av.tallyDataUserMinMax = bool(state)
+        self.tallyDock.tallyColorForm.setMinMaxEnabled(bool(state))
+        if apply:
+            self.applyChanges()
+
+    def editTallyDataMin(self, value, apply=False):
+        av = self.model.activeView
+        av.tallyDataMin = value
+        if apply:
+            self.applyChanges()
+
+    def editTallyDataMax(self, value, apply=False):
+        av = self.model.activeView
+        av.tallyDataMax = value
+        if apply:
+            self.applyChanges()
+
+    def editTallyDataColormap(self, cmap, apply=False):
+        av = self.model.activeView
+        av.tallyDataColormap = cmap
+        if apply:
+            self.applyChanges()
+
+    def updateTallyMinMax(self):
+        self.tallyDock.updateMinMax()
+
+    # Plot image methods
     def editPlotOrigin(self, xOr, yOr, zOr=None, apply=False):
         if zOr is not None:
             self.model.activeView.origin = [xOr, yOr, zOr]
@@ -813,6 +1017,17 @@ class MainWindow(QMainWindow):
                 print(wrn_msg.format(model.version, self.model.version))
                 return
 
+            try:
+                self.model.statepoint = model.statepoint
+            except OSError:
+                msg_box = QMessageBox()
+                msg = "Could open statepoint file: \n\n {} \n"
+                msg_box.setText(msg.format(self.model.statepoint.filename))
+                msg_box.setIcon(QMessageBox.Warning)
+                msg_box.setStandardButtons(QMessageBox.Ok)
+                msg_box.exec_()
+                self.model.statepoint = None
+
             self.model.currentView = model.currentView
             self.model.activeView = copy.deepcopy(model.currentView)
             self.model.previousViews = model.previousViews
@@ -839,7 +1054,6 @@ class MainWindow(QMainWindow):
         else:
             self.redoAction.setDisabled(True)
 
-        self.statusBar().showMessage('Done', 1000)
         self.adjustWindow()
 
     def updateScale(self):
@@ -917,6 +1131,8 @@ class MainWindow(QMainWindow):
             self.model.subsequentViews = self.model.subsequentViews[-10:]
 
         with open('plot_settings.pkl', 'wb') as file:
+            if self.model.statepoint:
+                self.model.statepoint.close()
             pickle.dump(self.model, file)
 
 
@@ -953,7 +1169,6 @@ if __name__ == '__main__':
                        QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
     app.processEvents()
 
-    FM = QtGui.QFontMetricsF(app.font())
     mainWindow = MainWindow()
     # connect splashscreen to main window, close when main window opens
     mainWindow.loadGui()
