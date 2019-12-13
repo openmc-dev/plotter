@@ -1,4 +1,4 @@
-from collections import Iterable, defaultdict
+from collections import defaultdict
 import copy
 import itertools
 import threading
@@ -30,11 +30,16 @@ _FLUX_UNITS = 'Particle-cm per Source Particle'
 _PRODUCTION_UNITS = 'Particles Produced per Source Particle'
 _ENERGY_UNITS = 'eV per Source Particle'
 
-productions = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
+_SPATIAL_FILTERS = (openmc.UniverseFilter,
+                    openmc.MaterialFilter,
+                    openmc.CellFilter,
+                    openmc.MeshFilter)
+
+_PRODUCTIONS = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
                'nu-scatter', 'H1-production', 'H2-production',
                'H3-production', 'He3-production', 'He4-production')
 
-_SCORE_UNITS = {production: _PRODUCTION_UNITS for production in productions}
+_SCORE_UNITS = {p: _PRODUCTION_UNITS for p in _PRODUCTIONS}
 _SCORE_UNITS['flux'] = 'Particle-cm/Particle'
 _SCORE_UNITS['current'] = 'Particles per source Particle'
 _SCORE_UNITS['events'] = 'Events per Source Particle'
@@ -50,12 +55,6 @@ _SCORE_UNITS['damage-energy'] = _ENERGY_UNITS
 _TALLY_VALUES = {'Mean': 'mean',
                  'Std. Dev.': 'std_dev',
                  'Rel. Error': 'rel_err'}
-
-_supported_spatial_filters = (openmc.filter.CellFilter,
-                              openmc.filter.UniverseFilter,
-                              openmc.filter.MaterialFilter,
-                              openmc.filter.MeshFilter)
-
 
 class PlotModel():
     """ Geometry and plot settings for OpenMC Plot Explorer model
@@ -364,7 +363,7 @@ class PlotModel():
             if tally_filter in self.appliedFilters:
                 selected_bins = self.appliedFilters[tally_filter]
 
-                if type(tally_filter) in _supported_spatial_filters:
+                if type(tally_filter) in _SPATIAL_FILTERS:
                     spatial_filter_bins[tally_filter] = selected_bins
                     n_spatial_filters += 1
                 else:

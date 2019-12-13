@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-# built-ins
 import copy
 from functools import partial
 import os
@@ -10,23 +9,26 @@ import signal
 import sys
 from threading import Thread
 
-# application modules
-from plotmodel import PlotModel, DomainTableModel
-from plotgui import PlotImage, ColorDialog
-from docks import DomainDock, TallyDock
-from overlays import ShortcutsOverlay
-from tools import ExportTallyDataDialog
-
-# third-party
 from PySide2 import QtCore, QtGui
 from PySide2.QtGui import QKeyEvent
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMessageBox, QAction,
                                QFileDialog, QColorDialog, QInputDialog,
                                QSplashScreen, QWidget, QGestureEvent)
-
 import openmc
 import openmc.lib
+
+try:
+    import vtk
+    _HAVE_VTK = True
+except ImportError:
+    _HAVE_VTK = False
+
+from plotmodel import PlotModel, DomainTableModel
+from plotgui import PlotImage, ColorDialog
+from docks import DomainDock, TallyDock
+from overlays import ShortcutsOverlay
+from tools import ExportTallyDataDialog
 
 
 def _openmcReload():
@@ -368,6 +370,9 @@ class MainWindow(QMainWindow):
         self.exportDataAction.setToolTip('Export current tally data to VTK')
         self.setStatusTip('Export current tallly data to VTK')
         self.exportDataAction.triggered.connect(self.exportTallyData)
+        if not _HAVE_VTK:
+            self.exportDataAction.setEnabled(False)
+            self.exportDataAction.setToolTip("Disabled: VTK Python module is not installed")
 
         self.toolsMenu = self.mainMenu.addMenu('&Tools')
         self.toolsMenu.addAction(self.exportDataAction)

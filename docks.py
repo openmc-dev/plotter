@@ -1,29 +1,20 @@
 from functools import partial
 from collections.abc import Iterable
 from collections import defaultdict
-import re
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2 import QtCore
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QGroupBox, QFormLayout, QLabel, QLineEdit,
-                               QComboBox, QSpinBox, QDoubleSpinBox,
-                               QSizePolicy, QSpacerItem, QMainWindow,
-                               QCheckBox, QDialog, QTabWidget, QGridLayout,
-                               QMessageBox, QToolButton, QColorDialog,
-                               QDockWidget, QItemDelegate, QHeaderView,
-                               QSlider, QScrollArea, QTextEdit, QListWidget,
+                               QComboBox, QSpinBox, QDoubleSpinBox, QSizePolicy,
+                               QCheckBox, QDockWidget, QScrollArea, QListWidget,
                                QListWidgetItem, QTreeWidget, QTreeWidgetItem)
 from matplotlib import cm as mcolormaps
 import numpy as np
-from openmc import (UniverseFilter, MaterialFilter, CellFilter,
-                    SurfaceFilter, MeshFilter, MeshSurfaceFilter)
-
 from custom_widgets import HorizontalLine, Expander
 from scientific_spin_box import ScientificDoubleSpinBox
-from plotmodel import _SCORE_UNITS, _TALLY_VALUES, _REACTION_UNITS
-
-_SPATIAL_FILTERS = (UniverseFilter, MaterialFilter, CellFilter,
-                    SurfaceFilter, MeshFilter, MeshSurfaceFilter)
+from plotmodel import (_SCORE_UNITS, _TALLY_VALUES,
+                       _REACTION_UNITS, _SPATIAL_FILTERS)
+import openmc
 
 
 class PlotterDock(QDockWidget):
@@ -375,7 +366,6 @@ class TallyDock(PlotterDock):
         self.filter_map = {}
         self.bin_map = {}
 
-
         for tally_filter in filters:
             filter_label = str(type(tally_filter)).split(".")[-1][:-2]
             filter_item = QTreeWidgetItem(self.filterTree, (filter_label,))
@@ -385,12 +375,12 @@ class TallyDock(PlotterDock):
             if not spatial_filters:
                 filter_item.setFlags(QtCore.Qt.ItemIsUserCheckable)
                 filter_item.setToolTip(0, "Only tallies with spatial filters are viewable.")
-
             else:
                 filter_item.setFlags(filter_item.flags() | QtCore.Qt.ItemIsTristate | QtCore.Qt.ItemIsUserCheckable)
             filter_item.setCheckState(0, QtCore.Qt.Unchecked)
 
-            if isinstance(tally_filter, MeshFilter):
+            # all mesh bins are selected by default and not shown in the dock
+            if isinstance(tally_filter, openmc.MeshFilter):
                 filter_item.setCheckState(0, QtCore.Qt.Checked)
                 filter_item.setFlags(QtCore.Qt.ItemIsUserCheckable)
                 filter_item.setToolTip(0, "All Mesh bins are selected automatically")
@@ -561,14 +551,14 @@ class TallyDock(PlotterDock):
     def updateFilters(self):
         applied_filters = defaultdict(tuple)
         for filter, filter_item in self.filter_map.items():
-            if type(filter) == MeshFilter:
+            if type(filter) == openmc.MeshFilter:
                 continue
 
             filter_checked = filter_item.checkState(0)
             if filter_checked != QtCore.Qt.Unchecked:
                 selected_bins = []
                 for idx, bin in enumerate(filter.bins):
-                    bin = bin if not hasattr(bin, '__iter__') else tuple(bin)
+                    bin = bin if not isinstance(bin, Iterable) else tuple(bin)
                     bin_checked = self.bin_map[(filter, bin)].checkState(0)
                     if bin_checked == QtCore.Qt.Checked:
                         selected_bins.append(idx)

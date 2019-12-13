@@ -5,20 +5,19 @@ from scientific_spin_box import ScientificDoubleSpinBox
 from custom_widgets import HorizontalLine
 from time import sleep
 import openmc
+import vtk
 
-try:
-    import vtk
-    _HAVE_VTK = True
-except ImportError:
-    _HAVE_VTK = False
 
 class ExportTallyDataDialog(QtWidgets.QDialog):
-
-    def __init__(self, model, FM, parent=None):
+    """
+    A dialog to facilitate generation of VTK files for
+    the current tally view.
+    """
+    def __init__(self, model, font_metric, parent=None):
         super().__init__(parent)
 
         self.model = model
-        self.FM = FM
+        self.FM = font_metric
         self.parent = parent
 
         self.layout = QtWidgets.QGridLayout()
@@ -30,6 +29,8 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
     def show(self):
         cv = self.model.currentView
 
+        # a couple checks for valid model state before
+        # opening the dialog window
         if not self.model.statepoint:
             msg = QtWidgets.QMessageBox()
             msg.setText("No statepoint file loaded.")
@@ -55,10 +56,10 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
 
     @staticmethod
     def _warn(msg):
-        msg_box = QMessageBox()
+        msg_box = QtWidgets.QMessageBox()
         msg_box.setText(msg)
-        msg_box.setIcon(QMessageBox.Information)
-        msg_box.setStandardButtons(QMessageBox.Ok)
+        msg_box.setIcon(QtWidgets.QMessageBox.Information)
+        msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
         msg_box.exec_()
 
     def populate(self):
@@ -84,7 +85,7 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
 
         self.layout.addWidget(QtWidgets.QLabel("Z-min:"), 2, 0)
         self.layout.addWidget(self.zminBox, 2, 1)
-        self.layout.addWidget(QtWidgets.QLabel("z-max:"), 2, 2)
+        self.layout.addWidget(QtWidgets.QLabel("Z-max:"), 2, 2)
         self.layout.addWidget(self.zmaxBox, 2, 3)
 
         self.layout.addWidget(HorizontalLine(), 3, 0, 1, 6)
@@ -110,18 +111,18 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
 
         self.dataLabelField = QtWidgets.QLineEdit()
         self.dataLabelField.setText("Tally {}".format(cv.selectedTally))
-        self.layout.addWidget(QtWidgets.QLabel("Data Label:"), 6, 0)
+        self.layout.addWidget(QtWidgets.QLabel("VTK Data Label:"), 6, 0)
         self.layout.addWidget(self.dataLabelField, 6, 1, 1, 2)
 
         self.geomCheckBox = QtWidgets.QCheckBox()
-        self.layout.addWidget(QtWidgets.QLabel("Include Model Domains:"), 7, 0, 1, 2)
+        self.layout.addWidget(QtWidgets.QLabel("Include Model Domains:"),
+                              7, 0, 1, 2)
         self.layout.addWidget(self.geomCheckBox, 7, 2)
 
         self.layout.addWidget(HorizontalLine(), 8, 0, 1, 6)
 
         self.exportButton = QtWidgets.QPushButton("Export to VTK")
         self.exportButton.clicked.connect(self.export_data)
-        self.exportButton.setEnabled(_HAVE_VTK)
 
         self.layout.addWidget(self.exportButton, 9, 5, 1, 2)
 
@@ -146,50 +147,56 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
             self.yResBox.setValue(dims[1])
             self.zResBox.setValue(dims[2])
 
+            bounds_msg = "Using MeshFilter to set bounds automatically."
             self.xminBox.setEnabled(False)
-            self.xminBox.setToolTip("Using MeshFilter to set bounds automatically.")
+            self.xminBox.setToolTip(bounds_msg)
             self.xmaxBox.setEnabled(False)
-            self.xmaxBox.setToolTip("Using MeshFilter to set bounds automatically.")
+            self.xmaxBox.setToolTip(bounds_msg)
             self.yminBox.setEnabled(False)
-            self.yminBox.setToolTip("Using MeshFilter to set bounds automatically.")
+            self.yminBox.setToolTip(bounds_msg)
             self.ymaxBox.setEnabled(False)
-            self.ymaxBox.setToolTip("Using MeshFilter to set bounds automatically.")
+            self.ymaxBox.setToolTip(bounds_msg)
             self.zminBox.setEnabled(False)
-            self.zminBox.setToolTip("Using MeshFilter to set bounds automatically.")
+            self.zminBox.setToolTip(bounds_msg)
             self.zmaxBox.setEnabled(False)
-            self.zmaxBox.setToolTip("Using MeshFilter to set bounds automatically.")
+            self.zmaxBox.setToolTip(bounds_msg)
 
-
+            resolution_msg = "Using MeshFilter to set resolution automatically."
             self.xResBox.setEnabled(False)
-            self.xResBox.setToolTip("Using MeshFilter to set resolution automatically.")
+            self.xResBox.setToolTip(resolution_msg)
             self.yResBox.setEnabled(False)
-            self.yResBox.setToolTip("Using MeshFilter to set resolution automatically.")
+            self.yResBox.setToolTip(resolution_msg)
             self.zResBox.setEnabled(False)
-            self.zResBox.setToolTip("Using MeshFilter to set resolution automatically.")
+            self.zResBox.setToolTip(resolution_msg)
 
     def export_data(self):
 
         # collect necessary information from the export box
-        llc = np.array((self.xminBox.value(), self.yminBox.value(), self.zminBox.value()))
-        urc = np.array((self.xmaxBox.value(), self.ymaxBox.value(), self.zmaxBox.value()))
-        res = np.array((self.xResBox.value(), self.yResBox.value(), self.zResBox.value()))
+        llc = np.array((self.xminBox.value(),
+                        self.yminBox.value(),
+                        self.zminBox.value()))
+        urc = np.array((self.xmaxBox.value(),
+                        self.ymaxBox.value(),
+                        self.zmaxBox.value()))
+        res = np.array((self.xResBox.value(),
+                        self.yResBox.value(),
+                        self.zResBox.value()))
         dx, dy, dz = (urc - llc) / res
 
         if any(llc >= urc):
-            _warn("Bounds of export data are invalid.")
+            self._warn("Bounds of export data are invalid.")
             return
 
-        if any(res <= 0):
-            _warn("Resolution of the export mesh is invalid. Values must be" \
-                  " <= 0.")
-            return
-
-        filename, ext = QtWidgets.QFileDialog.getSaveFileName(self,
-                                                              "Set VTK Filename",
-                                                              "untitled",
-                                                              "VTK Image (.vti)")
+        filename, ext = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Set VTK Filename",
+            "tally_data.vti",
+            "VTK Image (.vti)")
+        print(ext)
         if filename[-4:] != ".vti":
             filename += ".vti"
+
+        ### Generate VTK Data ###
 
         include_geom = self.geomCheckBox.checkState() == QtCore.Qt.Checked
 
@@ -245,7 +252,6 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         vtk_image.SetSpacing(dx, dy, dz)
         vtk_image.SetOrigin(llc)
         vtk_data = vtk.vtkDoubleArray()
-        label = self.dataLabelField.text()
         vtk_data.SetName(self.dataLabelField.text())
         vtk_data.SetArray(data, data.size, True)
         vtk_image.GetCellData().AddArray(vtk_data)
@@ -261,7 +267,8 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
             cell_data.SetArray(cells, cells.size, True)
             vtk_image.GetCellData().AddArray(cell_data)
 
-        progressBar.setLabel(QtWidgets.QLabel("Writing VTK Image file: {}...".format(filename)))
+        progressBar.setLabel(
+            QtWidgets.QLabel("Writing VTK Image file: {}...".format(filename)))
 
         writer = vtk.vtkXMLImageDataWriter()
         writer.SetInputData(vtk_image)
