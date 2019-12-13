@@ -17,7 +17,7 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         super().__init__(parent)
 
         self.model = model
-        self.FM = font_metric
+        self.font_metric = font_metric
         self.parent = parent
 
         self.layout = QtWidgets.QGridLayout()

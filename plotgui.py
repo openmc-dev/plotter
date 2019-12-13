@@ -693,13 +693,13 @@ class PlotImage(FigureCanvas):
 
 class ColorDialog(QDialog):
 
-    def __init__(self, model, FM, parent=None):
+    def __init__(self, model, font_metric, parent=None):
         super().__init__(parent)
 
         self.setWindowTitle('Color Options')
 
         self.model = model
-        self.FM = FM
+        self.font_metric = font_metric
         self.main_window = parent
 
         self.createDialogLayout()
@@ -741,8 +741,8 @@ class ColorDialog(QDialog):
 
         self.maskColorButton = QPushButton()
         self.maskColorButton.setCursor(QtCore.Qt.PointingHandCursor)
-        self.maskColorButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
-        self.maskColorButton.setFixedHeight(self.FM.height() * 1.5)
+        self.maskColorButton.setFixedWidth(self.font_metric.width("XXXXXXXXXX"))
+        self.maskColorButton.setFixedHeight(self.font_metric.height() * 1.5)
         self.maskColorButton.clicked.connect(main_window.editMaskingColor)
 
         # Highlighting options
@@ -751,8 +751,8 @@ class ColorDialog(QDialog):
 
         self.hlColorButton = QPushButton()
         self.hlColorButton.setCursor(QtCore.Qt.PointingHandCursor)
-        self.hlColorButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
-        self.hlColorButton.setFixedHeight(self.FM.height() * 1.5)
+        self.hlColorButton.setFixedWidth(self.font_metric.width("XXXXXXXXXX"))
+        self.hlColorButton.setFixedHeight(self.font_metric.height() * 1.5)
         self.hlColorButton.clicked.connect(main_window.editHighlightColor)
 
         self.alphaBox = QDoubleSpinBox()
@@ -767,8 +767,8 @@ class ColorDialog(QDialog):
         # General options
         self.bgButton = QPushButton()
         self.bgButton.setCursor(QtCore.Qt.PointingHandCursor)
-        self.bgButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
-        self.bgButton.setFixedHeight(self.FM.height() * 1.5)
+        self.bgButton.setFixedWidth(self.font_metric.width("XXXXXXXXXX"))
+        self.bgButton.setFixedHeight(self.font_metric.height() * 1.5)
         self.bgButton.clicked.connect(main_window.editBackgroundColor)
 
         self.colorbyBox = QComboBox(self)
@@ -784,8 +784,8 @@ class ColorDialog(QDialog):
 
         self.overlapColorButton = QPushButton()
         self.overlapColorButton.setCursor(QtCore.Qt.PointingHandCursor)
-        self.overlapColorButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
-        self.overlapColorButton.setFixedHeight(self.FM.height() * 1.5)
+        self.overlapColorButton.setFixedWidth(self.font_metric.width("XXXXXXXXXX"))
+        self.overlapColorButton.setFixedHeight(self.font_metric.height() * 1.5)
         self.overlapColorButton.clicked.connect(main_window.editOverlapColor)
 
         self.colorbyBox.currentTextChanged[str].connect(main_window.editColorBy)
