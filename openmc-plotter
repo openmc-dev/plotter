@@ -83,7 +83,7 @@ class MainWindow(QMainWindow):
         self.colorDialog.hide()
 
         # Tools
-        self.exportDataDialog = ExportTallyDataDialog(self.model, FM, self)
+        self.exportDataDialog = ExportTallyDataDialog(self.model, font_metric, self)
 
         # Restore Window Settings
         self.restoreWindowSettings()
