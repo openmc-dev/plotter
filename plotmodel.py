@@ -163,8 +163,6 @@ class PlotModel():
         cv = self.currentView = copy.deepcopy(self.activeView)
         ids = openmc.lib.id_map(cv)
         props = openmc.lib.property_map(cv)
-        # empty image data
-        image = np.ones((cv.v_res, cv.h_res, 3), dtype=int)
 
         self.cell_ids = ids[:, :, 0]
         self.mat_ids = ids[:, :, 1]
@@ -188,14 +186,11 @@ class PlotModel():
             if mat.color is None:
                 mat.color = random_rgb()
 
-        unique_ids = np.unique(self.ids)
-        for id in unique_ids:
-            if id == _NOT_FOUND:
-                image[self.ids == id] = cv.domainBackground
-            elif id == _OVERLAP:
-                image[self.ids == id] = cv.overlap_color
-            else:
-                image[self.ids == id] = domain[id].color
+        # construct image data
+        domain[_OVERLAP] = DomainView(_OVERLAP, "Overlap", cv.overlap_color)
+        domain[_NOT_FOUND] = DomainView(_NOT_FOUND, "Not Found", cv.plotBackground)
+        u,inv = np.unique(self.ids, return_inverse=True)
+        image = np.array([domain[id].color for id in u])[inv].reshape((cv.v_res, cv.h_res, 3))
 
         if cv.masking:
             for id, dom in domain.items():
