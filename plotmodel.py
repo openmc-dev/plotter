@@ -312,28 +312,68 @@ class PlotModel():
 
         if tally.contains_filter(openmc.MeshFilter):
             if tally_value == 'rel_err':
-                mean_data = self._create_tally_mesh_image(tally, 'mean', scores, nuclides, view) + (units_out,)
-                dev_data = self._create_tally_mesh_image(tally, 'std_dev', scores, nuclides, view) + (units_out,)
-                image_data = dev_data[0] / mean_data[0]
-                image_data = np.nan_to_num(image_data, nan=0.0, posinf=0.0, neginf=0.0)
+                # get both the std. dev. data and mean data
+                # to create the relative error data
+                mean_data = self._create_tally_mesh_image(tally,
+                                                          'mean',
+                                                          scores,
+                                                          nuclides,
+                                                          view)
+                std_dev_data = self._create_tally_mesh_image(tally,
+                                                             'std_dev',
+                                                             scores,
+                                                             nuclides,
+                                                             view)
+                image_data = np.divide(std_dev_data[0],
+                                       mean_data[0],
+                                       out=np.zeros_like(mean_data[0]),
+                                       where=mean_data != 0)
                 extents = mean_data[1]
                 data_min = np.min(image_data)
                 data_max = np.max(image_data)
                 return image_data, extents, data_min, data_max, units_out
+
             else:
-                return self._create_tally_mesh_image(tally, tally_value, scores, nuclides, view) + (units_out,)
+                image = self._create_tally_mesh_image(tally,
+                                                      tally_value,
+                                                      scores,
+                                                      nuclides,
+                                                      view)
+                return image + (units_out,)
         else:
+            # same as above, get the std. dev. data
+            # and mean date to produce the relative error data
             if tally_value == 'rel_err':
-                mean_data = self._create_tally_domain_image(tally, 'mean', scores, nuclides, view) + (units_out,)
-                dev_data = self._create_tally_domain_image(tally, 'std_dev', scores, nuclides, view) + (units_out,)
-                image_data = dev_data[0] / mean_data[0]
-                image_data = np.nan_to_num(image_data, nan=0.0, posinf=0.0, neginf=0.0)
+                mean_data = self._create_tally_domain_image(tally,
+                                                            'mean',
+                                                            scores,
+                                                            nuclides,
+                                                            view)
+                dev_data = self._create_tally_domain_image(tally,
+                                                           'std_dev',
+                                                           scores,
+                                                           nuclides,
+                                                           view)
+                image_data = np.divide(std_dev_data[0],
+                                       mean_data[0],
+                                       out=np.zeros_like(mean_data[0]),
+                                       where=mean_data != 0)
+                # adjust for NaNs in bins without tallies
+                image_data = np.nan_to_num(image_data,
+                                           nan=0.0,
+                                           posinf=0.0,
+                                           neginf=0.0)
                 extents = mean_data[1]
                 data_min = np.min(image_data)
                 data_max = np.max(image_data)
                 return image_data, extents, data_min, data_max, units_out
             else:
-                return self._create_tally_domain_image(tally, tally_value, scores, nuclides, view) + (units_out,)
+                image = self._create_tally_domain_image(tally,
+                                                        tally_value,
+                                                        scores,
+                                                        nuclides,
+                                                        view)
+                return image + (units_out,)
 
     def _create_tally_domain_image(self, tally, tally_value, scores, nuclides, view=None):
         # data resources used throughout

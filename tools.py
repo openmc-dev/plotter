@@ -1,12 +1,13 @@
-from PySide2 import QtCore, QtGui, QtWidgets
-import numpy as np
 import copy
-from scientific_spin_box import ScientificDoubleSpinBox
-from custom_widgets import HorizontalLine
 from time import sleep
+
+import numpy as np
 import openmc
+from PySide2 import QtCore, QtGui, QtWidgets
 import vtk
 
+from custom_widgets import HorizontalLine
+from scientific_spin_box import ScientificDoubleSpinBox
 
 class ExportTallyDataDialog(QtWidgets.QDialog):
     """
@@ -51,9 +52,6 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
 
         super().show()
 
-    def closeEvent(self, event):
-        super().closeEvent(event)
-
     @staticmethod
     def _warn(msg):
         msg_box = QtWidgets.QMessageBox()
@@ -72,6 +70,10 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         self.ymaxBox = ScientificDoubleSpinBox()
         self.zminBox = ScientificDoubleSpinBox()
         self.zmaxBox = ScientificDoubleSpinBox()
+
+        self.bounds_spin_boxes = (self.xminBox, self.xmaxBox,
+                                  self.yminBox, self.ymaxBox,
+                                  self.zminBox, self.zmaxBox)
 
         self.layout.addWidget(QtWidgets.QLabel("X-min:"), 0, 0)
         self.layout.addWidget(self.xminBox, 0, 1)
@@ -148,18 +150,9 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
             self.zResBox.setValue(dims[2])
 
             bounds_msg = "Using MeshFilter to set bounds automatically."
-            self.xminBox.setEnabled(False)
-            self.xminBox.setToolTip(bounds_msg)
-            self.xmaxBox.setEnabled(False)
-            self.xmaxBox.setToolTip(bounds_msg)
-            self.yminBox.setEnabled(False)
-            self.yminBox.setToolTip(bounds_msg)
-            self.ymaxBox.setEnabled(False)
-            self.ymaxBox.setToolTip(bounds_msg)
-            self.zminBox.setEnabled(False)
-            self.zminBox.setToolTip(bounds_msg)
-            self.zmaxBox.setEnabled(False)
-            self.zmaxBox.setToolTip(bounds_msg)
+            for box in self.bounds_spin_boxes:
+                box.setEnabled(False)
+                box.setToolTip(bounds_msg)
 
             resolution_msg = "Using MeshFilter to set resolution automatically."
             self.xResBox.setEnabled(False)
@@ -192,7 +185,7 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
             "Set VTK Filename",
             "tally_data.vti",
             "VTK Image (.vti)")
-        print(ext)
+
         if filename[-4:] != ".vti":
             filename += ".vti"
 

@@ -170,9 +170,18 @@ class MainWindow(QMainWindow):
         self.quitAction.setStatusTip('Quit OpenMC Plot Explorer')
         self.quitAction.triggered.connect(self.close)
 
+        self.exportDataAction = QAction('E&xport Tally Data...', self)
+        self.exportDataAction.setToolTip('Export current tally data to VTK')
+        self.setStatusTip('Export current tallly data to VTK')
+        self.exportDataAction.triggered.connect(self.exportTallyData)
+        if not _HAVE_VTK:
+            self.exportDataAction.setEnabled(False)
+            self.exportDataAction.setToolTip("Disabled: VTK Python module is not installed")
+
         self.fileMenu = self.mainMenu.addMenu('&File')
         self.fileMenu.addAction(self.reloadModelAction)
         self.fileMenu.addAction(self.saveImageAction)
+        self.fileMenu.addAction(self.exportDataAction)
         self.fileMenu.addSeparator()
         self.fileMenu.addAction(self.saveViewAction)
         self.fileMenu.addAction(self.openAction)
@@ -364,18 +373,6 @@ class MainWindow(QMainWindow):
         self.viewMenu.addSeparator()
         self.viewMenu.addAction(self.zoomAction)
         self.viewMenu.aboutToShow.connect(self.updateViewMenu)
-
-        # Tools Menu
-        self.exportDataAction = QAction('E&xport Tally Data', self)
-        self.exportDataAction.setToolTip('Export current tally data to VTK')
-        self.setStatusTip('Export current tallly data to VTK')
-        self.exportDataAction.triggered.connect(self.exportTallyData)
-        if not _HAVE_VTK:
-            self.exportDataAction.setEnabled(False)
-            self.exportDataAction.setToolTip("Disabled: VTK Python module is not installed")
-
-        self.toolsMenu = self.mainMenu.addMenu('&Tools')
-        self.toolsMenu.addAction(self.exportDataAction)
 
         # Window Menu
         self.mainWindowAction = QAction('&Main Window', self)

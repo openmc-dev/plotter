@@ -10,11 +10,12 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QListWidgetItem, QTreeWidget, QTreeWidgetItem)
 from matplotlib import cm as mcolormaps
 import numpy as np
+import openmc
+
 from custom_widgets import HorizontalLine, Expander
 from scientific_spin_box import ScientificDoubleSpinBox
 from plotmodel import (_SCORE_UNITS, _TALLY_VALUES,
                        _REACTION_UNITS, _SPATIAL_FILTERS)
-import openmc
 
 
 class PlotterDock(QDockWidget):
@@ -550,19 +551,19 @@ class TallyDock(PlotterDock):
 
     def updateFilters(self):
         applied_filters = defaultdict(tuple)
-        for filter, filter_item in self.filter_map.items():
-            if type(filter) == openmc.MeshFilter:
+        for f, f_item in self.filter_map.items():
+            if type(f) == openmc.MeshFilter:
                 continue
 
-            filter_checked = filter_item.checkState(0)
+            filter_checked = f_item.checkState(0)
             if filter_checked != QtCore.Qt.Unchecked:
                 selected_bins = []
-                for idx, bin in enumerate(filter.bins):
-                    bin = bin if not isinstance(bin, Iterable) else tuple(bin)
-                    bin_checked = self.bin_map[(filter, bin)].checkState(0)
+                for idx, b in enumerate(f.bins):
+                    b = b if not isinstance(b, Iterable) else tuple(b)
+                    bin_checked = self.bin_map[(f, b)].checkState(0)
                     if bin_checked == QtCore.Qt.Checked:
                         selected_bins.append(idx)
-                applied_filters[filter] = tuple(selected_bins)
+                applied_filters[f] = tuple(selected_bins)
 
             self.model.appliedFilters = applied_filters
 
@@ -576,7 +577,7 @@ class TallyDock(PlotterDock):
         if not applied_scores:
             # if no scores are selected, enable all scores again
             for score, score_box in self.score_map.items():
-                sunits = score_units.get(score, reaction_units)
+                sunits = _SCORE_UNITS.get(score, _REACTION_UNITS)
                 empty_item = QListWidgetItem()
                 score_box.setFlags(empty_item.flags() | QtCore.Qt.ItemIsUserCheckable)
                 score_box.setFlags(empty_item.flags() & ~QtCore.Qt.ItemIsSelectable)
