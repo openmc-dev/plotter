@@ -229,16 +229,16 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         progressBar.setWindowModality(QtCore.Qt.WindowModal)
 
         for k in range(res[2]):
-            z = z0 + k * dz
+            z = z0 + k*dz
             view.origin = (x0, y0, z)
             view.basis = 'xy'
             self.model.activeView = view
             self.model.makePlot()
             image_data = self.model.create_tally_image(view)
-            data[k, :,:] = image_data[0][::-1, :]
+            data[k] = image_data[0][::-1, :]
             if include_geom:
-                mats[k, :, :] = self.model.mat_ids[::-1, :]
-                cells[k, :, :] = self.model.cell_ids[::-1, :]
+                mats[k] = self.model.mat_ids[::-1, :]
+                cells[k] = self.model.cell_ids[::-1, :]
             progressBar.setValue(k)
             if progressBar.wasCanceled():
                 # restore the previous active

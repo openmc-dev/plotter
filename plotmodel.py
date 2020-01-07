@@ -288,7 +288,7 @@ class PlotModel():
 
         tally_selected = view.selectedTally is not None
         tally_visible = view.tallyDataVisible
-        visible_selection = bool(scores) and bool(nuclides)
+        visible_selection = scores and nuclides
 
         if not tally_selected or not tally_visible or not visible_selection:
             return (None, None, None, None, None)
@@ -372,7 +372,7 @@ class PlotModel():
                     slc = tuple(slc)
                     data = _do_op(data[slc], tally_value, n_spatial_filters)
             else:
-                data[:,...] = 0.0
+                data[:, ...] = 0.0
                 data = _do_op(data, tally_value, n_spatial_filters)
 
         # filter by selected scores
@@ -470,7 +470,7 @@ class PlotModel():
             return (None, None, None, None)
 
         # move mesh axes to the end of the filters
-        filter_idx = [ type(filter) for filter in tally.filters ].index(openmc.MeshFilter)
+        filter_idx = [type(filter) for filter in tally.filters].index(openmc.MeshFilter)
         data = np.moveaxis(data, filter_idx, -1)
 
         # reshape data (with zyx ordering for mesh data)
@@ -489,7 +489,7 @@ class PlotModel():
             else:
                 # if the filter is completely unselected,
                 # set all of it's data to zero and remove the axis
-                data[:,...] = 0.0
+                data[:, ...] = 0.0
                 data = _do_op(data, tally_value)
 
         # filter by selected nuclides
