@@ -4,7 +4,6 @@ from time import sleep
 import numpy as np
 import openmc
 from PySide2 import QtCore, QtGui, QtWidgets
-import vtk
 
 from custom_widgets import HorizontalLine
 from scientific_spin_box import ScientificDoubleSpinBox
@@ -163,6 +162,8 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
             self.zResBox.setToolTip(resolution_msg)
 
     def export_data(self):
+
+        import vtk
 
         # collect necessary information from the export box
         llc = np.array((self.xminBox.value(),
