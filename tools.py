@@ -240,7 +240,7 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
             "tally_data.vti",
             "VTK Image (.vti)")
 
-        # check for cancelation
+        # check for cancellation
         if filename == "":
             return
 
@@ -267,7 +267,7 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
 
         export_densities = self.densityCheckBox.checkState() == QtCore.Qt.Checked
         if export_densities:
-            rhos = np.zeros(res[::-1], dtype='int32')
+            rhos = np.zeros(res[::-1], dtype='float')
 
         # get a copy of the current view
         view = copy.deepcopy(self.model.currentView)
@@ -332,7 +332,7 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
 
         if export_materials:
             mat_data = vtk.vtkIntArray()
-            mat_data.SetName("materials")
+            mat_data.SetName("mats")
             mat_data.SetArray(mats, mats.size, True)
             vtk_image.GetCellData().AddArray(mat_data)
 
