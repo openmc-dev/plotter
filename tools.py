@@ -74,21 +74,28 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
                                   self.yminBox, self.ymaxBox,
                                   self.zminBox, self.zmaxBox)
 
-        self.layout.addWidget(QtWidgets.QLabel("X-min:"), 0, 0)
-        self.layout.addWidget(self.xminBox, 0, 1)
-        self.layout.addWidget(QtWidgets.QLabel("X-max:"), 0, 2)
-        self.layout.addWidget(self.xmaxBox, 0, 3)
+        row = 0
 
-        self.layout.addWidget(QtWidgets.QLabel("Y-min:"), 1, 0)
-        self.layout.addWidget(self.yminBox, 1, 1)
-        self.layout.addWidget(QtWidgets.QLabel("Y-max:"), 1, 2)
-        self.layout.addWidget(self.ymaxBox, 1, 3)
+        self.layout.addWidget(QtWidgets.QLabel("X-min:"), row, 0)
+        self.layout.addWidget(self.xminBox, row, 1)
+        self.layout.addWidget(QtWidgets.QLabel("X-max:"), row, 2)
+        self.layout.addWidget(self.xmaxBox, row, 3)
 
-        self.layout.addWidget(QtWidgets.QLabel("Z-min:"), 2, 0)
-        self.layout.addWidget(self.zminBox, 2, 1)
-        self.layout.addWidget(QtWidgets.QLabel("Z-max:"), 2, 2)
-        self.layout.addWidget(self.zmaxBox, 2, 3)
+        row += 1
 
+        self.layout.addWidget(QtWidgets.QLabel("Y-min:"), row, 0)
+        self.layout.addWidget(self.yminBox, row, 1)
+        self.layout.addWidget(QtWidgets.QLabel("Y-max:"), row, 2)
+        self.layout.addWidget(self.ymaxBox, row, 3)
+
+        row += 1
+
+        self.layout.addWidget(QtWidgets.QLabel("Z-min:"), row, 0)
+        self.layout.addWidget(self.zminBox, row, 1)
+        self.layout.addWidget(QtWidgets.QLabel("Z-max:"), row, 2)
+        self.layout.addWidget(self.zmaxBox, row, 3)
+
+        row +=1
         self.layout.addWidget(HorizontalLine(), 3, 0, 1, 6)
 
         self.xResBox = QtWidgets.QSpinBox()
@@ -101,31 +108,64 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         self.zResBox.setMaximum(1E6)
         self.zResBox.setMinimum(0)
 
-        self.layout.addWidget(QtWidgets.QLabel("X steps:"), 4, 0)
-        self.layout.addWidget(self.xResBox, 4, 1)
-        self.layout.addWidget(QtWidgets.QLabel("Y steps:"), 4, 2)
-        self.layout.addWidget(self.yResBox, 4, 3)
-        self.layout.addWidget(QtWidgets.QLabel("Z steps:"), 4, 4)
-        self.layout.addWidget(self.zResBox, 4, 5)
+        row += 1
 
-        self.layout.addWidget(HorizontalLine(), 5, 0, 1, 6)
+        self.layout.addWidget(QtWidgets.QLabel("X steps:"), row, 0)
+        self.layout.addWidget(self.xResBox, row, 1)
+        self.layout.addWidget(QtWidgets.QLabel("Y steps:"), row, 2)
+        self.layout.addWidget(self.yResBox, row, 3)
+        self.layout.addWidget(QtWidgets.QLabel("Z steps:"), row, 4)
+        self.layout.addWidget(self.zResBox, row, 5)
+
+        row += 1
+
+        self.layout.addWidget(HorizontalLine(), row, 0, 1, 6)
+
+        row += 1
 
         self.dataLabelField = QtWidgets.QLineEdit()
         self.dataLabelField.setText("Tally {}".format(cv.selectedTally))
-        self.layout.addWidget(QtWidgets.QLabel("VTK Data Label:"), 6, 0)
-        self.layout.addWidget(self.dataLabelField, 6, 1, 1, 2)
+        self.layout.addWidget(QtWidgets.QLabel("VTK Data Label:"), row, 0)
+        self.layout.addWidget(self.dataLabelField, row, 1, 1, 2)
+
+        row += 1
 
         self.geomCheckBox = QtWidgets.QCheckBox()
-        self.layout.addWidget(QtWidgets.QLabel("Include Model Domains:"),
-                              7, 0, 1, 2)
-        self.layout.addWidget(self.geomCheckBox, 7, 2)
+        self.layout.addWidget(QtWidgets.QLabel("Include Cells:"),
+                              row, 0, 1, 2)
+        self.layout.addWidget(self.geomCheckBox, row, 2)
 
-        self.layout.addWidget(HorizontalLine(), 8, 0, 1, 6)
+        row += 1
+
+        self.matsCheckBox = QtWidgets.QCheckBox()
+        self.layout.addWidget(QtWidgets.QLabel("Include Materials:"),
+                              row, 0, 1, 2)
+        self.layout.addWidget(self.matsCheckBox, row, 2)
+
+        row += 1
+
+        self.tempCheckBox = QtWidgets.QCheckBox()
+        self.layout.addWidget(QtWidgets.QLabel("Include Temperature:"),
+                              row, 0, 1, 2)
+        self.layout.addWidget(self.tempCheckBox, row, 2)
+
+        row += 1
+
+        self.densityCheckBox = QtWidgets.QCheckBox()
+        self.layout.addWidget(QtWidgets.QLabel("Include Density:"),
+                              row, 0, 1, 2)
+        self.layout.addWidget(self.densityCheckBox, row, 2)
+
+        row += 1
+
+        self.layout.addWidget(HorizontalLine(), row, 0, 1, 6)
+
+        row += 1
 
         self.exportButton = QtWidgets.QPushButton("Export to VTK")
         self.exportButton.clicked.connect(self.export_data)
 
-        self.layout.addWidget(self.exportButton, 9, 5, 1, 2)
+        self.layout.addWidget(self.exportButton, row, 5, 1, 2)
 
         if tally.contains_filter(openmc.MeshFilter):
 
@@ -162,6 +202,19 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
             self.zResBox.setToolTip(resolution_msg)
 
     def export_data(self):
+        # cache current and active views
+        cv = self.model.currentView
+        av = self.model.activeView
+        try:
+            # export the tally data
+            self._export_data()
+        finally:
+            #always reset to the original view
+            self.model.currentView = cv
+            self.model.activeView = av
+            self.model.makePlot()
+
+    def _export_data(self):
 
         import vtk
 
@@ -187,41 +240,57 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
             "tally_data.vti",
             "VTK Image (.vti)")
 
+        # check for cancelation
+        if filename == "":
+            return
+
         if filename[-4:] != ".vti":
             filename += ".vti"
 
         ### Generate VTK Data ###
 
-        include_geom = self.geomCheckBox.checkState() == QtCore.Qt.Checked
-
         # create empty array to store our values
-        data = np.zeros(res[::-1], dtype=float)
+        tally_data = np.zeros(res[::-1], dtype=float)
 
-        if include_geom:
-            mats = np.zeros(res[::-1], dtype='int32')
+        # create empty arrays for other model properties if requested
+        export_cells = self.geomCheckBox.checkState() == QtCore.Qt.Checked
+        if export_cells:
             cells = np.zeros(res[::-1], dtype='int32')
 
+        export_materials = self.matsCheckBox.checkState() == QtCore.Qt.Checked
+        if export_materials:
+            mats = np.zeros(res[::-1], dtype='int32')
+
+        export_temperatures = self.tempCheckBox.checkState() == QtCore.Qt.Checked
+        if export_temperatures:
+            temps = np.zeros(res[::-1], dtype='float')
+
+        export_densities = self.densityCheckBox.checkState() == QtCore.Qt.Checked
+        if export_densities:
+            rhos = np.zeros(res[::-1], dtype='int32')
+
         # get a copy of the current view
-        cv = self.model.currentView
-        av = self.model.activeView
-        view = copy.deepcopy(cv)
+        view = copy.deepcopy(self.model.currentView)
 
-        # get a view of the tally data for each x,y slice:
-
+        # adjust view settings to match those set in the export dialog
         x0, y0, z0 = (llc + urc) / 2.0
         view.width = urc[0] - llc[0]
         view.height = urc[1] - llc[1]
         view.h_res = res[0]
         view.v_res = res[1]
+        view.tallyDataVisible = True
 
         z0 = llc[2] + dz / 2.0
 
+        # progress bar to make sure the user knows something is happening
+        # large mesh tallies could take a long time to export
         progressBar = QtWidgets.QProgressDialog("Accumulating data...",
-                                                "Abort Copy",
+                                                "Cancel",
                                                 0,
                                                 res[2])
         progressBar.setWindowModality(QtCore.Qt.WindowModal)
 
+        # get a view of the tally data for each x, y slice:
         for k in range(res[2]):
             z = z0 + k*dz
             view.origin = (x0, y0, z)
@@ -229,37 +298,55 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
             self.model.activeView = view
             self.model.makePlot()
             image_data = self.model.create_tally_image(view)
-            data[k] = image_data[0][::-1, :]
-            if include_geom:
-                mats[k] = self.model.mat_ids[::-1, :]
-                cells[k] = self.model.cell_ids[::-1, :]
+            tally_data[k] = image_data[0][::-1]
+
+            if export_cells:
+                cells[k] = self.model.cell_ids[::-1]
+            if export_materials:
+                mats[k] = self.model.mat_ids[::-1]
+            if export_temperatures:
+                temps[k] = self.model.temperatures[::-1]
+            if export_densities:
+                rhos[k] = self.model.densities[::-1]
+
             progressBar.setValue(k)
             if progressBar.wasCanceled():
-                # restore the previous active
-                self.model.currentView = cv
-                self.model.activeView = av
-                self.model.makePlot()
                 return
 
         vtk_image = vtk.vtkImageData()
         vtk_image.SetDimensions(res + 1)
         vtk_image.SetSpacing(dx, dy, dz)
         vtk_image.SetOrigin(llc)
+
+        # assign tally data to double array
         vtk_data = vtk.vtkDoubleArray()
         vtk_data.SetName(self.dataLabelField.text())
-        vtk_data.SetArray(data, data.size, True)
+        vtk_data.SetArray(tally_data, tally_data.size, True)
         vtk_image.GetCellData().AddArray(vtk_data)
 
-        if include_geom:
-            mat_data = vtk.vtkIntArray()
-            mat_data.SetName("mats")
-            mat_data.SetArray(mats, mats.size, True)
-            vtk_image.GetCellData().AddArray(mat_data)
-
+        if export_cells:
             cell_data = vtk.vtkIntArray()
             cell_data.SetName("cells")
             cell_data.SetArray(cells, cells.size, True)
             vtk_image.GetCellData().AddArray(cell_data)
+
+        if export_materials:
+            mat_data = vtk.vtkIntArray()
+            mat_data.SetName("materials")
+            mat_data.SetArray(mats, mats.size, True)
+            vtk_image.GetCellData().AddArray(mat_data)
+
+        if export_temperatures:
+            temp_data = vtk.vtkDoubleArray()
+            temp_data.SetName("temperature")
+            temp_data.SetArray(temps, temps.size, True)
+            vtk_image.GetCellData().AddArray(temp_data)
+
+        if export_densities:
+            rho_data = vtk.vtkDoubleArray()
+            rho_data.SetName("density")
+            rho_data.SetArray(rhos, rhos.size, True)
+            vtk_image.GetCellData().AddArray(rho_data)
 
         progressBar.setLabel(
             QtWidgets.QLabel("Writing VTK Image file: {}...".format(filename)))
@@ -271,11 +358,6 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
 
         progressBar.setLabel(QtWidgets.QLabel("Export complete"))
         progressBar.setValue(res[2])
-
-        # restore the previous active
-        self.model.currentView = cv
-        self.model.activeView = av
-        self.model.makePlot()
 
         msg = QtWidgets.QMessageBox()
         msg.setText("Tally Export Complete!")

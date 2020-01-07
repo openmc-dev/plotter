@@ -1155,7 +1155,6 @@ class MainWindow(QMainWindow):
                 self.model.statepoint.close()
             pickle.dump(self.model, file)
 
-
     def exportTallyData(self):
         # show export tool dialog
         self.showExportDialog()

@@ -244,6 +244,9 @@ class PlotModel():
 
         self.properties[self.properties < 0.0] = np.nan
 
+        self.temperatures = self.properties[..., _PROPERTY_INDICES['temperature']]
+        self.densities = self.properties[..., _PROPERTY_INDICES['density']]
+
         minmax = {}
         for prop in _MODEL_PROPERTIES:
             idx = _PROPERTY_INDICES[prop]
