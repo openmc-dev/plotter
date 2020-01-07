@@ -1,6 +1,4 @@
-from collections import Iterable, defaultdict
 from functools import partial
-import itertools
 
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
@@ -14,15 +12,12 @@ from matplotlib import lines as mlines
 from matplotlib import cm as mcolormaps
 from matplotlib.colors import SymLogNorm
 import numpy as np
-import openmc
 
 from plot_colors import rgb_normalize, invert_rgb
 from plotmodel import DomainDelegate
 from plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
 from scientific_spin_box import ScientificDoubleSpinBox
-from docks import score_units, tally_values, reaction_units
 from custom_widgets import HorizontalLine
-
 
 if is_pyqt5():
     from matplotlib.backends.backend_qt5agg import FigureCanvas
@@ -55,11 +50,6 @@ class PlotImage(FigureCanvas):
         self.data_indicator = None
         self.tally_data_indicator = None
         self.image = None
-
-        self._supported_spatial_filters = (openmc.CellFilter,
-                                           openmc.UniverseFilter,
-                                           openmc.MaterialFilter,
-                                           openmc.MeshFilter)
 
         self.menu = QMenu(self)
 
@@ -521,7 +511,7 @@ class PlotImage(FigureCanvas):
         self.ax.set_ylabel(axis_label_str.format(cv.basis[1]))
 
         # generate tally image
-        image_data, extents, data_min, data_max, units = self.create_tally_image()
+        image_data, extents, data_min, data_max, units = self.model.create_tally_image()
 
         ### DRAW TALLY IMAGE ###
 
@@ -642,276 +632,6 @@ class PlotImage(FigureCanvas):
         else:
             return int(line)
 
-    def _create_tally_domain_image(self, tally, tally_value, scores, nuclides):
-        # get tally data as a numpy array
-        data = tally.get_reshaped_data(tally_value)
-        data_out = np.full(self.model.ids.shape, -1.0)
-
-        def _do_op(array, tally_value, ax=0):
-            if tally_value == 'mean':
-                return np.sum(array, axis=ax)
-            elif tally_value == 'std_dev':
-                return np.sqrt(np.sum(array**2, axis=ax))
-
-        # data structure for tracking which spatial
-        # filter bins are enabled
-        spatial_filter_bins = defaultdict(list)
-        n_spatial_filters = 0
-        filter_map = self.main_window.tallyDock.filter_map
-        for filter_idx, tally_filter in enumerate(tally.filters):
-            filter_check_state = filter_map[tally_filter].checkState(0)
-
-            if filter_check_state != QtCore.Qt.Unchecked:
-
-                selected_bins = []
-                for idx, bin in enumerate(tally_filter.bins):
-                    bin = bin if not hasattr(bin, '__iter__') else tuple(bin)
-                    bin_check_state = self.main_window.tallyDock.bin_map[tally_filter, bin].checkState(0)
-                    if bin_check_state == QtCore.Qt.Checked:
-                        selected_bins.append(idx)
-
-                if type(tally_filter) in self._supported_spatial_filters:
-                    spatial_filter_bins[tally_filter] = selected_bins
-                    n_spatial_filters += 1
-                else:
-                    slc = [slice(None)] * len(data.shape)
-                    slc[n_spatial_filters] = selected_bins
-                    slc = tuple(slc)
-                    data = _do_op(data[slc], tally_value, n_spatial_filters)
-            else:
-                data[:] = 0.0
-                data = _do_op(data, tally_value, n_spatial_filters)
-
-        # filter by selected scores
-        selected_scores = []
-        for idx, score in enumerate(tally.scores):
-            if score in scores:
-                selected_scores.append(idx)
-        data = _do_op(data[..., np.array(selected_scores)], tally_value, -1)
-
-        # filter by selected nuclides
-        selected_nuclides = []
-        for idx, nuclide in enumerate(tally.nuclides):
-            if nuclide in nuclides:
-                selected_nuclides.append(idx)
-        data = _do_op(data[..., np.array(selected_nuclides)], tally_value, -1)
-
-        # get data limits
-        data_min = np.min(data)
-        data_max = np.max(data)
-
-        # for all combinations of spatial bins, create a mask
-        # and set image data values
-        spatial_filters = spatial_filter_bins.keys()
-        spatial_bins = spatial_filter_bins.values()
-        for bin_indices in itertools.product(*spatial_bins):
-
-            # look up the tally value
-            tally_val = data[bin_indices]
-            if tally_val == 0.0:
-                continue
-
-            # generate a mask with the correct size
-            mask = np.full(self.model.ids.shape, True, dtype=bool)
-
-            for tally_filter, bin_idx in zip(spatial_filters, bin_indices):
-                bin = tally_filter.bins[bin_idx]
-                if isinstance(tally_filter, openmc.CellFilter):
-                    mask &= self.model.cell_ids == bin
-                elif isinstance(tally_filter, openmc.MaterialFilter):
-                    mask &= self.model.mat_ids == bin
-                elif isinstance(tally_filter, openmc.UniverseFilter):
-                    # get the statepoint summary
-                    univ_cells = self.model.statepoint.universes[bin].cells
-                    for cell in univ_cells:
-                        mask &= self.model.cell_ids == cell
-            # set image data values
-            data_out[mask] = tally_val
-
-        # mask out invalid values
-        image_data = np.ma.masked_where(data_out < 0.0, data_out)
-
-        return image_data, None, data_min, data_max
-
-    def _create_tally_mesh_image(self, tally, tally_value, scores, nuclides):
-        # some variables used throughout
-        cv = self.model.currentView
-
-        mesh = tally.find_filter(openmc.MeshFilter).mesh
-
-        def _do_op(array, tally_value, ax=0):
-            if tally_value == 'mean':
-                return np.sum(array, axis=ax)
-            elif tally_value == 'std_dev':
-                return np.sqrt(np.sum(array**2, axis=ax))
-
-        # start with reshaped data
-        data = tally.get_reshaped_data(tally_value)
-
-        # determine basis indices
-        if cv.basis == 'xy':
-            h_ind = 0
-            v_ind = 1
-            ax = 2
-        elif cv.basis == 'yz':
-            h_ind = 1
-            v_ind = 2
-            ax = 0
-        else:
-            h_ind = 0
-            v_ind = 2
-            ax = 1
-
-        # reduce data to the visible slice of the mesh values
-        k = int((cv.origin[ax] - mesh.lower_left[ax]) // mesh.width[ax])
-
-        # setup slice
-        data_slice = [None, None, None]
-        data_slice[h_ind] = slice(mesh.dimension[h_ind])
-        data_slice[v_ind] = slice(mesh.dimension[v_ind])
-        data_slice[ax] = k
-
-        if k < 0 or k > mesh.dimension[ax]:
-            return (None, None, None, None)
-
-        # move mesh axes to the end of the filters
-        filter_idx = [type(f) for f in tally.filters].index(openmc.MeshFilter)
-        data = np.moveaxis(data, filter_idx, -1)
-
-        # reshape data (with zyx ordering for mesh data)
-        data = data.reshape(data.shape[:-1] + tuple(mesh.dimension[::-1]))
-        data = data[..., data_slice[2], data_slice[1], data_slice[0]]
-
-        # sum over the rest of the tally filters
-        filter_map = self.main_window.tallyDock.filter_map
-        for filter_idx, tally_filter in enumerate(tally.filters):
-            if type(tally_filter) == openmc.MeshFilter:
-                continue
-
-            filter_check_state = filter_map[tally_filter].checkState(0)
-            if filter_check_state != QtCore.Qt.Unchecked:
-                selected_bins = []
-                bin_map = self.main_window.tallyDock.bin_map
-                for idx, bin in enumerate(tally_filter.bins):
-                    if isinstance(bin, Iterable):
-                        bin = tuple(bin)
-                    # see if the bin is checked
-                    bin_check_state = bin_map[tally_filter, bin].checkState(0)
-                    if bin_check_state == QtCore.Qt.Checked:
-                        selected_bins.append(idx)
-                # sum filter data for the selected bins
-                data = data[np.array(selected_bins)].sum(axis=0)
-            else:
-                # if the filter is completely unselected,
-                # set all of it's data to zero and remove the axis
-                data[:] = 0.0
-                data = _do_op(data, tally_value)
-
-        # filter by selected nuclides
-        if not nuclides:
-            data = 0.0
-
-        selected_nuclides = []
-        for idx, nuclide in enumerate(tally.nuclides):
-            if nuclide in nuclides:
-                selected_nuclides.append(idx)
-        data = _do_op(data[np.array(selected_nuclides)], tally_value)
-
-        # filter by selected scores
-        if not scores:
-            data = 0.0
-
-        selected_scores = []
-        for idx, score in enumerate(tally.scores):
-            if score in scores:
-                selected_scores.append(idx)
-        data = _do_op(data[np.array(selected_scores)], tally_value)
-
-        # get dataset's min/max
-        data_min = np.min(data)
-        data_max = np.max(data)
-
-        # set image data, reverse y-axis
-        image_data = data[::-1, ...]
-
-        # return data extents (in cm) for the tally
-        extents = [mesh.lower_left[h_ind], mesh.upper_right[h_ind],
-                   mesh.lower_left[v_ind], mesh.upper_right[v_ind]]
-
-        return image_data, extents, data_min, data_max
-
-    def create_tally_image(self):
-        cv = self.model.currentView
-
-        tally_id = cv.selectedTally
-
-        scores = self.model.appliedScores
-        nuclides = self.model.appliedNuclides
-
-        tally_selected = cv.selectedTally is not None
-        tally_visible = cv.tallyDataVisible
-        visible_selection = bool(scores) and bool(nuclides)
-
-        if not tally_selected or not tally_visible or not visible_selection:
-            return (None, None, None, None, None)
-
-        tally = self.model.statepoint.tallies[tally_id]
-
-        tally_value = tally_values[cv.tallyValue]
-
-        # check score units
-        units = set()
-        for score in scores:
-            try:
-                unit = score_units.get(score.lower(), reaction_units)
-            except KeyError:
-                msg_box = QMessageBox()
-                msg_box.setText("Could not find unit for score '{}'".format(score))
-                msg_box.setIcon(QMessageBox.Information)
-                msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.exec_()
-                return (None, None, None, None, None)
-
-            units.add(unit)
-
-        if len(units) != 1:
-            msg_box = QMessageBox()
-            msg = "The scores selected have incompatible units:\n"
-            for unit in units:
-                msg += "  - {}\n".format(unit)
-            msg_box.setText(msg)
-            msg_box.setIcon(QMessageBox.Information)
-            msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.exec_()
-            return (None, None, None, None, None)
-
-        units_out = list(units)[0]
-
-        if tally.contains_filter(openmc.MeshFilter):
-            if tally_value == 'rel_err':
-                mean_data = self._create_tally_mesh_image(tally, 'mean', scores, nuclides) + (units_out,)
-                dev_data = self._create_tally_mesh_image(tally, 'std_dev', scores, nuclides) + (units_out,)
-                image_data = dev_data[0] / mean_data[0]
-                image_data = np.nan_to_num(image_data, nan=0.0, posinf=0.0, neginf=0.0)
-                extents = mean_data[1]
-                data_min = np.min(image_data)
-                data_max = np.max(image_data)
-                return image_data, extents, data_min, data_max, units_out
-            else:
-                return self._create_tally_mesh_image(tally, tally_value, scores, nuclides) + (units_out,)
-        else:
-            if tally_value == 'rel_err':
-                mean_data = self._create_tally_domain_image(tally, 'mean', scores, nuclides) + (units_out,)
-                dev_data = self._create_tally_domain_image(tally, 'std_dev', scores, nuclides) + (units_out,)
-                image_data = dev_data[0] / mean_data[0]
-                image_data = np.nan_to_num(image_data, nan=0.0, posinf=0.0, neginf=0.0)
-                extents = mean_data[1]
-                data_min = np.min(image_data)
-                data_max = np.max(image_data)
-                return image_data, extents, data_min, data_max, units_out
-            else:
-                return self._create_tally_domain_image(tally, tally_value, scores, nuclides) + (units_out,)
-
     def updateColorbarScale(self):
         self.updatePixmap()
 
@@ -973,13 +693,13 @@ class PlotImage(FigureCanvas):
 
 class ColorDialog(QDialog):
 
-    def __init__(self, model, FM, parent=None):
+    def __init__(self, model, font_metric, parent=None):
         super().__init__(parent)
 
         self.setWindowTitle('Color Options')
 
         self.model = model
-        self.FM = FM
+        self.font_metric = font_metric
         self.main_window = parent
 
         self.createDialogLayout()
@@ -1021,8 +741,8 @@ class ColorDialog(QDialog):
 
         self.maskColorButton = QPushButton()
         self.maskColorButton.setCursor(QtCore.Qt.PointingHandCursor)
-        self.maskColorButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
-        self.maskColorButton.setFixedHeight(self.FM.height() * 1.5)
+        self.maskColorButton.setFixedWidth(self.font_metric.width("XXXXXXXXXX"))
+        self.maskColorButton.setFixedHeight(self.font_metric.height() * 1.5)
         self.maskColorButton.clicked.connect(main_window.editMaskingColor)
 
         # Highlighting options
@@ -1031,8 +751,8 @@ class ColorDialog(QDialog):
 
         self.hlColorButton = QPushButton()
         self.hlColorButton.setCursor(QtCore.Qt.PointingHandCursor)
-        self.hlColorButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
-        self.hlColorButton.setFixedHeight(self.FM.height() * 1.5)
+        self.hlColorButton.setFixedWidth(self.font_metric.width("XXXXXXXXXX"))
+        self.hlColorButton.setFixedHeight(self.font_metric.height() * 1.5)
         self.hlColorButton.clicked.connect(main_window.editHighlightColor)
 
         self.alphaBox = QDoubleSpinBox()
@@ -1047,8 +767,8 @@ class ColorDialog(QDialog):
         # General options
         self.bgButton = QPushButton()
         self.bgButton.setCursor(QtCore.Qt.PointingHandCursor)
-        self.bgButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
-        self.bgButton.setFixedHeight(self.FM.height() * 1.5)
+        self.bgButton.setFixedWidth(self.font_metric.width("XXXXXXXXXX"))
+        self.bgButton.setFixedHeight(self.font_metric.height() * 1.5)
         self.bgButton.clicked.connect(main_window.editBackgroundColor)
 
         self.colorbyBox = QComboBox(self)
@@ -1064,8 +784,8 @@ class ColorDialog(QDialog):
 
         self.overlapColorButton = QPushButton()
         self.overlapColorButton.setCursor(QtCore.Qt.PointingHandCursor)
-        self.overlapColorButton.setFixedWidth(self.FM.width("XXXXXXXXXX"))
-        self.overlapColorButton.setFixedHeight(self.FM.height() * 1.5)
+        self.overlapColorButton.setFixedWidth(self.font_metric.width("XXXXXXXXXX"))
+        self.overlapColorButton.setFixedHeight(self.font_metric.height() * 1.5)
         self.overlapColorButton.clicked.connect(main_window.editOverlapColor)
 
         self.colorbyBox.currentTextChanged[str].connect(main_window.editColorBy)

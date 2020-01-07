@@ -1,53 +1,21 @@
 from functools import partial
 from collections.abc import Iterable
-import re
+from collections import defaultdict
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2 import QtCore
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QGroupBox, QFormLayout, QLabel, QLineEdit,
-                               QComboBox, QSpinBox, QDoubleSpinBox,
-                               QSizePolicy, QSpacerItem, QMainWindow,
-                               QCheckBox, QDialog, QTabWidget, QGridLayout,
-                               QMessageBox, QToolButton, QColorDialog,
-                               QDockWidget, QItemDelegate, QHeaderView,
-                               QSlider, QScrollArea, QTextEdit, QListWidget,
+                               QComboBox, QSpinBox, QDoubleSpinBox, QSizePolicy,
+                               QCheckBox, QDockWidget, QScrollArea, QListWidget,
                                QListWidgetItem, QTreeWidget, QTreeWidgetItem)
 from matplotlib import cm as mcolormaps
 import numpy as np
-from openmc import (UniverseFilter, MaterialFilter, CellFilter,
-                    SurfaceFilter, MeshFilter, MeshSurfaceFilter)
+import openmc
 
 from custom_widgets import HorizontalLine, Expander
 from scientific_spin_box import ScientificDoubleSpinBox
-
-_SPATIAL_FILTERS = (UniverseFilter, MaterialFilter, CellFilter,
-                    SurfaceFilter, MeshFilter, MeshSurfaceFilter)
-
-reaction_units = 'Reactions per Source Particle'
-flux_units = 'Particle-cm per Source Particle'
-production_units = 'Particles Produced per Source Particle'
-energy_units = 'eV per Source Particle'
-
-productions = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
-               'nu-scatter', 'H1-production', 'H2-production',
-               'H3-production', 'He3-production', 'He4-production')
-
-score_units = {production: production_units for production in productions}
-score_units['flux'] = 'Particle-cm per Source Particle'
-score_units['current'] = 'Particles per Source Particle'
-score_units['events'] = 'Events per Source Particle'
-score_units['inverse-velocity'] = 'Particle-seconds per Source Particle'
-score_units['heating'] = energy_units
-score_units['heating-local'] = energy_units
-score_units['kappa-fission'] = energy_units
-score_units['fission-q-prompt'] = energy_units
-score_units['fission-q-recoverable'] = energy_units
-score_units['decay-rate'] = 's^-1'
-score_units['damage-energy'] = energy_units
-
-tally_values = {'Mean': 'mean',
-                'Std. Dev.': 'std_dev',
-                'Rel. Error': 'rel_err'}
+from plotmodel import (_SCORE_UNITS, _TALLY_VALUES,
+                       _REACTION_UNITS, _SPATIAL_FILTERS)
 
 
 class PlotterDock(QDockWidget):
@@ -394,6 +362,7 @@ class TallyDock(PlotterDock):
         self.filterTree.setHeaderItem(header)
         self.filterTree.setItemHidden(header, True)
         self.filterTree.setColumnCount(1)
+        self.filterTree.itemChanged.connect(self.updateFilters)
 
         self.filter_map = {}
         self.bin_map = {}
@@ -411,7 +380,8 @@ class TallyDock(PlotterDock):
                 filter_item.setFlags(filter_item.flags() | QtCore.Qt.ItemIsTristate | QtCore.Qt.ItemIsUserCheckable)
             filter_item.setCheckState(0, QtCore.Qt.Unchecked)
 
-            if isinstance(tally_filter, MeshFilter):
+            # all mesh bins are selected by default and not shown in the dock
+            if isinstance(tally_filter, openmc.MeshFilter):
                 filter_item.setCheckState(0, QtCore.Qt.Checked)
                 filter_item.setFlags(QtCore.Qt.ItemIsUserCheckable)
                 filter_item.setToolTip(0, "All Mesh bins are selected automatically")
@@ -481,7 +451,7 @@ class TallyDock(PlotterDock):
             # value selection
             self.tallySelectorLayout.addRow(QLabel("Value:"))
             self.valueBox = QComboBox(self)
-            self.values = tuple(tally_values.keys())
+            self.values = tuple(_TALLY_VALUES.keys())
             for value in self.values:
                 self.valueBox.addItem(value)
             self.tallySelectorLayout.addRow(self.valueBox)
@@ -579,6 +549,24 @@ class TallyDock(PlotterDock):
             idx = self.tallySelector.findData(cv.selectedTally)
         self.tallySelector.setCurrentIndex(idx)
 
+    def updateFilters(self):
+        applied_filters = defaultdict(tuple)
+        for f, f_item in self.filter_map.items():
+            if type(f) == openmc.MeshFilter:
+                continue
+
+            filter_checked = f_item.checkState(0)
+            if filter_checked != QtCore.Qt.Unchecked:
+                selected_bins = []
+                for idx, b in enumerate(f.bins):
+                    b = b if not isinstance(b, Iterable) else tuple(b)
+                    bin_checked = self.bin_map[(f, b)].checkState(0)
+                    if bin_checked == QtCore.Qt.Checked:
+                        selected_bins.append(idx)
+                applied_filters[f] = tuple(selected_bins)
+
+            self.model.appliedFilters = applied_filters
+
     def updateScores(self):
         applied_scores = []
         for score, score_box in self.score_map.items():
@@ -589,7 +577,7 @@ class TallyDock(PlotterDock):
         if not applied_scores:
             # if no scores are selected, enable all scores again
             for score, score_box in self.score_map.items():
-                sunits = score_units.get(score, reaction_units)
+                sunits = _SCORE_UNITS.get(score, _REACTION_UNITS)
                 empty_item = QListWidgetItem()
                 score_box.setFlags(empty_item.flags() | QtCore.Qt.ItemIsUserCheckable)
                 score_box.setFlags(empty_item.flags() & ~QtCore.Qt.ItemIsSelectable)
@@ -602,10 +590,10 @@ class TallyDock(PlotterDock):
                     score_box.setToolTip("De-select 'total' to enable other scores")
         else:
             # get units of applied scores
-            selected_units = score_units.get(applied_scores[0], reaction_units)
+            selected_units = _SCORE_UNITS.get(applied_scores[0], _REACTION_UNITS)
             # disable scores with incompatible units
             for score, score_box in self.score_map.items():
-                sunits = score_units.get(score, reaction_units)
+                sunits = _SCORE_UNITS.get(score, _REACTION_UNITS)
                 if sunits != selected_units:
                     score_box.setFlags(QtCore.Qt.ItemIsUserCheckable)
                     score_box.setToolTip("Score is incompatible with currently selected scores")
