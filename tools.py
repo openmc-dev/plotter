@@ -276,3 +276,9 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         self.model.currentView = cv
         self.model.activeView = av
         self.model.makePlot()
+
+        msg = QtWidgets.QMessageBox()
+        msg.setText("Tally Export Complete!")
+        msg.setIcon(QtWidgets.QMessageBox.Information)
+        msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        msg.exec_()
