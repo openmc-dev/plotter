@@ -8,10 +8,10 @@ from PySide2 import QtCore, QtGui, QtWidgets
 from custom_widgets import HorizontalLine
 from scientific_spin_box import ScientificDoubleSpinBox
 
-class ExportTallyDataDialog(QtWidgets.QDialog):
+class ExportDataDialog(QtWidgets.QDialog):
     """
     A dialog to facilitate generation of VTK files for
-    the current tally view.
+    the current model and tally data.
     """
     def __init__(self, model, font_metric, parent=None):
         super().__init__(parent)
@@ -27,28 +27,7 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         self.setModal(True)
 
     def show(self):
-        cv = self.model.currentView
-
-        # a couple checks for valid model state before
-        # opening the dialog window
-        if not self.model.statepoint:
-            msg = QtWidgets.QMessageBox()
-            msg.setText("No statepoint file loaded.")
-            msg.setIcon(QtWidgets.QMessageBox.Warning)
-            msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
-            msg.exec_()
-            return
-
-        if not cv.selectedTally:
-            msg = QtWidgets.QMessageBox()
-            msg.setText("No tally selected.")
-            msg.setIcon(QtWidgets.QMessageBox.Warning)
-            msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
-            msg.exec_()
-            return
-
         self.populate()
-
         super().show()
 
     @staticmethod
@@ -61,7 +40,6 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
 
     def populate(self):
         cv = self.model.currentView
-        tally = self.model.statepoint.tallies[cv.selectedTally]
 
         self.xminBox = ScientificDoubleSpinBox()
         self.xmaxBox = ScientificDoubleSpinBox()
@@ -123,10 +101,22 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
 
         row += 1
 
+        self.tallyCheckBox = QtWidgets.QCheckBox()
+        self.layout.addWidget(QtWidgets.QLabel("Include tally data:"),
+                              row, 0, 1, 2)
+        self.layout.addWidget(self.tallyCheckBox, row, 2)
+
+        row += 1
+
         self.dataLabelField = QtWidgets.QLineEdit()
-        self.dataLabelField.setText("Tally {}".format(cv.selectedTally))
         self.layout.addWidget(QtWidgets.QLabel("VTK Data Label:"), row, 0)
         self.layout.addWidget(self.dataLabelField, row, 1, 1, 2)
+        if cv.selectedTally:
+            self.dataLabelField.setText("Tally {}".format(cv.selectedTally))
+        else:
+            self.dataLabelField.setText("No tally selected")
+            self.dataLabelField.setEnabled(False)
+            self.tallyCheckBox.setEnabled(False)
 
         row += 1
 
@@ -167,7 +157,12 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
 
         self.layout.addWidget(self.exportButton, row, 5, 1, 2)
 
-        if tally.contains_filter(openmc.MeshFilter):
+        if cv.selectedTally:
+            tally = self.model.statepoint.tallies[cv.selectedTally]
+        else:
+            tally = None
+
+        if tally and tally.contains_filter(openmc.MeshFilter):
 
             mesh_filter = tally.find_filter(openmc.MeshFilter)
             mesh = mesh_filter.mesh
@@ -200,6 +195,22 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
             self.yResBox.setToolTip(resolution_msg)
             self.zResBox.setEnabled(False)
             self.zResBox.setToolTip(resolution_msg)
+
+        else:
+            # initialize using the bounds of the current view
+            llc = cv.llc
+            self.xminBox.setValue(llc[0])
+            self.yminBox.setValue(llc[1])
+            self.zminBox.setValue(llc[2])
+
+            urc = cv.urc
+            self.xmaxBox.setValue(urc[0])
+            self.ymaxBox.setValue(urc[1])
+            self.zmaxBox.setValue(urc[2])
+
+            self.xResBox.setValue(10)
+            self.yResBox.setValue(10)
+            self.zResBox.setValue(10)
 
     def export_data(self):
         # cache current and active views
@@ -250,7 +261,9 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         ### Generate VTK Data ###
 
         # create empty array to store our values
-        tally_data = np.zeros(res[::-1], dtype=float)
+        export_tally_data = self.tallyCheckBox.checkState() == QtCore.Qt.Checked
+        if export_tally_data:
+            tally_data = np.zeros(res[::-1], dtype=float)
 
         # create empty arrays for other model properties if requested
         export_cells = self.geomCheckBox.checkState() == QtCore.Qt.Checked
@@ -297,9 +310,10 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
             view.basis = 'xy'
             self.model.activeView = view
             self.model.makePlot()
-            image_data = self.model.create_tally_image(view)
-            tally_data[k] = image_data[0][::-1]
 
+            if export_tally_data:
+                image_data = self.model.create_tally_image(view)
+                tally_data[k] = image_data[0][::-1]
             if export_cells:
                 cells[k] = self.model.cell_ids[::-1]
             if export_materials:
@@ -318,11 +332,12 @@ class ExportTallyDataDialog(QtWidgets.QDialog):
         vtk_image.SetSpacing(dx, dy, dz)
         vtk_image.SetOrigin(llc)
 
-        # assign tally data to double array
-        vtk_data = vtk.vtkDoubleArray()
-        vtk_data.SetName(self.dataLabelField.text())
-        vtk_data.SetArray(tally_data, tally_data.size, True)
-        vtk_image.GetCellData().AddArray(vtk_data)
+        if export_tally_data:
+            # assign tally data to double array
+            vtk_data = vtk.vtkDoubleArray()
+            vtk_data.SetName(self.dataLabelField.text())
+            vtk_data.SetArray(tally_data, tally_data.size, True)
+            vtk_image.GetCellData().AddArray(vtk_data)
 
         if export_cells:
             cell_data = vtk.vtkIntArray()
