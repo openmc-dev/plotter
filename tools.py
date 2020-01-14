@@ -375,7 +375,7 @@ class ExportDataDialog(QtWidgets.QDialog):
         progressBar.setValue(res[2])
 
         msg = QtWidgets.QMessageBox()
-        msg.setText("Tally Export Complete!")
+         msg.setText("Export complete!")
         msg.setIcon(QtWidgets.QMessageBox.Information)
         msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
         msg.exec_()
