@@ -244,6 +244,9 @@ class PlotModel():
 
         self.properties[self.properties < 0.0] = np.nan
 
+        self.temperatures = self.properties[..., _PROPERTY_INDICES['temperature']]
+        self.densities = self.properties[..., _PROPERTY_INDICES['density']]
+
         minmax = {}
         for prop in _MODEL_PROPERTIES:
             idx = _PROPERTY_INDICES[prop]
@@ -760,6 +763,36 @@ class PlotView(openmc.lib.plot._PlotBase):
         else:
             return self.data_minmax[property]
 
+    @property
+    def llc(self):
+        if self.basis == 'xy':
+            x = self.origin[0] - self.width / 2.0
+            y = self.origin[1] - self.height / 2.0
+            z = self.origin[2]
+        elif self.basis == 'yz':
+            x = self.origin[0]
+            y = self.origin[1] - self.width / 2.0
+            z = self.origin[2] - self.height / 2.0
+        else:
+            x = self.origin[0] - self.width / 2.0
+            y = self.origin[1]
+            z = self.origin[2] - self.height / 2.0
+        return x, y, z
+    @property
+    def urc(self):
+        if self.basis == 'xy':
+            x = self.origin[0] + self.width / 2.0
+            y = self.origin[1] + self.height / 2.0
+            z = self.origin[2]
+        elif self.basis == 'yz':
+            x = self.origin[0]
+            y = self.origin[1] + self.width / 2.0
+            z = self.origin[2] + self.height / 2.0
+        else:
+            x = self.origin[0] + self.width / 2.0
+            y = self.origin[1]
+            z = self.origin[2] + height / 2.0
+        return x, y, z
 
     def adopt_plotbase(self, view):
         """

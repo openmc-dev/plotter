@@ -28,7 +28,7 @@ from plotmodel import PlotModel, DomainTableModel
 from plotgui import PlotImage, ColorDialog
 from docks import DomainDock, TallyDock
 from overlays import ShortcutsOverlay
-from tools import ExportTallyDataDialog
+from tools import ExportDataDialog
 
 
 def _openmcReload():
@@ -85,7 +85,7 @@ class MainWindow(QMainWindow):
         self.colorDialog.hide()
 
         # Tools
-        self.exportDataDialog = ExportTallyDataDialog(self.model, font_metric, self)
+        self.exportDataDialog = ExportDataDialog(self.model, font_metric, self)
 
         # Restore Window Settings
         self.restoreWindowSettings()
@@ -170,9 +170,9 @@ class MainWindow(QMainWindow):
         self.quitAction.setStatusTip('Quit OpenMC Plot Explorer')
         self.quitAction.triggered.connect(self.close)
 
-        self.exportDataAction = QAction('E&xport Tally Data...', self)
-        self.exportDataAction.setToolTip('Export current tally data to VTK')
-        self.setStatusTip('Export current tallly data to VTK')
+        self.exportDataAction = QAction('E&xport...', self)
+        self.exportDataAction.setToolTip('Export model and tally data VTK')
+        self.setStatusTip('Export current model and tally data to VTK')
         self.exportDataAction.triggered.connect(self.exportTallyData)
         if not _HAVE_VTK:
             self.exportDataAction.setEnabled(False)
@@ -1154,7 +1154,6 @@ class MainWindow(QMainWindow):
             if self.model.statepoint:
                 self.model.statepoint.close()
             pickle.dump(self.model, file)
-
 
     def exportTallyData(self):
         # show export tool dialog
