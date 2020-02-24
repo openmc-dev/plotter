@@ -1,17 +1,12 @@
-#!/usr/bin/env python3
-
 import copy
 from functools import partial
 import os
-from pathlib import Path
 import pickle
-import signal
-import sys
 from threading import Thread
 
 from PySide2 import QtCore, QtGui
 from PySide2.QtGui import QKeyEvent
-from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
+from PySide2.QtWidgets import (QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMessageBox, QAction,
                                QFileDialog, QColorDialog, QInputDialog,
                                QSplashScreen, QWidget, QGestureEvent)

@@ -6,7 +6,7 @@ kwargs = {
     'packages': ['openmc_plotter'],
     'entry_points': {
         'console_scripts': [
-            'openmc-plotter=openmc_plotter.plotter:main'
+            'openmc-plotter=openmc_plotter.__main__:main'
         ]
     },
 
