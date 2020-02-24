@@ -11,4 +11,5 @@ def test_window(qtbot):
 
     mw = MainWindow()
     mw.loadGui()
+    mw.plotIm.figure.savefig("test.png")
     qtbot.addWidget(mw)
