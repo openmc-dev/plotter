@@ -6,10 +6,10 @@ from threading import Thread
 
 from PySide2 import QtCore, QtGui
 from PySide2.QtGui import QKeyEvent
-from PySide2.QtWidgets import (QLabel, QSizePolicy, QMainWindow,
-                               QScrollArea, QMessageBox, QAction,
-                               QFileDialog, QColorDialog, QInputDialog,
-                               QSplashScreen, QWidget, QGestureEvent)
+from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
+                               QScrollArea, QMessageBox, QAction, QFileDialog,
+                               QColorDialog, QInputDialog, QWidget,
+                               QGestureEvent)
 
 import openmc
 import openmc.lib
@@ -37,7 +37,7 @@ def _openmcReload():
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, font=QtGui.QFont(), screen_size=QtCore.QSize()):
+    def __init__(self, font=QtGui.QFontMetrics(QtGui.QFont()), screen_size=QtCore.QSize()):
         super().__init__()
 
         self.screen = screen_size
@@ -451,7 +451,7 @@ class MainWindow(QMainWindow):
             loader_thread.start()
             while loader_thread.is_alive():
                 self.statusBar().showMessage("Reloading model...")
-#                app.processEvents()
+                QApplication.processEvents()
 
             self.plotIm.model = self.model
             self.applyChanges()
