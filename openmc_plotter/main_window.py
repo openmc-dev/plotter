@@ -41,7 +41,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.screen = screen_size
-        self.font = font
+        self.font_metric = font
         self.setWindowTitle('OpenMC Plot Explorer')
 
     def loadGui(self):
@@ -67,22 +67,22 @@ class MainWindow(QMainWindow):
         self.frame.setWidget(self.plotIm)
 
         # Dock
-        self.dock = DomainDock(self.model, self.font, self)
+        self.dock = DomainDock(self.model, self.font_metric, self)
         self.dock.setObjectName("Domain Options Dock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
 
         # Tally Dock
-        self.tallyDock = TallyDock(self.model, self.font, self)
+        self.tallyDock = TallyDock(self.model, self.font_metric, self)
         self.tallyDock.update()
         self.tallyDock.setObjectName("Tally Options Dock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.tallyDock)
 
         # Color DialogtallyDock
-        self.colorDialog = ColorDialog(self.model, self.font, self)
+        self.colorDialog = ColorDialog(self.model, self.font_metric, self)
         self.colorDialog.hide()
 
         # Tools
-        self.exportDataDialog = ExportDataDialog(self.model, self.font, self)
+        self.exportDataDialog = ExportDataDialog(self.model, self.font_metric, self)
 
         # Restore Window Settings
         self.restoreWindowSettings()
