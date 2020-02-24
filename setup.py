@@ -11,9 +11,9 @@ kwargs = {
     },
 
     # Metadata
-    'author': 'Patrick Shriwise',
-    'author_email': 'pshriwise@anl.gov',
-    'description': 'Plotting tool for OpenMC',
+    'author': 'OpenMC Development Team',
+    'author_email': 'openmc-users@googlegroups.com',
+    'description': 'Plotting tool for OpenMC models and tally data',
     'url': 'https://github.com/openmc-dev/plotter',
     'download_url': 'https://github.com/openmc-dev/plotter',
     'project_urls': {
@@ -25,7 +25,6 @@ kwargs = {
         'Intended Audience :: Developers',
         'Intended Audience :: End Users/Desktop',
         'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Topic :: Scientific/Engineering'
         'Programming Language :: Python :: 3',
@@ -37,7 +36,7 @@ kwargs = {
     # Dependencies
     'python_requires': '>=3.6',
     'install_requires': [
-        'numpy', 'h5py', 'prompt_toolkit',
+        'openmc>=0.11.0', 'numpy', 'matplotlib', 'PySide2'
     ],
 }
 
