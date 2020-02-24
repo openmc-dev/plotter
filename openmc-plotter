@@ -15,6 +15,7 @@ from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMessageBox, QAction,
                                QFileDialog, QColorDialog, QInputDialog,
                                QSplashScreen, QWidget, QGestureEvent)
+
 import openmc
 import openmc.lib
 
@@ -41,9 +42,11 @@ def _openmcReload():
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, font=QtGui.QFont(), screen_size=QtCore.QSize()):
         super().__init__()
 
+        self.screen = screen_size
+        self.font = font
         self.setWindowTitle('OpenMC Plot Explorer')
 
     def loadGui(self):
@@ -68,24 +71,23 @@ class MainWindow(QMainWindow):
         self.plotIm = PlotImage(self.model, self.frame, self)
         self.frame.setWidget(self.plotIm)
 
-        font_metric = QtGui.QFontMetricsF(app.font())
         # Dock
-        self.dock = DomainDock(self.model, font_metric, self)
+        self.dock = DomainDock(self.model, self.font, self)
         self.dock.setObjectName("Domain Options Dock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
 
         # Tally Dock
-        self.tallyDock = TallyDock(self.model, font_metric, self)
+        self.tallyDock = TallyDock(self.model, self.font, self)
         self.tallyDock.update()
         self.tallyDock.setObjectName("Tally Options Dock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.tallyDock)
 
         # Color DialogtallyDock
-        self.colorDialog = ColorDialog(self.model, font_metric, self)
+        self.colorDialog = ColorDialog(self.model, self.font, self)
         self.colorDialog.hide()
 
         # Tools
-        self.exportDataDialog = ExportDataDialog(self.model, font_metric, self)
+        self.exportDataDialog = ExportDataDialog(self.model, self.font, self)
 
         # Restore Window Settings
         self.restoreWindowSettings()
@@ -436,7 +438,6 @@ class MainWindow(QMainWindow):
         self.mainWindowAction.setChecked(self.isActiveWindow())
 
     # Menu and shared methods
-
     def loadModel(self, reload=False):
         if reload:
             self.resetModels()
@@ -455,7 +456,7 @@ class MainWindow(QMainWindow):
             loader_thread.start()
             while loader_thread.is_alive():
                 self.statusBar().showMessage("Reloading model...")
-                app.processEvents()
+#                app.processEvents()
 
             self.plotIm.model = self.model
             self.applyChanges()
@@ -1088,7 +1089,6 @@ class MainWindow(QMainWindow):
         self.zBasis = 3 - (self.xBasis + self.yBasis)
 
     def adjustWindow(self):
-        self.screen = app.primaryScreen().size()
         self.setMaximumSize(self.screen.width(), self.screen.height())
 
     def onRatioChange(self):
@@ -1192,7 +1192,9 @@ if __name__ == '__main__':
                        QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
     app.processEvents()
 
-    mainWindow = MainWindow()
+    font_metric = QtGui.QFontMetricsF(app.font())
+    screen_size = app.primaryScreen().size()
+    mainWindow = MainWindow(font_metric, screen_size)
     # connect splashscreen to main window, close when main window opens
     mainWindow.loadGui()
     mainWindow.show()
