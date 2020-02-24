@@ -34,10 +34,13 @@ kwargs = {
     ],
 
     # Dependencies
-    'python_requires': '>=3.6',
+    'python_requires': '>=3.5',
     'install_requires': [
         'openmc>=0.11.0', 'numpy', 'matplotlib', 'PySide2'
     ],
+    'extras_require': {
+        'vtk' : ['vtk']
+    },
 }
 
 setup(**kwargs)
