@@ -1,2 +1,2 @@
 [build-system]
-requires = ["setuptools", "wheel", "PySide2", "openmc"]
+requires = ["setuptools", "wheel", "PySide2"]

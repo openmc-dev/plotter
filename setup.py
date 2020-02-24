@@ -3,10 +3,10 @@ from setuptools import setup
 kwargs = {
     'name': 'openmc-plotter',
     'version': '0.1.0',
-    'packages': ['openmc-plotter'],
+    'packages': ['openmc_plotter'],
     'entry_points': {
         'console_scripts': [
-            'openmc-plotter = openmc-plotter.__main__:main'
+            'openmc-plotter=openmc_plotter.plotter:main'
         ]
     },
 

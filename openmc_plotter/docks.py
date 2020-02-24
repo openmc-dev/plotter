@@ -12,10 +12,10 @@ from matplotlib import cm as mcolormaps
 import numpy as np
 import openmc
 
-from custom_widgets import HorizontalLine, Expander
-from scientific_spin_box import ScientificDoubleSpinBox
-from plotmodel import (_SCORE_UNITS, _TALLY_VALUES,
-                       _REACTION_UNITS, _SPATIAL_FILTERS)
+from .custom_widgets import HorizontalLine, Expander
+from .scientific_spin_box import ScientificDoubleSpinBox
+from .plotmodel import (_SCORE_UNITS, _TALLY_VALUES,
+                        _REACTION_UNITS, _SPATIAL_FILTERS)
 
 
 class PlotterDock(QDockWidget):

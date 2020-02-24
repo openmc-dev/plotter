@@ -25,11 +25,11 @@ try:
 except ImportError:
     _HAVE_VTK = False
 
-from plotmodel import PlotModel, DomainTableModel
-from plotgui import PlotImage, ColorDialog
-from docks import DomainDock, TallyDock
-from overlays import ShortcutsOverlay
-from tools import ExportDataDialog
+from .plotmodel import PlotModel, DomainTableModel
+from .plotgui import PlotImage, ColorDialog
+from .docks import DomainDock, TallyDock
+from .overlays import ShortcutsOverlay
+from .tools import ExportDataDialog
 
 
 def _openmcReload():
@@ -1159,10 +1159,9 @@ class MainWindow(QMainWindow):
         # show export tool dialog
         self.showExportDialog()
 
-if __name__ == '__main__':
-
-    path_icon = str(Path(__file__).parent / 'assets/openmc_logo.png')
-    path_splash = str(Path(__file__).parent / 'assets/splash.png')
+def main():
+    path_icon = str(Path(__file__).parent.parent / 'assets/openmc_logo.png')
+    path_splash = str(Path(__file__).parent.parent / 'assets/splash.png')
 
     app = QApplication(sys.argv)
     app.setOrganizationName("OpenMC")
@@ -1209,3 +1208,6 @@ if __name__ == '__main__':
     timer.timeout.connect(lambda: None)
 
     sys.exit(app.exec_())
+
+if __name__ == '__main__':
+    main()
