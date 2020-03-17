@@ -11,7 +11,8 @@ def setup_regression_test(request):
         yield
     finally:
         # some cleanup
-        if Path("./plot_settings.pkl").exists():
-            os.remove("plot_settings.pkl")
+        plot_settings = Path('plot_settings.pkl')
+        if plot_settings.exists():
+            plot_settings.unlink()
 
         olddir.chdir()
