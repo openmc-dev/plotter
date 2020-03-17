@@ -1,0 +1,47 @@
+from setuptools import setup
+
+kwargs = {
+    'name': 'openmc-plotter',
+    'version': '0.1.0',
+    'packages': ['openmc_plotter'],
+    'entry_points': {
+        'console_scripts': [
+            'openmc-plotter=openmc_plotter.__main__:main'
+        ]
+    },
+
+    # Metadata
+    'author': 'OpenMC Development Team',
+    'author_email': 'openmc-users@googlegroups.com',
+    'description': 'Plotting tool for OpenMC models and tally data',
+    'url': 'https://github.com/openmc-dev/plotter',
+    'download_url': 'https://github.com/openmc-dev/plotter',
+    'project_urls': {
+        'Issue Tracker': 'https://github.com/openmc-dev/plotter/issues',
+        'Source Code': 'https://github.com/openmc-dev/plotter',
+    },
+    'classifiers': [
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Developers',
+        'Intended Audience :: End Users/Desktop',
+        'Intended Audience :: Science/Research',
+        'Natural Language :: English',
+        'Topic :: Scientific/Engineering'
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+    ],
+
+    # Dependencies
+    'python_requires': '>=3.5',
+    'install_requires': [
+        'openmc>=0.11.0', 'numpy', 'matplotlib', 'PySide2'
+    ],
+    'extras_require': {
+        'test' : ['pytest', 'pytest-qt'],
+        'vtk' : ['vtk']
+    },
+}
+
+setup(**kwargs)

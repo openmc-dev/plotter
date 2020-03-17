@@ -1,20 +1,16 @@
-#!/usr/bin/env python3
-
 import copy
 from functools import partial
 import os
-from pathlib import Path
 import pickle
-import signal
-import sys
 from threading import Thread
 
 from PySide2 import QtCore, QtGui
 from PySide2.QtGui import QKeyEvent
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
-                               QScrollArea, QMessageBox, QAction,
-                               QFileDialog, QColorDialog, QInputDialog,
-                               QSplashScreen, QWidget, QGestureEvent)
+                               QScrollArea, QMessageBox, QAction, QFileDialog,
+                               QColorDialog, QInputDialog, QWidget,
+                               QGestureEvent)
+
 import openmc
 import openmc.lib
 
@@ -24,11 +20,11 @@ try:
 except ImportError:
     _HAVE_VTK = False
 
-from plotmodel import PlotModel, DomainTableModel
-from plotgui import PlotImage, ColorDialog
-from docks import DomainDock, TallyDock
-from overlays import ShortcutsOverlay
-from tools import ExportDataDialog
+from .plotmodel import PlotModel, DomainTableModel
+from .plotgui import PlotImage, ColorDialog
+from .docks import DomainDock, TallyDock
+from .overlays import ShortcutsOverlay
+from .tools import ExportDataDialog
 
 
 def _openmcReload():
@@ -41,9 +37,11 @@ def _openmcReload():
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, font=QtGui.QFontMetrics(QtGui.QFont()), screen_size=QtCore.QSize()):
         super().__init__()
 
+        self.screen = screen_size
+        self.font_metric = font
         self.setWindowTitle('OpenMC Plot Explorer')
 
     def loadGui(self):
@@ -68,24 +66,23 @@ class MainWindow(QMainWindow):
         self.plotIm = PlotImage(self.model, self.frame, self)
         self.frame.setWidget(self.plotIm)
 
-        font_metric = QtGui.QFontMetricsF(app.font())
         # Dock
-        self.dock = DomainDock(self.model, font_metric, self)
+        self.dock = DomainDock(self.model, self.font_metric, self)
         self.dock.setObjectName("Domain Options Dock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
 
         # Tally Dock
-        self.tallyDock = TallyDock(self.model, font_metric, self)
+        self.tallyDock = TallyDock(self.model, self.font_metric, self)
         self.tallyDock.update()
         self.tallyDock.setObjectName("Tally Options Dock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.tallyDock)
 
         # Color DialogtallyDock
-        self.colorDialog = ColorDialog(self.model, font_metric, self)
+        self.colorDialog = ColorDialog(self.model, self.font_metric, self)
         self.colorDialog.hide()
 
         # Tools
-        self.exportDataDialog = ExportDataDialog(self.model, font_metric, self)
+        self.exportDataDialog = ExportDataDialog(self.model, self.font_metric, self)
 
         # Restore Window Settings
         self.restoreWindowSettings()
@@ -436,7 +433,6 @@ class MainWindow(QMainWindow):
         self.mainWindowAction.setChecked(self.isActiveWindow())
 
     # Menu and shared methods
-
     def loadModel(self, reload=False):
         if reload:
             self.resetModels()
@@ -455,7 +451,7 @@ class MainWindow(QMainWindow):
             loader_thread.start()
             while loader_thread.is_alive():
                 self.statusBar().showMessage("Reloading model...")
-                app.processEvents()
+                QApplication.processEvents()
 
             self.plotIm.model = self.model
             self.applyChanges()
@@ -1088,7 +1084,6 @@ class MainWindow(QMainWindow):
         self.zBasis = 3 - (self.xBasis + self.yBasis)
 
     def adjustWindow(self):
-        self.screen = app.primaryScreen().size()
         self.setMaximumSize(self.screen.width(), self.screen.height())
 
     def onRatioChange(self):
@@ -1158,52 +1153,3 @@ class MainWindow(QMainWindow):
     def exportTallyData(self):
         # show export tool dialog
         self.showExportDialog()
-
-if __name__ == '__main__':
-
-    path_icon = str(Path(__file__).parent / 'assets/openmc_logo.png')
-    path_splash = str(Path(__file__).parent / 'assets/splash.png')
-
-    app = QApplication(sys.argv)
-    app.setOrganizationName("OpenMC")
-    app.setOrganizationDomain("openmc.org")
-    app.setApplicationName("OpenMC Plot Explorer")
-    app.setWindowIcon(QtGui.QIcon(path_icon))
-    app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, True)
-
-    splash_pix = QtGui.QPixmap(path_splash)
-    splash = QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)
-    splash.setMask(splash_pix.mask())
-    splash.show()
-    app.processEvents()
-    splash.setMask(splash_pix.mask())
-    splash.showMessage("Loading Model...",
-                       QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
-    app.processEvents()
-    # load OpenMC model on another thread
-    loader_thread = Thread(target=_openmcReload)
-    loader_thread.start()
-    # while thread is working, process app events
-    while loader_thread.is_alive():
-        app.processEvents()
-
-    splash.clearMessage()
-    splash.showMessage("Starting GUI...",
-                       QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
-    app.processEvents()
-
-    mainWindow = MainWindow()
-    # connect splashscreen to main window, close when main window opens
-    mainWindow.loadGui()
-    mainWindow.show()
-    splash.close()
-
-    # connect interrupt signal to close call
-    signal.signal(signal.SIGINT, lambda *args: mainWindow.close())
-    # create timer that interrupts the Qt event loop
-    # to check for a signal
-    timer = QtCore.QTimer()
-    timer.start(500)
-    timer.timeout.connect(lambda: None)
-
-    sys.exit(app.exec_())

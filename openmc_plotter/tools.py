@@ -5,8 +5,8 @@ import numpy as np
 import openmc
 from PySide2 import QtCore, QtGui, QtWidgets
 
-from custom_widgets import HorizontalLine
-from scientific_spin_box import ScientificDoubleSpinBox
+from .custom_widgets import HorizontalLine
+from .scientific_spin_box import ScientificDoubleSpinBox
 
 class ExportDataDialog(QtWidgets.QDialog):
     """

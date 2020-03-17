@@ -13,11 +13,11 @@ from matplotlib import cm as mcolormaps
 from matplotlib.colors import SymLogNorm
 import numpy as np
 
-from plot_colors import rgb_normalize, invert_rgb
-from plotmodel import DomainDelegate
-from plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
-from scientific_spin_box import ScientificDoubleSpinBox
-from custom_widgets import HorizontalLine
+from .plot_colors import rgb_normalize, invert_rgb
+from .plotmodel import DomainDelegate
+from .plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
+from .scientific_spin_box import ScientificDoubleSpinBox
+from .custom_widgets import HorizontalLine
 
 if is_pyqt5():
     from matplotlib.backends.backend_qt5agg import FigureCanvas

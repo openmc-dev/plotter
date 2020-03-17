@@ -11,8 +11,8 @@ import openmc
 import openmc.lib
 import numpy as np
 
-from statepointmodel import StatePointModel
-from plot_colors import random_rgb, reset_seed
+from .statepointmodel import StatePointModel
+from .plot_colors import random_rgb, reset_seed
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = tuple(range(0, 6))
 
