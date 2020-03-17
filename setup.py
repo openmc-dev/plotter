@@ -39,6 +39,7 @@ kwargs = {
         'openmc>=0.11.0', 'numpy', 'matplotlib', 'PySide2'
     ],
     'extras_require': {
+        'test' : ['pytest', 'pytest-qt'],
         'vtk' : ['vtk']
     },
 }
