@@ -11,8 +11,8 @@ from PySide2.QtWidgets import QApplication, QSplashScreen
 from .main_window import MainWindow, _openmcReload
 
 def main():
-    path_icon = str(Path(__file__).parent.parent / 'assets/openmc_logo.png')
-    path_splash = str(Path(__file__).parent.parent / 'assets/splash.png')
+    path_icon = str(Path(__file__).parent / 'assets/openmc_logo.png')
+    path_splash = str(Path(__file__).parent / 'assets/splash.png')
 
     app = QApplication(sys.argv)
     app.setOrganizationName("OpenMC")
