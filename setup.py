@@ -4,6 +4,7 @@ kwargs = {
     'name': 'openmc-plotter',
     'version': '0.1.0',
     'packages': ['openmc_plotter'],
+    'package_data': {'openmc_plotter' : ['assets/*.png']},
     'entry_points': {
         'console_scripts': [
             'openmc-plotter=openmc_plotter.__main__:main'
