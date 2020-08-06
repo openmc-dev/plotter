@@ -29,7 +29,7 @@ From a directory containing a working OpenMC model run:
 openmc-plotter
 ```
 
-Press `?` to view a variety of keyboard shortcuts.
+Once the viewer has opened, press `?` to view a variety of keyboard shortcuts.
 
 # Controls/Functionality
 
