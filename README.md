@@ -11,15 +11,25 @@ repository](https://github.com/landonjmitchell/openmc-plotgui)).
 
 OpenMC, Matplotlib, NumPy, PySide2
 
+## Installation
+
+This package is most easily installed by running
+
+```console
+pip install .
+```
+
+from the top directory in the repository.
+
 ## Usage
 
 From a directory containing a working OpenMC model run:
 
 ```console
-python /path/to/openmc-plotter
+openmc-plotter
 ```
 
-Press `?` to view a variety of keyboard shortcuts.
+Once the viewer has opened, press `?` to view a variety of keyboard shortcuts.
 
 # Controls/Functionality
 
