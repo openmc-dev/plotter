@@ -133,7 +133,7 @@ class DomainDock(PlotterDock):
         # Height
         self.heightBox = QDoubleSpinBox(self)
         self.heightBox.setRange(.1, 99999)
-        self.widthBox.setDecimals(9)
+        self.heightBox.setDecimals(9)
         self.heightBox.valueChanged.connect(self.main_window.editHeight)
 
         # ColorBy
