@@ -19,7 +19,7 @@ from .plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
 from .scientific_spin_box import ScientificDoubleSpinBox
 from .custom_widgets import HorizontalLine
 
-if is_pyqt5():
+if QtCore.qVersion():
     from matplotlib.backends.backend_qt5agg import FigureCanvas
 else:
     from matplotlib.backends.backend_qt5agg import FigureCanvas
