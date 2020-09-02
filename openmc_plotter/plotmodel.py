@@ -96,6 +96,7 @@ class PlotModel():
         # Retrieve OpenMC Cells/Materials
         self.modelCells = openmc.lib.cells
         self.modelMaterials = openmc.lib.materials
+        self.max_universe_levels = openmc.lib._coord_levels()
 
         # Cell/Material ID by coordinates
         self.ids = None
@@ -170,7 +171,9 @@ class PlotModel():
         else:
             zcenter = 0.00
 
-        default = PlotView([xcenter, ycenter, zcenter], width, height)
+        level = self.max_universe_levels
+
+        default = PlotView([xcenter, ycenter, zcenter], width, height, level)
         return default
 
     def resetColors(self):
@@ -653,13 +656,13 @@ class PlotView(openmc.lib.plot._PlotBase):
         Label of the currently selected tally
     """
 
-    def __init__(self, origin, width, height):
+    def __init__(self, origin, width, height, level):
         """ Initialize PlotView attributes """
 
         super().__init__()
 
         # View Parameters
-        self.level = -1
+        self.level = level
         self.origin = origin
         self.width = width
         self.height = height
@@ -791,7 +794,7 @@ class PlotView(openmc.lib.plot._PlotBase):
         else:
             x = self.origin[0] + self.width / 2.0
             y = self.origin[1]
-            z = self.origin[2] + height / 2.0
+            z = self.origin[2] + self.height / 2.0
         return x, y, z
 
     def adopt_plotbase(self, view):

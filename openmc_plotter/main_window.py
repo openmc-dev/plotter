@@ -26,6 +26,7 @@ from .docks import DomainDock, TallyDock
 from .overlays import ShortcutsOverlay
 from .tools import ExportDataDialog
 
+_COORD_LEVELS = 0
 
 def _openmcReload():
     # reset OpenMC memory, instances
@@ -34,7 +35,6 @@ def _openmcReload():
     # initialize geometry (for volume calculation)
     openmc.lib.settings.output_summary = False
     openmc.lib.init(["-c"])
-
 
 class MainWindow(QMainWindow):
     def __init__(self, font=QtGui.QFontMetrics(QtGui.QFont()), screen_size=QtCore.QSize()):
@@ -624,6 +624,15 @@ class MainWindow(QMainWindow):
         self.model.activeView.colorby = domain_kind
         self.dock.updateColorBy()
         self.colorDialog.updateColorBy()
+        if apply:
+            self.applyChanges()
+
+    def editUniverseLevel(self, level, apply=False):
+        if level == 'lowest':
+            self.model.activeView.level = -1
+        else:
+            self.model.activeView.level = int(level)
+        self.dock.updateUniverseLevel()
         if apply:
             self.applyChanges()
 
