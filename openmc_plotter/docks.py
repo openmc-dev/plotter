@@ -238,6 +238,7 @@ class DomainDock(PlotterDock):
         self.updateWidth()
         self.updateHeight()
         self.updateColorBy()
+        self.updateUniverseLevel()
         self.updatePlotAlpha()
         self.updatePlotVisibility()
         self.updateOutlines()

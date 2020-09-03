@@ -979,6 +979,7 @@ class ColorDialog(QDialog):
         self.updateSeed()
         self.updateBackgroundColor()
         self.updateColorBy()
+        self.updateUniverseLevel()
         self.updateDomainTabs()
         self.updateOverlap()
         self.updateOverlapColor()
@@ -1059,7 +1060,10 @@ class ColorDialog(QDialog):
 
     def updateUniverseLevel(self):
         level = self.model.activeView.level
-        self.universeLevelBox.setCurrentText(level)
+        if level == -1:
+            self.universeLevelBox.setCurrentText('all')
+        else:
+            self.universeLevelBox.setCurrentText(str(level))
 
     def updateDomainTabs(self):
         self.cellTable.setModel(self.main_window.cellsModel)
