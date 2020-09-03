@@ -776,6 +776,13 @@ class ColorDialog(QDialog):
         self.colorbyBox.addItem("cell")
         self.colorbyBox.addItem("temperature")
         self.colorbyBox.addItem("density")
+        self.colorbyBox.currentTextChanged[str].connect(main_window.editColorBy)
+
+        self.universeLevelBox = QComboBox(self)
+        self.universeLevelBox.addItem('all')
+        for i in range(self.model.max_universe_levels):
+            self.universeLevelBox.addItem(str(i))
+        self.universeLevelBox.currentTextChanged[str].connect(main_window.editUniverseLevel)
 
         # Overlap plotting
         self.overlapCheck = QCheckBox('', self)
@@ -787,8 +794,6 @@ class ColorDialog(QDialog):
         self.overlapColorButton.setFixedWidth(self.font_metric.width("XXXXXXXXXX"))
         self.overlapColorButton.setFixedHeight(self.font_metric.height() * 1.5)
         self.overlapColorButton.clicked.connect(main_window.editOverlapColor)
-
-        self.colorbyBox.currentTextChanged[str].connect(main_window.editColorBy)
 
         self.colorResetButton = QPushButton("&Reset Colors")
         self.colorResetButton.setCursor(QtCore.Qt.PointingHandCursor)
@@ -813,6 +818,7 @@ class ColorDialog(QDialog):
         formLayout.addRow('OVerlap Color:', self.overlapColorButton)
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Color Plot By:', self.colorbyBox)
+        formLayout.addRow('Universe Level:', self.universeLevelBox)
         formLayout.addRow(self.colorResetButton, None)
 
         generalLayout = QHBoxLayout()
@@ -1049,6 +1055,11 @@ class ColorDialog(QDialog):
         colorby = self.model.activeView.colorby
         self.colorbyBox.setCurrentText(colorby)
         self.overlapCheck.setEnabled(colorby in ("cell", "material"))
+        self.universeLevelBox.setEnabled(colorby == 'cell')
+
+    def updateUniverseLevel(self):
+        level = self.model.activeView.level
+        self.universeLevelBox.setCurrentText(level)
 
     def updateDomainTabs(self):
         self.cellTable.setModel(self.main_window.cellsModel)

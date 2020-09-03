@@ -628,11 +628,12 @@ class MainWindow(QMainWindow):
             self.applyChanges()
 
     def editUniverseLevel(self, level, apply=False):
-        if level == 'lowest':
+        if level == 'all':
             self.model.activeView.level = -1
         else:
             self.model.activeView.level = int(level)
         self.dock.updateUniverseLevel()
+        self.colorDialog.updateUniverseLevel()
         if apply:
             self.applyChanges()
 
