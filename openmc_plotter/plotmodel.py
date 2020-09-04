@@ -171,9 +171,7 @@ class PlotModel():
         else:
             zcenter = 0.00
 
-        level = self.max_universe_levels
-
-        default = PlotView([xcenter, ycenter, zcenter], width, height, level)
+        default = PlotView([xcenter, ycenter, zcenter], width, height)
         return default
 
     def resetColors(self):
@@ -656,13 +654,13 @@ class PlotView(openmc.lib.plot._PlotBase):
         Label of the currently selected tally
     """
 
-    def __init__(self, origin, width, height, level):
+    def __init__(self, origin, width, height):
         """ Initialize PlotView attributes """
 
         super().__init__()
 
         # View Parameters
-        self.level = level
+        self.level = -1
         self.origin = origin
         self.width = width
         self.height = height
