@@ -145,6 +145,14 @@ class DomainDock(PlotterDock):
         self.colorbyBox.currentTextChanged[str].connect(
             self.main_window.editColorBy)
 
+        # Universe level (applies to cell coloring only)
+        self.universeLevelBox = QComboBox(self)
+        self.universeLevelBox.addItem('all')
+        for i in range(self.model.max_universe_levels):
+            self.universeLevelBox.addItem(str(i))
+        self.universeLevelBox.currentTextChanged[str].connect(
+            self.main_window.editUniverseLevel)
+
         # Alpha
         self.domainAlphaBox = QDoubleSpinBox(self)
         self.domainAlphaBox.setValue(self.model.activeView.domainAlpha)
@@ -180,6 +188,7 @@ class DomainDock(PlotterDock):
         self.opLayout.addRow('Height:', self.heightBox)
         self.opLayout.addRow('Basis:', self.basisBox)
         self.opLayout.addRow('Color By:', self.colorbyBox)
+        self.opLayout.addRow('Universe Level:', self.universeLevelBox)
         self.opLayout.addRow('Plot alpha:', self.domainAlphaBox)
         self.opLayout.addRow('Visible:', self.visibilityBox)
         self.opLayout.addRow('Outlines:', self.outlinesBox)
@@ -229,6 +238,7 @@ class DomainDock(PlotterDock):
         self.updateWidth()
         self.updateHeight()
         self.updateColorBy()
+        self.updateUniverseLevel()
         self.updatePlotAlpha()
         self.updatePlotVisibility()
         self.updateOutlines()
@@ -250,6 +260,13 @@ class DomainDock(PlotterDock):
 
     def updateColorBy(self):
         self.colorbyBox.setCurrentText(self.model.activeView.colorby)
+        if self.model.activeView.colorby != 'cell':
+            self.universeLevelBox.setEnabled(False)
+        else:
+            self.universeLevelBox.setEnabled(True)
+
+    def updateUniverseLevel(self):
+        self.universeLevelBox.setCurrentIndex(self.model.activeView.level + 1)
 
     def updatePlotAlpha(self):
         self.domainAlphaBox.setValue(self.model.activeView.domainAlpha)
