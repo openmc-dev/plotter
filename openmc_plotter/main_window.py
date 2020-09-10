@@ -521,7 +521,7 @@ class MainWindow(QMainWindow):
             except (FileNotFoundError, OSError):
                 message = 'Error opening statepoint file: {}'
                 msg_box = QMessageBox()
-                msg = "Could open statepoint file: \n\n {} \n"
+                msg = "Could not open statepoint file: \n\n {} \n"
                 msg_box.setText(msg.format(filename))
                 msg_box.setIcon(QMessageBox.Warning)
                 msg_box.setStandardButtons(QMessageBox.Ok)
@@ -628,7 +628,7 @@ class MainWindow(QMainWindow):
             self.applyChanges()
 
     def editUniverseLevel(self, level, apply=False):
-        if level == 'all':
+        if level in ('all', ''):
             self.model.activeView.level = -1
         else:
             self.model.activeView.level = int(level)
@@ -1047,7 +1047,7 @@ class MainWindow(QMainWindow):
                 self.model.statepoint = model.statepoint
             except OSError:
                 msg_box = QMessageBox()
-                msg = "Could open statepoint file: \n\n {} \n"
+                msg = "Could not open statepoint file: \n\n {} \n"
                 msg_box.setText(msg.format(self.model.statepoint.filename))
                 msg_box.setIcon(QMessageBox.Warning)
                 msg_box.setStandardButtons(QMessageBox.Ok)

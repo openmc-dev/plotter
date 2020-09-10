@@ -328,14 +328,14 @@ class PlotModel():
                                                              scores,
                                                              nuclides,
                                                              view)
-                image_data = np.divide(std_dev_data[0],
-                                       mean_data[0],
-                                       out=np.zeros_like(mean_data[0]),
-                                       where=mean_data != 0)
+                image_data = 100 * np.divide(std_dev_data[0],
+                                             mean_data[0],
+                                             out=np.zeros_like(mean_data[0]),
+                                             where=mean_data != 0)
                 extents = mean_data[1]
                 data_min = np.min(image_data)
                 data_max = np.max(image_data)
-                return image_data, extents, data_min, data_max, units_out
+                return image_data, extents, data_min, data_max, '% error'
 
             else:
                 image = self._create_tally_mesh_image(tally,
@@ -353,15 +353,15 @@ class PlotModel():
                                                             scores,
                                                             nuclides,
                                                             view)
-                dev_data = self._create_tally_domain_image(tally,
+                std_dev_data = self._create_tally_domain_image(tally,
                                                            'std_dev',
                                                            scores,
                                                            nuclides,
                                                            view)
-                image_data = np.divide(std_dev_data[0],
-                                       mean_data[0],
-                                       out=np.zeros_like(mean_data[0]),
-                                       where=mean_data != 0)
+                image_data = 100 * np.divide(std_dev_data[0],
+                                             mean_data[0],
+                                             out=np.zeros_like(mean_data[0]),
+                                             where=mean_data != 0)
                 # adjust for NaNs in bins without tallies
                 image_data = np.nan_to_num(image_data,
                                            nan=0.0,
@@ -370,7 +370,7 @@ class PlotModel():
                 extents = mean_data[1]
                 data_min = np.min(image_data)
                 data_max = np.max(image_data)
-                return image_data, extents, data_min, data_max, units_out
+                return image_data, extents, data_min, data_max, '% error'
             else:
                 image = self._create_tally_domain_image(tally,
                                                         tally_value,
@@ -383,7 +383,6 @@ class PlotModel():
         # data resources used throughout
         if view is None:
             view = self.currentView
-        sp = self.statepoint
 
         data = tally.get_reshaped_data(tally_value)
         data_out = np.full(self.ids.shape, -1.0)
