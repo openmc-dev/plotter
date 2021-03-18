@@ -1,3 +1,5 @@
+[![PyPI](https://img.shields.io/pypi/v/openmc-plotter?color=brightgreen&label=pypi&logo=grebrightgreenen&logoColor=green)](https://pypi.org/project/openmc-plotter/)
+
 # OpenMC Plot Explorer
 
 ## Description
