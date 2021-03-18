@@ -3,7 +3,7 @@
 # push to the master branch occures. For more information see:
 # https://help.github.com/en/actions/language-and-framework-guides/using-python-with-github-actions#publishing-to-package-registries
 
-name: Upload Python Package
+name: Upload Test Python Package
 
 on:
   push:
