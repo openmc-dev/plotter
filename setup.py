@@ -27,7 +27,7 @@ kwargs = {
         'Intended Audience :: End Users/Desktop',
         'Intended Audience :: Science/Research',
         'Natural Language :: English',
-        'Topic :: Scientific/Engineering'
+        'Topic :: Scientific/Engineering',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
