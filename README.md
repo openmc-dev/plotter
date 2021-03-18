@@ -16,7 +16,7 @@ OpenMC, Matplotlib, NumPy, PySide2
 This package is most easily installed by running
 
 ```console
-pip install .
+pip install openmc-plotter
 ```
 
 from the top directory in the repository.
