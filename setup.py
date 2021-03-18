@@ -2,7 +2,7 @@ from setuptools import setup
 
 kwargs = {
     'name': 'openmc-plotter',
-    'version': '0.1.0',
+    'version': '0.1.1',
     'packages': ['openmc_plotter'],
     'package_data': {'openmc_plotter' : ['assets/*.png']},
     'entry_points': {
