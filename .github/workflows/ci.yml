@@ -19,24 +19,24 @@ env:
 
 jobs:
   ci:
+    runs-on: ubuntu-latest
     container: openmc/openmc:v0.12.1
-
-  steps:
-    -
-      name: Apt dependencies
-      shell: bash
-      run: sudo apt install -y libgl1-mesa
-    -
-      uses: actions/checkout@v2
-    -
-      name: Install
-      shell: bash
-      run: |
-        cd ${GITHUB_WORKSPACE}
-        pip install .[test]
-    -
-      name: Test
-      shell: bash
-      run: |
-        cd ${GITHUB_WORKSPACE}
-        pytest -v tests
+    steps:
+      - 
+        name: Apt dependencies
+        shell: bash
+        run: sudo apt install -y libgl1-mesa
+      -
+        uses: actions/checkout@v2
+      -
+        name: Install
+        shell: bash
+        run: |
+          cd ${GITHUB_WORKSPACE}
+          pip install .[test]
+      -
+        name: Test
+        shell: bash
+        run: |
+          cd ${GITHUB_WORKSPACE}
+          pytest -v tests
