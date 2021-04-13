@@ -20,7 +20,7 @@ env:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    container: openmc/openmc:v0.12.1
+    container: openmc/openmc:develop
     steps:
       -
         name: Apt dependencies
