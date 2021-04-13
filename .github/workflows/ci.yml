@@ -7,11 +7,11 @@ on:
   pull_request:
     branches:
       - develop
-      - main
+      - master
   push:
     branches:
       - develop
-      - main
+      - master
 
 env:
   OMP_NUM_THREADS: 2
