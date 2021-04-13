@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  # allows us to run workflows manually
+  workflow_dispatch:
+
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - develop
+      - main
+
+env:
+  OMP_NUM_THREADS: 2
+  QT_QPA_PLATFORM: offscreen
+
+jobs:
+  ci:
+    container: openmc/openmc:v0.12.1
+
+  steps:
+    -
+      name: Apt dependencies
+      shell: bash
+      run: sudo apt install -y libgl1-mesa
+    -
+      uses: actions/checkout@v2
+    -
+      name: Install
+      shell: bash
+      run: |
+        cd ${GITHUB_WORKSPACE}
+        pip install .[test]
+    -
+      name: Test
+      shell: bash
+      run: |
+        cd ${GITHUB_WORKSPACE}
+        pytest -v tests
