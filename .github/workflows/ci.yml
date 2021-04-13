@@ -25,7 +25,9 @@ jobs:
       -
         name: Apt dependencies
         shell: bash
-        run: apt install -y libgl1-mesa
+        run: |
+          apt update
+          apt install -y libgl1-mesa
       -
         uses: actions/checkout@v2
       -
