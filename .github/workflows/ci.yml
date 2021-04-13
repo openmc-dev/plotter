@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: |
           apt update
-          apt install -y libgl1-mesa
+          apt install -y libglu1-mesa
       -
         uses: actions/checkout@v2
       -
