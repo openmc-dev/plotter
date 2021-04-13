@@ -22,10 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     container: openmc/openmc:v0.12.1
     steps:
-      - 
+      -
         name: Apt dependencies
         shell: bash
-        run: sudo apt install -y libgl1-mesa
+        run: apt install -y libgl1-mesa
       -
         uses: actions/checkout@v2
       -
