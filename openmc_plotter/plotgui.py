@@ -736,9 +736,10 @@ class ColorDialog(QDialog):
         self.maskingCheck = QCheckBox('')
         self.maskingCheck.stateChanged.connect(main_window.toggleMasking)
 
+        button_width = self.font_metric.boundingRect("XXXXXXXXXX").width()
         self.maskColorButton = QPushButton()
         self.maskColorButton.setCursor(QtCore.Qt.PointingHandCursor)
-        self.maskColorButton.setFixedWidth(self.font_metric.width("XXXXXXXXXX"))
+        self.maskColorButton.setFixedWidth(button_width)
         self.maskColorButton.setFixedHeight(self.font_metric.height() * 1.5)
         self.maskColorButton.clicked.connect(main_window.editMaskingColor)
 
@@ -748,7 +749,7 @@ class ColorDialog(QDialog):
 
         self.hlColorButton = QPushButton()
         self.hlColorButton.setCursor(QtCore.Qt.PointingHandCursor)
-        self.hlColorButton.setFixedWidth(self.font_metric.width("XXXXXXXXXX"))
+        self.hlColorButton.setFixedWidth(button_width)
         self.hlColorButton.setFixedHeight(self.font_metric.height() * 1.5)
         self.hlColorButton.clicked.connect(main_window.editHighlightColor)
 
@@ -764,7 +765,7 @@ class ColorDialog(QDialog):
         # General options
         self.bgButton = QPushButton()
         self.bgButton.setCursor(QtCore.Qt.PointingHandCursor)
-        self.bgButton.setFixedWidth(self.font_metric.width("XXXXXXXXXX"))
+        self.bgButton.setFixedWidth(button_width)
         self.bgButton.setFixedHeight(self.font_metric.height() * 1.5)
         self.bgButton.clicked.connect(main_window.editBackgroundColor)
 
@@ -788,7 +789,7 @@ class ColorDialog(QDialog):
 
         self.overlapColorButton = QPushButton()
         self.overlapColorButton.setCursor(QtCore.Qt.PointingHandCursor)
-        self.overlapColorButton.setFixedWidth(self.font_metric.width("XXXXXXXXXX"))
+        self.overlapColorButton.setFixedWidth(button_width)
         self.overlapColorButton.setFixedHeight(self.font_metric.height() * 1.5)
         self.overlapColorButton.clicked.connect(main_window.editOverlapColor)
 
@@ -812,7 +813,7 @@ class ColorDialog(QDialog):
         formLayout.addRow('Background Color:          ', self.bgButton)
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Show Overlaps:', self.overlapCheck)
-        formLayout.addRow('OVerlap Color:', self.overlapColorButton)
+        formLayout.addRow('Overlap Color:', self.overlapColorButton)
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Color Plot By:', self.colorbyBox)
         formLayout.addRow('Universe Level:', self.universeLevelBox)

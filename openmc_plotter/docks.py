@@ -336,7 +336,7 @@ class TallyDock(PlotterDock):
         self.tallyGroupBox.setLayout(self.tallySelectorLayout)
 
         # Create submit button
-        self.applyButton = QPushButton("ApplyChanges")
+        self.applyButton = QPushButton("Apply Changes")
         self.applyButton.setMinimumHeight(self.font_metric.height() * 1.6)
         self.applyButton.clicked.connect(self.main_window.applyChanges)
 
