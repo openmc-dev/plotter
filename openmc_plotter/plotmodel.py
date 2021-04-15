@@ -4,7 +4,7 @@ import itertools
 import threading
 from ast import literal_eval
 
-from PySide2.QtWidgets import QItemDelegate, QColorDialog, QLineEdit
+from PySide2.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
 from PySide2.QtGui import QColor
 import openmc
