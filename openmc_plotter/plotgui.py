@@ -813,7 +813,7 @@ class ColorDialog(QDialog):
         formLayout.addRow('Background Color:          ', self.bgButton)
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Show Overlaps:', self.overlapCheck)
-        formLayout.addRow('OVerlap Color:', self.overlapColorButton)
+        formLayout.addRow('Overlap Color:', self.overlapColorButton)
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Color Plot By:', self.colorbyBox)
         formLayout.addRow('Universe Level:', self.universeLevelBox)
