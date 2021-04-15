@@ -21,7 +21,6 @@ This package is most easily installed by running
 pip install openmc-plotter
 ```
 
-from the top directory in the repository.
 
 ## Usage
 
