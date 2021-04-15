@@ -1,3 +1,5 @@
+[![PyPI](https://img.shields.io/pypi/v/openmc-plotter?color=brightgreen&label=pypi&logo=grebrightgreenen&logoColor=green)](https://pypi.org/project/openmc-plotter/)
+
 # OpenMC Plot Explorer
 
 ## Description
@@ -16,10 +18,9 @@ OpenMC, Matplotlib, NumPy, PySide2
 This package is most easily installed by running
 
 ```console
-pip install .
+pip install openmc-plotter
 ```
 
-from the top directory in the repository.
 
 ## Usage
 
