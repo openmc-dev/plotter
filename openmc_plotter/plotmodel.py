@@ -984,13 +984,13 @@ class DomainDelegate(QItemDelegate):
         column = index.column()
 
         if column == ID:
-            return QSize(fm.width("XXXXXX"), fm.height())
+            return QSize(fm.boundingRect("XXXXXX").width(), fm.height())
         elif column == COLOR:
-            return QSize(fm.width("XXXXXX"), fm.height())
+            return QSize(fm.boundingRect("XXXXXX").width(), fm.height())
         elif column == COLORLABEL:
-            return QSize(fm.width("X(XXX, XXX, XXX)X"), fm.height())
+            return QSize(fm.boundingRect("X(XXX, XXX, XXX)X").width(), fm.height())
         elif column == MASK:
-            return QSize(fm.width("XXXX"), fm.height())
+            return QSize(fm.boundingRect("XXXX").width(), fm.height())
         else:
             return QItemDelegate.sizeHint(self, option, index)
 
