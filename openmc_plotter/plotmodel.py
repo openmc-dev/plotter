@@ -471,7 +471,8 @@ class PlotModel():
             cv = self.currentView
 
         sp = self.statepoint
-        mesh = tally.find_filter(openmc.MeshFilter).mesh
+        mesh_filter = tally.find_filter(openmc.MeshFilter)
+        mesh = mesh_filter.mesh
 
         def _do_op(array, tally_value, ax=0):
             if tally_value == 'mean':
@@ -496,8 +497,16 @@ class PlotModel():
             v_ind = 2
             ax = 1
 
+        # adjust corners of the mesh for a translation
+        # applied to the mesh filter
+        lower_left = mesh.lower_left
+        upper_right = mesh.upper_right
+        if hasattr(mesh_filter, 'translation') and mesh_filter.translation is not None:
+            lower_left += mesh_filter.translation
+            upper_right += mesh_filter.translation
+
         # reduce data to the visible slice of the mesh values
-        k = int((view.origin[ax] - mesh.lower_left[ax]) // mesh.width[ax])
+        k = int((view.origin[ax] - lower_left[ax]) // mesh.width[ax])
 
         # setup slice
         data_slice = [None, None, None]
@@ -559,8 +568,9 @@ class PlotModel():
         image_data = data[::-1, ...]
 
         # return data extents (in cm) for the tally
-        extents = [mesh.lower_left[h_ind], mesh.upper_right[h_ind],
-                   mesh.lower_left[v_ind], mesh.upper_right[v_ind]]
+        extents = [lower_left[h_ind], upper_right[h_ind],
+                   lower_left[v_ind], upper_right[v_ind]]
+        print(extents)
 
         return image_data, extents, data_min, data_max
 
