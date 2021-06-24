@@ -570,7 +570,6 @@ class PlotModel():
         # return data extents (in cm) for the tally
         extents = [lower_left[h_ind], upper_right[h_ind],
                    lower_left[v_ind], upper_right[v_ind]]
-        print(extents)
 
         return image_data, extents, data_min, data_max
 
