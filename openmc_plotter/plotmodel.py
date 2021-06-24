@@ -100,6 +100,7 @@ class PlotModel():
 
         # Cell/Material ID by coordinates
         self.ids = None
+        self.instances = None
 
         self.version = __VERSION__
 
@@ -198,7 +199,8 @@ class PlotModel():
         props = openmc.lib.property_map(cv)
 
         self.cell_ids = ids[:, :, 0]
-        self.mat_ids = ids[:, :, 1]
+        self.instances = ids[:, :, 1]
+        self.mat_ids = ids[:, :, 2]
 
         # set model ids based on domain
         if cv.colorby == 'cell':

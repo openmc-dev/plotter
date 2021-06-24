@@ -183,11 +183,13 @@ class PlotImage(FigureCanvas):
         # check that the position is in the axes view
         if 0 <= yPos < self.model.currentView.v_res \
            and 0 <= xPos and xPos < self.model.currentView.h_res:
-            id = self.model.ids[yPos][xPos]
-            temp = "{:g}".format(self.model.properties[yPos][xPos][0])
-            density = "{:g}".format(self.model.properties[yPos][xPos][1])
+            id = self.model.ids[yPos, xPos]
+            instance = self.model.instances[yPos, xPos]
+            temp = "{:g}".format(self.model.properties[yPos, xPos, 0])
+            density = "{:g}".format(self.model.properties[yPos, xPos, 1])
         else:
             id = _NOT_FOUND
+            instance = _NOT_FOUND
             density = str(_NOT_FOUND)
             temp = str(_NOT_FOUND)
 
@@ -207,7 +209,7 @@ class PlotImage(FigureCanvas):
         properties = {'density': density,
                       'temperature': temp}
 
-        return id, properties, domain, domain_kind
+        return id, instance, properties, domain, domain_kind
 
     def mouseDoubleClickEvent(self, event):
         xCenter, yCenter = self.getPlotCoords(event.pos())
@@ -219,7 +221,7 @@ class PlotImage(FigureCanvas):
         xPlotPos, yPlotPos = self.getPlotCoords(event.pos())
 
         # Show Cell/Material ID, Name in status bar
-        id, properties, domain, domain_kind = self.getIDinfo(event)
+        id, instance, properties, domain, domain_kind = self.getIDinfo(event)
 
         domainInfo = ""
         tallyInfo = ""
@@ -235,21 +237,29 @@ class PlotImage(FigureCanvas):
             temperature = properties['temperature']
             density = properties['density']
 
+            if instance != _NOT_FOUND and domain_kind == 'Cell':
+                instanceInfo = f" ({instance})"
+            else:
+                instanceInfo = ""
             if id == _VOID_REGION:
                 domainInfo = ("VOID")
             elif id == _OVERLAP:
                 domainInfo = ("OVERLAP")
             elif id != _NOT_FOUND and domain[id].name:
-                domainInfo = ("{} {}: \"{}\"\t Density: {} g/cc\t"
-                              "Temperature: {} K".format(domain_kind,
-                                                         id,
-                                                         domain[id].name,
-                                                         density,
-                                                         temperature))
+                domainInfo = ("{} {}{}: \"{}\"\t Density: {} g/cc\t"
+                              "Temperature: {} K".format(
+                                  domain_kind,
+                                  id,
+                                  instanceInfo,
+                                  domain[id].name,
+                                  density,
+                                  temperature
+                             ))
             elif id != _NOT_FOUND:
-                domainInfo = ("{} {}\t Density: {} g/cc\t"
+                domainInfo = ("{} {}{}\t Density: {} g/cc\t"
                               "Temperature: {} K".format(domain_kind,
                                                          id,
+                                                         instanceInfo,
                                                          density,
                                                          temperature))
             else:
@@ -328,7 +338,7 @@ class PlotImage(FigureCanvas):
         self.main_window.undoAction.setText('&Undo ({})'.format(len(self.model.previousViews)))
         self.main_window.redoAction.setText('&Redo ({})'.format(len(self.model.subsequentViews)))
 
-        id, properties, domain, domain_kind = self.getIDinfo(event)
+        id, instance, properties, domain, domain_kind = self.getIDinfo(event)
 
         cv = self.model.currentView
 
