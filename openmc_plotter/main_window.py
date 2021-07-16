@@ -190,8 +190,13 @@ class MainWindow(QMainWindow):
         self.openStatePointAction.setToolTip('Open statepoint file')
         self.openStatePointAction.triggered.connect(self.openStatePoint)
 
+        self.importPropertiesAction = QAction("&Import properties...", self)
+        self.importPropertiesAction.setToolTip("Import properties")
+        self.importPropertiesAction.triggered.connect(self.importProperties)
+
         self.dataMenu = self.mainMenu.addMenu('D&ata')
         self.dataMenu.addAction(self.openStatePointAction)
+        self.dataMenu.addAction(self.importPropertiesAction)
         self.updateDataMenu()
 
         # Edit Menu
@@ -530,6 +535,28 @@ class MainWindow(QMainWindow):
                 self.statusBar().showMessage(message.format(filename), 5000)
             self.updateDataMenu()
             self.tallyDock.update()
+
+    def importProperties(self):
+        filename, ext = QFileDialog.getOpenFileName(self, "Import properties",
+                                                    ".", "*.h5")
+        if not filename:
+            return
+
+        try:
+            openmc.lib.import_properties(filename)
+            message = 'Imported properties: {}'
+        except (FileNotFoundError, OSError, openmc.lib.exc.OpenMCError) as e:
+            message = 'Error opening properties file: {}'
+            msg_box = QMessageBox()
+            msg_box.setText(f"Error opening properties file: \n\n {e} \n")
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.exec_()
+        finally:
+            self.statusBar().showMessage(message.format(filename), 5000)
+
+        if self.model.activeView.colorby == 'temperature':
+            self.applyChanges()
 
     def closeStatePoint(self):
         # remove the statepoint object and update the data menu
