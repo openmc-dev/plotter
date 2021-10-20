@@ -1,5 +1,3 @@
-import openmc.lib
-
 from openmc_plotter.main_window import MainWindow, _openmcReload
 
 def test_window(qtbot):
