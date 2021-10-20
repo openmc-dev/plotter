@@ -412,7 +412,12 @@ class TallyDock(PlotterDock):
                 else:
                     return bin
 
-            for bin in sorted(tally_filter.bins, key=_bin_sort_val):
+            if isinstance(tally_filter, openmc.EnergyFunctionFilter):
+                bins = [0]
+            else:
+                bins = tally_filter.bins
+
+            for bin in sorted(bins, key=_bin_sort_val):
                 item = QTreeWidgetItem(filter_item, [str(bin),])
                 if not spatial_filters:
                     item.setFlags(QtCore.Qt.ItemIsUserCheckable)
@@ -577,7 +582,11 @@ class TallyDock(PlotterDock):
             filter_checked = f_item.checkState(0)
             if filter_checked != QtCore.Qt.Unchecked:
                 selected_bins = []
-                for idx, b in enumerate(f.bins):
+                if isinstance(f, openmc.EnergyFunctionFilter):
+                    bins = [0]
+                else:
+                    bins = f.bins
+                for idx, b in enumerate(bins):
                     b = b if not isinstance(b, Iterable) else tuple(b)
                     bin_checked = self.bin_map[(f, b)].checkState(0)
                     if bin_checked == QtCore.Qt.Checked:
