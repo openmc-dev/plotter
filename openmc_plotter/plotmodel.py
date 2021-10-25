@@ -1,8 +1,8 @@
+from ast import literal_eval
 from collections import defaultdict
 import copy
 import itertools
 import threading
-from ast import literal_eval
 
 from PySide2.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
@@ -503,20 +503,29 @@ class PlotModel():
         # applied to the mesh filter
         lower_left = mesh.lower_left
         upper_right = mesh.upper_right
+        width = mesh.width
+        dimension = mesh.dimension
         if hasattr(mesh_filter, 'translation') and mesh_filter.translation is not None:
             lower_left += mesh_filter.translation
             upper_right += mesh_filter.translation
 
+        # For 2D meshes, add an extra z dimension
+        if len(mesh.dimension) == 2:
+            lower_left = np.hstack((lower_left, -1e50))
+            upper_right = np.hstack((upper_right, 1e50))
+            width = np.hstack((width, 2e50))
+            dimension = np.hstack((dimension, 1))
+
         # reduce data to the visible slice of the mesh values
-        k = int((view.origin[ax] - lower_left[ax]) // mesh.width[ax])
+        k = int((view.origin[ax] - lower_left[ax]) // width[ax])
 
         # setup slice
         data_slice = [None, None, None]
-        data_slice[h_ind] = slice(mesh.dimension[h_ind])
-        data_slice[v_ind] = slice(mesh.dimension[v_ind])
+        data_slice[h_ind] = slice(dimension[h_ind])
+        data_slice[v_ind] = slice(dimension[v_ind])
         data_slice[ax] = k
 
-        if k < 0 or k > mesh.dimension[ax]:
+        if k < 0 or k > dimension[ax]:
             return (None, None, None, None)
 
         # move mesh axes to the end of the filters
@@ -524,7 +533,7 @@ class PlotModel():
         data = np.moveaxis(data, filter_idx, -1)
 
         # reshape data (with zyx ordering for mesh data)
-        data = data.reshape(data.shape[:-1] + tuple(mesh.dimension[::-1]))
+        data = data.reshape(data.shape[:-1] + tuple(dimension[::-1]))
         data = data[..., data_slice[2], data_slice[1], data_slice[0]]
 
         # sum over the rest of the tally filters
