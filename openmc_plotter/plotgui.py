@@ -6,7 +6,6 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QDoubleSpinBox, QSizePolicy, QMessageBox,
                                QCheckBox, QRubberBand, QMenu, QDialog,
                                QTabWidget, QTableView, QHeaderView)
-from matplotlib.backends.qt_compat import is_pyqt5
 from matplotlib.figure import Figure
 from matplotlib import lines as mlines
 from matplotlib import cm as mcolormaps
