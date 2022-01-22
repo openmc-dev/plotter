@@ -4,10 +4,14 @@
 
 ## Description
 
-A graphical interface for visualizing and manipulating OpenMC plot slices.
+A graphical interface for visualizing and navigating OpenMC models.
 
 Originally created by @landonjmitchell at the University of Chicago ([original
 repository](https://github.com/landonjmitchell/openmc-plotgui)).
+
+![beavrs](./screenshots/beavrs.png)
+
+![beavrs_zoom](./screenshots/beavrs_zoomed.png)
 
 ## Dependencies
 
@@ -21,10 +25,9 @@ This package is most easily installed by running
 pip install openmc-plotter
 ```
 
-
 ## Usage
 
-From a directory containing a working OpenMC model run:
+From a directory containing an OpenMC model run:
 
 ```console
 openmc-plotter
@@ -32,7 +35,47 @@ openmc-plotter
 
 Once the viewer has opened, press `?` to view a variety of keyboard shortcuts.
 
-# Controls/Functionality
+![shortcuts](./screenshots/shortcuts.png)
+
+## Features
+
+### Tally Visualization
+
+The plotter also provides the ability to view tallies with spatial filters (mesh
+filter, cell filter, etc.). After loading a statepoint file from the "Edit"
+menu, tallies can be displayed on top of the geometry.
+
+![tally](./screenshots/pincell_tally.png)
+
+Filters, scores, and nuclides on the tally can be enabled/disabled to isolate data.
+
+### Color Manipulation
+
+Cell and material colors can be customized in the color dialog menu. Overlap
+coloring can be enabled as well to debug problems in the geometry definition.
+
+![colors](./screenshots/color_dialog.png)
+
+### DAGMC Geometry Visualization
+
+The plotter can also present the CAD-based tesellation geometry enabled by the
+[Direct Accelerated Geometry Monte Carlo](https://svalinn.github.io/DAGMC/)
+(DAGMC) toolkit. Below is the cross section of a tokamake model generated using [paramak](https://paramak.readthedocs.io/en/main/):
+
+![dagmc](./screenshots/dagmc.png)
+
+As well as a DAGMC model of the Advanced Test Reactor (ATR):
+
+![atr](./screenshots/atr.png)
+
+### Saving and Exporting
+
+  - Any image displayed in the plotter can be saved in any format supported by the
+user's Matplotlib installation.
+
+  - Tally and geometry data (material/cell IDs) can be exported to a VTK file under "File->Export"
+
+# Options/Functionality
 
 ## Menu Bar:
 
