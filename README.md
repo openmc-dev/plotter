@@ -4,7 +4,7 @@
 
 ## Description
 
-A graphical interface for visualizing and navitaging OpenMC models.
+A graphical interface for visualizing and navigating OpenMC models.
 
 Originally created by @landonjmitchell at the University of Chicago ([original
 repository](https://github.com/landonjmitchell/openmc-plotgui)).
