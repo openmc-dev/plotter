@@ -31,12 +31,6 @@ jobs:
       -
         uses: actions/checkout@v2
       -
-        name: Install OpenMC Python API
-        shell: bash
-        run: |
-          cd /root/OpenMC/openmc
-          pip install .[test]
-      -
         name: Install
         shell: bash
         run: |
