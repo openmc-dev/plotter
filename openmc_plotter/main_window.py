@@ -585,6 +585,8 @@ class MainWindow(QMainWindow):
         if self.model.activeView != self.model.currentView:
             self.statusBar().showMessage('Generating Plot...')
             QApplication.processEvents()
+            if self.model.activeView.selectedTally is not None:
+                self.tallyDock.updateModel()
             self.model.storeCurrent()
             self.model.subsequentViews = []
             self.plotIm.generatePixmap()
@@ -900,12 +902,6 @@ class MainWindow(QMainWindow):
     def editTallyValue(self, event):
         av = self.model.activeView
         av.tallyValue = event
-
-    def updateScores(self, state):
-        self.tallyDock.updateScores()
-
-    def updateNuclides(self, state):
-        self.tallyDock.updateNuclides()
 
     def toggleTallyVisibility(self, state, apply=False):
         av = self.model.activeView
