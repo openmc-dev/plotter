@@ -589,7 +589,7 @@ class TallyDock(PlotterDock):
                     for i in range(f_item.childCount()):
                         bin_item = f_item.child(i)
                         bin_item.setCheckState(0, QtCore.Qt.Checked)
-                    applied_filters[f] = tuple(i for i in range(f_item.childCount()))
+                    applied_filters[f] = tuple(range(f_item.childCount()))
             elif filter_checked == QtCore.Qt.PartiallyChecked:
                 selected_bins = []
                 if isinstance(f, openmc.EnergyFunctionFilter):
