@@ -541,8 +541,8 @@ class PlotModel():
             if type(tally_filter) == openmc.MeshFilter:
                 continue
 
-            if tally_filter in self.appliedFilters:
-                selected_bins = self.appliedFilters[tally_filter]
+            selected_bins = self.appliedFilters[tally_filter]
+            if selected_bins:
                 # sum filter data for the selected bins
                 data = data[np.array(selected_bins)].sum(axis=0)
             else:

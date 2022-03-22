@@ -381,7 +381,6 @@ class TallyDock(PlotterDock):
         self.filterTree.setHeaderItem(header)
         self.filterTree.setItemHidden(header, True)
         self.filterTree.setColumnCount(1)
-        self.filterTree.itemChanged.connect(self.updateFilters)
 
         self.filter_map = {}
         self.bin_map = {}
@@ -489,8 +488,6 @@ class TallyDock(PlotterDock):
 
             # scores
             self.score_map = {}
-            self.scoresListWidget.itemClicked.connect(
-                self.main_window.updateScores)
             self.score_map.clear()
             self.scoresListWidget.clear()
 
@@ -525,7 +522,6 @@ class TallyDock(PlotterDock):
 
             # nuclides
             self.nuclide_map = {}
-            self.nuclidesListWidget.itemClicked.connect(self.main_window.updateNuclides)
             self.nuclide_map.clear()
             self.nuclidesListWidget.clear()
 
@@ -574,13 +570,27 @@ class TallyDock(PlotterDock):
         self.tallySelector.setCurrentIndex(idx)
 
     def updateFilters(self):
+        # if the filters header is checked, uncheck all bins and return
         applied_filters = defaultdict(tuple)
         for f, f_item in self.filter_map.items():
             if type(f) == openmc.MeshFilter:
                 continue
 
             filter_checked = f_item.checkState(0)
-            if filter_checked != QtCore.Qt.Unchecked:
+            if filter_checked == QtCore.Qt.Unchecked:
+                for i in range(f_item.childCount()):
+                    bin_item = f_item.child(i)
+                    bin_item.setCheckState(0, QtCore.Qt.Unchecked)
+                applied_filters[f] = tuple()
+            elif filter_checked == QtCore.Qt.Checked:
+                if isinstance(f, openmc.EnergyFunctionFilter):
+                    bins = [0]
+                else:
+                    for i in range(f_item.childCount()):
+                        bin_item = f_item.child(i)
+                        bin_item.setCheckState(0, QtCore.Qt.Checked)
+                    applied_filters[f] = tuple(range(f_item.childCount()))
+            elif filter_checked == QtCore.Qt.PartiallyChecked:
                 selected_bins = []
                 if isinstance(f, openmc.EnergyFunctionFilter):
                     bins = [0]
@@ -593,7 +603,7 @@ class TallyDock(PlotterDock):
                         selected_bins.append(idx)
                 applied_filters[f] = tuple(selected_bins)
 
-            self.model.appliedFilters = applied_filters
+        self.model.appliedFilters = applied_filters
 
     def updateScores(self):
         applied_scores = []
@@ -648,6 +658,11 @@ class TallyDock(PlotterDock):
                 empty_item = QListWidgetItem()
                 nuclide_box.setFlags(empty_item.flags() | QtCore.Qt.ItemIsUserCheckable)
                 nuclide_box.setFlags(empty_item.flags() & ~QtCore.Qt.ItemIsSelectable)
+
+    def updateModel(self):
+        self.updateFilters()
+        self.updateScores()
+        self.updateNuclides()
 
     def update(self):
 
