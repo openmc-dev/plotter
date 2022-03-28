@@ -30,8 +30,16 @@ pip install openmc-plotter
 From a directory containing an OpenMC model run:
 
 ```console
-openmc-plotter
+$ openmc-plotter -d <path_to_openmc_model_dir>
 ```
+
+or simply run
+
+```console
+$ openmc-plotter
+```
+
+from the directory containing the model.
 
 Once the viewer has opened, press `?` to view a variety of keyboard shortcuts.
 
