@@ -22,6 +22,9 @@ def main():
     if args.model_directory is not None:
         os.chdir(args.model_directory)
 
+    run_app()
+
+
 def run_app():
     path_icon = str(Path(__file__).parent / 'assets/openmc_logo.png')
     path_splash = str(Path(__file__).parent / 'assets/splash.png')
