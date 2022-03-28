@@ -14,13 +14,12 @@ from .main_window import MainWindow, _openmcReload
 
 def main():
     ap = ArgumentParser(description='OpenMC Plotter GUI')
-    ap.add_argument('-d','--model-directory', default=None,
+    ap.add_argument('-d', '--model-directory', default=os.curdir,
                     help='Location of model dir (default is current dir)')
 
     args = ap.parse_args()
 
-    if args.model_directory is not None:
-        os.chdir(args.model_directory)
+    os.chdir(args.model_directory)
 
     run_app()
 
