@@ -35,6 +35,7 @@ def _openmcReload():
     # initialize geometry (for volume calculation)
     openmc.lib.settings.output_summary = False
     openmc.lib.init(["-c"])
+    openmc.lib.settings.verbosity = 1
 
 class MainWindow(QMainWindow):
     def __init__(self, font=QtGui.QFontMetrics(QtGui.QFont()), screen_size=QtCore.QSize()):
