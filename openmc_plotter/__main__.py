@@ -1,7 +1,9 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
+from argparse import ArgumentParser
 from pathlib import Path
 from threading import Thread
+import os
 import signal
 import sys
 
@@ -11,6 +13,16 @@ from PySide2.QtWidgets import QApplication, QSplashScreen
 from .main_window import MainWindow, _openmcReload
 
 def main():
+    ap = ArgumentParser(description='OpenMC Plotter GUI')
+    ap.add_argument('-d','--model-directory', default=None,
+                    help='Location of model dir (default is current dir)')
+
+    args = ap.parse_args()
+
+    if args.model_directory is not None:
+        os.chdir(args.model_directory)
+
+def run_app():
     path_icon = str(Path(__file__).parent / 'assets/openmc_logo.png')
     path_splash = str(Path(__file__).parent / 'assets/splash.png')
 
