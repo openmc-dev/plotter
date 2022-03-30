@@ -17,7 +17,7 @@ def main():
     ap.add_argument('-d','--model-directory', default=None,
                     help='Location of model dir (default is current dir)')
     ap.add_argument('-e','--ignore-settings', action='store_false',
-                    help='Ignore plot_settings.pkl file if flag is present.')
+                    help='Ignore plot_settings.pkl file if present.')
 
     args = ap.parse_args()
 
