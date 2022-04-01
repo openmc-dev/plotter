@@ -16,15 +16,17 @@ def main():
     ap = ArgumentParser(description='OpenMC Plotter GUI')
     ap.add_argument('-d', '--model-directory', default=os.curdir,
                     help='Location of model dir (default is current dir)')
+    ap.add_argument('-e','--ignore-settings', action='store_false',
+                    help='Ignore plot_settings.pkl file if present.')
 
     args = ap.parse_args()
 
     os.chdir(args.model_directory)
 
-    run_app()
+    run_app(use_settings_pkl=args.ignore_settings)
 
 
-def run_app():
+def run_app(use_settings_pkl=True):
     path_icon = str(Path(__file__).parent / 'assets/openmc_logo.png')
     path_splash = str(Path(__file__).parent / 'assets/splash.png')
 
@@ -60,7 +62,7 @@ def run_app():
     screen_size = app.primaryScreen().size()
     mainWindow = MainWindow(font_metric, screen_size)
     # connect splashscreen to main window, close when main window opens
-    mainWindow.loadGui()
+    mainWindow.loadGui(use_settings_pkl=use_settings_pkl)
     mainWindow.show()
     splash.close()
 

@@ -38,19 +38,21 @@ def _openmcReload():
     openmc.lib.settings.verbosity = 1
 
 class MainWindow(QMainWindow):
-    def __init__(self, font=QtGui.QFontMetrics(QtGui.QFont()), screen_size=QtCore.QSize()):
+    def __init__(self,
+                 font=QtGui.QFontMetrics(QtGui.QFont()),
+                 screen_size=QtCore.QSize()):
         super().__init__()
 
         self.screen = screen_size
         self.font_metric = font
         self.setWindowTitle('OpenMC Plot Explorer')
 
-    def loadGui(self):
+    def loadGui(self, use_settings_pkl=True):
 
         self.pixmap = None
         self.zoom = 100
 
-        self.loadModel()
+        self.loadModel(use_settings_pkl=use_settings_pkl)
 
         # Create viewing area
         self.frame = QScrollArea(self)
@@ -439,13 +441,14 @@ class MainWindow(QMainWindow):
         self.mainWindowAction.setChecked(self.isActiveWindow())
 
     # Menu and shared methods
-    def loadModel(self, reload=False):
+    def loadModel(self, reload=False, use_settings_pkl=True):
         if reload:
             self.resetModels()
         else:
             # create new plot model
             self.model = PlotModel()
-            self.restoreModelSettings()
+            if use_settings_pkl:
+                self.restoreModelSettings()
             # update plot and model settings
             self.updateRelativeBases()
 
