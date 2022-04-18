@@ -409,10 +409,6 @@ class MainWindow(QMainWindow):
         changed = self.model.currentView != self.model.defaultView
         self.restoreAction.setDisabled(not changed)
 
-        self.maskingAction.setChecked(self.model.currentView.masking)
-        self.highlightingAct.setChecked(self.model.currentView.highlighting)
-        self.outlineAct.setChecked(self.model.currentView.outlines)
-
         num_previous_views = len(self.model.previousViews)
         self.undoAction.setText('&Undo ({})'.format(num_previous_views))
         num_subsequent_views = len(self.model.subsequentViews)
