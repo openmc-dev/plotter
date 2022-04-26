@@ -33,6 +33,7 @@ _ENERGY_UNITS = 'eV per Source Particle'
 _SPATIAL_FILTERS = (openmc.UniverseFilter,
                     openmc.MaterialFilter,
                     openmc.CellFilter,
+                    openmc.DistribcellFilter,
                     openmc.MeshFilter)
 
 _PRODUCTIONS = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
@@ -280,6 +281,13 @@ class PlotModel():
         self.previousViews.append(copy.deepcopy(self.currentView))
 
     def create_tally_image(self, view=None):
+        """
+        Returns
+        -------
+        tuple : image data (numpy.ndarray), data extents (optional),
+                data_min_value (float), data_max_value (float),
+                data label (str)
+        """
         if view is None:
             view = self.currentView
 
@@ -345,6 +353,32 @@ class PlotModel():
                                                       scores,
                                                       nuclides,
                                                       view)
+                return image + (units_out,)
+        elif tally.contains_filter(openmc.DistribcellFilter):
+            if tally_value == 'rel_err':
+                mean_data = self._create_distribcell_image(tally,
+                                                           'mean',
+                                                           scores,
+                                                           nuclides,
+                                                           view)
+                std_dev_data = self._create_distribcell_image(tally,
+                                                              'std_dev',
+                                                              scores,
+                                                              nuclides,
+                                                              view)
+                image_data = 100 * np.divide(std_dev_data[0],
+                                             mean_data[0],
+                                             out=np.zeros_like(mean_data[0]),
+                                             where=mean_data != 0)
+                data_min = np.min(image_data)
+                data_max = np.max(image_data)
+                return image_data, None, data_min, data_max, '% error'
+            else:
+                image = self._create_distribcell_image(tally,
+                                                       tally_value,
+                                                       scores,
+                                                       nuclides,
+                                                       view)
                 return image + (units_out,)
         else:
             # same as above, get the std. dev. data
@@ -464,6 +498,31 @@ class PlotModel():
 
         # mask out invalid values
         image_data = np.ma.masked_where(data_out < 0.0, data_out)
+
+        return image_data, None, data_min, data_max
+
+    def _create_distribcell_image(self, tally, tally_value, scores, nuclides, view=None):
+        if view is None:
+            cv = self.currentView
+
+        sp = self.statepoint
+        dfilter = tally.find_filter(openmc.DistribcellFilter)
+
+        data = tally.get_values(scores=scores, nuclides=nuclides, value=tally_value)
+        data = data.flatten()
+
+        cell_id = dfilter.bins[0]
+        # create a mask for ids that match the cell
+        image_data = np.zeros_like(self.ids)
+
+        cell_id_mask = self.cell_ids == cell_id
+        for i, v in enumerate(data):
+            instance_mask = self.instances == i
+            image_data[np.logical_and(cell_id_mask, instance_mask)] = v
+
+        data_min = np.min(data)
+        data_max = np.max(data)
+        image_data = np.ma.masked_where(image_data < 0.0, image_data)
 
         return image_data, None, data_min, data_max
 
