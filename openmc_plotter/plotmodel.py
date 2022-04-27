@@ -282,11 +282,17 @@ class PlotModel():
 
     def create_tally_image(self, view=None):
         """
+        Parameters
+        ----------
+        view :
+            View used to set bounds of the tally data
+
         Returns
         -------
-        tuple : image data (numpy.ndarray), data extents (optional),
-                data_min_value (float), data_max_value (float),
-                data label (str)
+        tuple
+            image data (numpy.ndarray), data extents (optional),
+            data_min_value (float), data_max_value (float),
+            data label (str)
         """
         if view is None:
             view = self.currentView
@@ -387,13 +393,11 @@ class PlotModel():
                 mean_data = self._create_tally_domain_image(tally,
                                                             'mean',
                                                             scores,
-                                                            nuclides,
-                                                            view)
+                                                            nuclides)
                 std_dev_data = self._create_tally_domain_image(tally,
                                                            'std_dev',
                                                            scores,
-                                                           nuclides,
-                                                           view)
+                                                           nuclides)
                 image_data = 100 * np.divide(std_dev_data[0],
                                              mean_data[0],
                                              out=np.zeros_like(mean_data[0]),
@@ -411,8 +415,7 @@ class PlotModel():
                 image = self._create_tally_domain_image(tally,
                                                         tally_value,
                                                         scores,
-                                                        nuclides,
-                                                        view)
+                                                        nuclides)
                 return image + (units_out,)
 
     def _create_tally_domain_image(self, tally, tally_value, scores, nuclides, view=None):
@@ -501,10 +504,7 @@ class PlotModel():
 
         return image_data, None, data_min, data_max
 
-    def _create_distribcell_image(self, tally, tally_value, scores, nuclides, view=None):
-        if view is None:
-            cv = self.currentView
-
+    def _create_distribcell_image(self, tally, tally_value, scores, nuclides):
         sp = self.statepoint
         dfilter = tally.find_filter(openmc.DistribcellFilter)
 
@@ -529,7 +529,7 @@ class PlotModel():
     def _create_tally_mesh_image(self, tally, tally_value, scores, nuclides, view=None):
         # some variables used throughout
         if view is None:
-            cv = self.currentView
+            view = self.currentView
 
         sp = self.statepoint
         mesh_filter = tally.find_filter(openmc.MeshFilter)
