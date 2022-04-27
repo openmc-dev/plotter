@@ -365,13 +365,11 @@ class PlotModel():
                 mean_data = self._create_distribcell_image(tally,
                                                            'mean',
                                                            scores,
-                                                           nuclides,
-                                                           view)
+                                                           nuclides)
                 std_dev_data = self._create_distribcell_image(tally,
                                                               'std_dev',
                                                               scores,
-                                                              nuclides,
-                                                              view)
+                                                              nuclides)
                 image_data = 100 * np.divide(std_dev_data[0],
                                              mean_data[0],
                                              out=np.zeros_like(mean_data[0]),
@@ -383,8 +381,7 @@ class PlotModel():
                 image = self._create_distribcell_image(tally,
                                                        tally_value,
                                                        scores,
-                                                       nuclides,
-                                                       view)
+                                                       nuclides)
                 return image + (units_out,)
         else:
             # same as above, get the std. dev. data
@@ -512,7 +509,7 @@ class PlotModel():
 
         cell_id = dfilter.bins[0]
         # create a mask for ids that match the cell
-        image_data = np.zeros_like(self.ids)
+        image_data = np.full_like(self.ids, np.nan, dtype=float)
 
         cell_id_mask = self.cell_ids == cell_id
         for i, v in enumerate(data):
