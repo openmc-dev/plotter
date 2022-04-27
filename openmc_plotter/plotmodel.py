@@ -518,7 +518,7 @@ class PlotModel():
         cell_id_mask = self.cell_ids == cell_id
         for i, v in enumerate(data):
             instance_mask = self.instances == i
-            image_data[np.logical_and(cell_id_mask, instance_mask)] = v
+            image_data[cell_id_mask & instance_mask] = v
 
         data_min = np.min(data)
         data_max = np.max(data)
