@@ -505,7 +505,6 @@ class PlotModel():
         return image_data, None, data_min, data_max
 
     def _create_distribcell_image(self, tally, tally_value, scores, nuclides):
-        sp = self.statepoint
         dfilter = tally.find_filter(openmc.DistribcellFilter)
 
         data = tally.get_values(scores=scores, nuclides=nuclides, value=tally_value)
