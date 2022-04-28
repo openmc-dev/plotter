@@ -34,6 +34,7 @@ _SPATIAL_FILTERS = (openmc.UniverseFilter,
                     openmc.MaterialFilter,
                     openmc.CellFilter,
                     openmc.DistribcellFilter,
+                    openmc.CellInstanceFilter,
                     openmc.MeshFilter)
 
 _PRODUCTIONS = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
@@ -330,6 +331,9 @@ class PlotModel():
 
         units_out = list(units)[0]
 
+        contains_distribcell = tally.contains_filter(openmc.DistribcellFilter)
+        contains_cellinstance = tally.contains_filter(openmc.CellInstanceFilter)
+
         if tally.contains_filter(openmc.MeshFilter):
             if tally_value == 'rel_err':
                 # get both the std. dev. data and mean data
@@ -360,28 +364,23 @@ class PlotModel():
                                                       nuclides,
                                                       view)
                 return image + (units_out,)
-        elif tally.contains_filter(openmc.DistribcellFilter):
+        elif contains_distribcell or contains_cellinstance:
             if tally_value == 'rel_err':
-                mean_data = self._create_distribcell_image(tally,
-                                                           'mean',
-                                                           scores,
-                                                           nuclides)
-                std_dev_data = self._create_distribcell_image(tally,
-                                                              'std_dev',
-                                                              scores,
-                                                              nuclides)
-                image_data = 100 * np.divide(std_dev_data[0],
-                                             mean_data[0],
-                                             out=np.zeros_like(mean_data[0]),
-                                             where=mean_data != 0)
+                mean_data = self._create_distribcell_image(
+                    tally, 'mean', scores, nuclides, contains_cellinstance)
+                std_dev_data = self._create_distribcell_image(
+                    tally, 'std_dev', scores, nuclides)
+                image_data = 100 * np.divide(
+                    std_dev_data[0], mean_data[0],
+                    out=np.zeros_like(mean_data[0]),
+                    where=mean_data != 0
+                )
                 data_min = np.min(image_data)
                 data_max = np.max(image_data)
                 return image_data, None, data_min, data_max, '% error'
             else:
-                image = self._create_distribcell_image(tally,
-                                                       tally_value,
-                                                       scores,
-                                                       nuclides)
+                image = self._create_distribcell_image(
+                    tally, tally_value, scores, nuclides, contains_cellinstance)
                 return image + (units_out,)
         else:
             # same as above, get the std. dev. data
@@ -501,19 +500,27 @@ class PlotModel():
 
         return image_data, None, data_min, data_max
 
-    def _create_distribcell_image(self, tally, tally_value, scores, nuclides):
-        dfilter = tally.find_filter(openmc.DistribcellFilter)
-
+    def _create_distribcell_image(self, tally, tally_value, scores, nuclides, cellinstance=False):
+        # Get flattened array of tally results
         data = tally.get_values(scores=scores, nuclides=nuclides, value=tally_value)
         data = data.flatten()
 
-        cell_id = dfilter.bins[0]
-        # create a mask for ids that match the cell
+        # Create an empty array of appropriate shape for image
         image_data = np.full_like(self.ids, np.nan, dtype=float)
 
-        cell_id_mask = self.cell_ids == cell_id
-        for i, v in enumerate(data):
-            instance_mask = self.instances == i
+        # Determine appropriate set of bins depending on filter type
+        if cellinstance:
+            f = tally.find_filter(openmc.CellInstanceFilter)
+            bins = f.bins
+        else:
+            f = tally.find_filter(openmc.DistribcellFilter)
+            bins = [(f.bins[0], i) for i in range(data.size)]
+
+        # Iterate over tally bins, setting any pixels that have matching (cell
+        # ID, instance) each time
+        for v, (cell_id, instance) in zip(data, bins):
+            cell_id_mask = (self.cell_ids == cell_id)
+            instance_mask = (self.instances == instance)
             image_data[cell_id_mask & instance_mask] = v
 
         data_min = np.min(data)

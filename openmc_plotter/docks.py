@@ -406,8 +406,11 @@ class TallyDock(PlotterDock):
                 continue
 
             def _bin_sort_val(bin):
-                if isinstance(bin, Iterable) and all([isinstance(val, float) for val in bin]):
-                    return np.sum(bin)
+                if isinstance(bin, Iterable):
+                    if all([isinstance(val, float) for val in bin]):
+                        return np.sum(bin)
+                    else:
+                        return tuple(bin)
                 else:
                     return bin
 
