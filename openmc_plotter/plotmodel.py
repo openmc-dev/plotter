@@ -508,20 +508,25 @@ class PlotModel():
         # Create an empty array of appropriate shape for image
         image_data = np.full_like(self.ids, np.nan, dtype=float)
 
-        # Determine appropriate set of bins depending on filter type
+        # Determine mapping of cell IDs to list of (instance, tally value).
         if cellinstance:
             f = tally.find_filter(openmc.CellInstanceFilter)
-            bins = f.bins
+            cell_id_to_inst_value = defaultdict(list)
+            for value, (cell_id, instance) in zip(data, f.bins):
+                cell_id_to_inst_value[cell_id].append((instance, value))
         else:
             f = tally.find_filter(openmc.DistribcellFilter)
-            bins = [(f.bins[0], i) for i in range(data.size)]
+            cell_id_to_inst_value = {f.bins[0]: list(enumerate(data))}
 
-        # Iterate over tally bins, setting any pixels that have matching (cell
-        # ID, instance) each time
-        for v, (cell_id, instance) in zip(data, bins):
+        for cell_id, value_list in cell_id_to_inst_value.items():
+            # Get mask for each relevant cell
             cell_id_mask = (self.cell_ids == cell_id)
-            instance_mask = (self.instances == instance)
-            image_data[cell_id_mask & instance_mask] = v
+
+            # For each cell, iterate over instances and corresponding tally
+            # values and set any matching pixels
+            for instance, value in value_list:
+                instance_mask = (self.instances == instance)
+                image_data[cell_id_mask & instance_mask] = value
 
         data_min = np.min(data)
         data_max = np.max(data)
