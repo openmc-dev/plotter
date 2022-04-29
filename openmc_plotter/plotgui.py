@@ -437,6 +437,9 @@ class PlotImage(FigureCanvas):
         self.menu.exec_(event.globalPos())
 
     def generatePixmap(self, update=False):
+        if self.frozen:
+            return
+
         self.model.generatePlot()
         if update:
             self.updatePixmap()

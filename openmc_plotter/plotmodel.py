@@ -3,6 +3,7 @@ from collections import defaultdict
 import copy
 import itertools
 import threading
+import traceback
 
 from PySide2.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
@@ -184,7 +185,6 @@ class PlotModel():
 
     def generatePlot(self):
         """ Spawn thread from which to generate new plot image """
-
         t = threading.Thread(target=self.makePlot)
         t.start()
         t.join()

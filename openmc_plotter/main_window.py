@@ -67,6 +67,7 @@ class MainWindow(QMainWindow):
 
         # Create plot image
         self.plotIm = PlotImage(self.model, self.frame, self)
+        self.plotIm.frozen = True
         self.frame.setWidget(self.plotIm)
 
         # Dock
@@ -111,8 +112,10 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage('')
 
         # Timer allows GUI to render before plot finishes loading
-        QtCore.QTimer.singleShot(0, self.plotIm.generatePixmap)
+        # QtCore.QTimer.singleShot(0, self.plotIm.generatePixmap)
         QtCore.QTimer.singleShot(0, self.showCurrentView)
+
+        self.plotIm.frozen = False
 
     def event(self, event):
         # use pinch event to update zoom
