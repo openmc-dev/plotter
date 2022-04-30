@@ -112,7 +112,6 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage('')
 
         # Timer allows GUI to render before plot finishes loading
-        # QtCore.QTimer.singleShot(0, self.plotIm.generatePixmap)
         QtCore.QTimer.singleShot(0, self.showCurrentView)
 
         self.plotIm.frozen = False
