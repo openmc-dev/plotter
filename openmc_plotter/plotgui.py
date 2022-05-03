@@ -441,7 +441,7 @@ class PlotImage(FigureCanvas):
     def generatePixmap(self, update=False):
         if self.frozen:
             return
-        print('Calling gen plot')
+
         self.model.generatePlot()
         if update:
             self.updatePixmap()

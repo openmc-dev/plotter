@@ -3,7 +3,6 @@ from collections import defaultdict
 import copy
 import itertools
 import threading
-import traceback
 
 from PySide2.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
