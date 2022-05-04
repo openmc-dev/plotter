@@ -37,6 +37,8 @@ class PlotImage(FigureCanvas):
         self.main_window = main_window
         self.parent = parent
 
+        self.frozen = False
+
         self.rubber_band = QRubberBand(QRubberBand.Rectangle, self)
         self.band_origin = QtCore.QPoint()
         self.x_plot_origin = None
@@ -437,6 +439,9 @@ class PlotImage(FigureCanvas):
         self.menu.exec_(event.globalPos())
 
     def generatePixmap(self, update=False):
+        if self.frozen:
+            return
+
         self.model.generatePlot()
         if update:
             self.updatePixmap()
