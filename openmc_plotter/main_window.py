@@ -3,6 +3,7 @@ from functools import partial
 import os
 import pickle
 from threading import Thread
+import hashlib
 
 from PySide2 import QtCore, QtGui
 from PySide2.QtGui import QKeyEvent
@@ -52,7 +53,7 @@ class MainWindow(QMainWindow):
         self.pixmap = None
         self.zoom = 100
 
-        self.loadModel(use_settings_pkl=use_settings_pkl)
+        self.loadModel()
 
         # Create viewing area
         self.frame = QScrollArea(self)
@@ -115,6 +116,10 @@ class MainWindow(QMainWindow):
         QtCore.QTimer.singleShot(0, self.showCurrentView)
 
         self.plotIm.frozen = False
+
+        # restore plot settings after loading materials/cells
+        if use_settings_pkl:
+            self.restoreModelSettings()
 
     def event(self, event):
         # use pinch event to update zoom
@@ -444,15 +449,12 @@ class MainWindow(QMainWindow):
         self.mainWindowAction.setChecked(self.isActiveWindow())
 
     # Menu and shared methods
-    def loadModel(self, reload=False, use_settings_pkl=True):
+    def loadModel(self, reload=False):
         if reload:
             self.resetModels()
         else:
             # create new plot model
             self.model = PlotModel()
-            if use_settings_pkl:
-                self.restoreModelSettings()
-            # update plot and model settings
             self.updateRelativeBases()
 
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
@@ -1065,6 +1067,21 @@ class MainWindow(QMainWindow):
             with open('plot_settings.pkl', 'rb') as file:
                 model = pickle.load(file)
 
+                # check if loaded cell/mat ids hash match the pkl file:
+                current_mat_hash = hashlib.md5(
+                    pickle.dumps(self.model.mat_ids)).hexdigest()
+                current_cell_hash = hashlib.md5(
+                    pickle.dumps(self.model.cell_ids)).hexdigest()
+
+                if (current_mat_hash != model.mat_ids_hash) or \
+                    (current_cell_hash != model.cell_ids_hash):
+                    # hashes do not match so ignore plot_settings.pkl file
+                    pkl_settings_warn = "WARNING: Model has changed since " +\
+                                        "storing plot settings. Ignoring " +\
+                                        "previous plot settings."
+                    print(pkl_settings_warn)
+                    return
+
             # do not replace model if the version is out of date
             if model.version != self.model.version:
                 print("WARNING: previous plot settings are for a different "
@@ -1184,6 +1201,12 @@ class MainWindow(QMainWindow):
             self.model.previousViews = self.model.previousViews[-10:]
         if len(self.model.subsequentViews) > 10:
             self.model.subsequentViews = self.model.subsequentViews[-10:]
+
+        # get hashes for cell/mat ids at close
+        self.model.cell_ids_hash = hashlib.md5(
+            pickle.dumps(self.model.cell_ids)).hexdigest()
+        self.model.mat_ids_hash = hashlib.md5(
+            pickle.dumps(self.model.mat_ids)).hexdigest()
 
         with open('plot_settings.pkl', 'wb') as file:
             if self.model.statepoint:
