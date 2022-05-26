@@ -64,7 +64,7 @@ class MainWindow(QMainWindow):
         self.pixmap = None
         self.zoom = 100
 
-        self.loadModel()
+        self.loadModel(use_settings_pkl=use_settings_pkl)
 
         # Create viewing area
         self.frame = QScrollArea(self)
@@ -127,10 +127,6 @@ class MainWindow(QMainWindow):
         QtCore.QTimer.singleShot(0, self.showCurrentView)
 
         self.plotIm.frozen = False
-
-        # restore plot settings after loading materials/cells
-        if use_settings_pkl:
-            self.restoreModelSettings()
 
     def event(self, event):
         # use pinch event to update zoom
@@ -460,12 +456,15 @@ class MainWindow(QMainWindow):
         self.mainWindowAction.setChecked(self.isActiveWindow())
 
     # Menu and shared methods
-    def loadModel(self, reload=False):
+    def loadModel(self, reload=False, use_settings_pkl=True):
         if reload:
             self.resetModels()
         else:
             # create new plot model
             self.model = PlotModel()
+            if use_settings_pkl:
+                self.restoreModelSettings()
+            # update plot and model settings
             self.updateRelativeBases()
 
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
