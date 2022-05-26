@@ -38,6 +38,17 @@ def _openmcReload():
     openmc.lib.init(["-c"])
     openmc.lib.settings.verbosity = 1
 
+def hash_file(filename):
+    # return the md5 hash of a file
+    h = hashlib.md5()
+    with open(filename,'rb') as file:
+        chunk = 0
+        while chunk != b'':
+            # read 32768 bytes at a time
+            chunk = file.read(32768)
+            h.update(chunk)
+    return h.hexdigest()
+
 class MainWindow(QMainWindow):
     def __init__(self,
                  font=QtGui.QFontMetrics(QtGui.QFont()),
@@ -1068,8 +1079,8 @@ class MainWindow(QMainWindow):
                 model = pickle.load(file)
 
                 # check if loaded cell/mat ids hash match the pkl file:
-                current_mat_xml_hash = self.hash_file('materials.xml')
-                current_geom_xml_hash = self.hash_file('geometry.xml')
+                current_mat_xml_hash = hash_file('materials.xml')
+                current_geom_xml_hash = hash_file('geometry.xml')
                 if (current_mat_xml_hash != model.mat_xml_hash) or \
                     (current_geom_xml_hash != model.geom_xml_hash):
                     # hashes do not match so ignore plot_settings.pkl file
@@ -1200,8 +1211,8 @@ class MainWindow(QMainWindow):
             self.model.subsequentViews = self.model.subsequentViews[-10:]
 
         # get hashes for geometry.xml and material.xml at close
-        self.model.mat_xml_hash = self.hash_file('materials.xml')
-        self.model.geom_xml_hash = self.hash_file('geometry.xml')
+        self.model.mat_xml_hash = hash_file('materials.xml')
+        self.model.geom_xml_hash = hash_file('geometry.xml')
 
         with open('plot_settings.pkl', 'wb') as file:
             if self.model.statepoint:
@@ -1212,14 +1223,3 @@ class MainWindow(QMainWindow):
         # show export tool dialog
         self.showExportDialog()
 
-    @staticmethod
-    def hash_file(filename):
-        # return the md5 hash of a file
-        h = hashlib.md5()
-        with open(filename,'rb') as file:
-            chunk = 0
-            while chunk != b'':
-                # read 1024 bytes at a time
-                chunk = file.read(1024)
-                h.update(chunk)
-        return h.hexdigest()
