@@ -17,7 +17,7 @@ def main():
     ap = ArgumentParser(description='OpenMC Plotter GUI')
     version_str = f'OpenMC Plotter Version: {__version__}'
     ap.add_argument('-v', '--version', action='version', version=version_str,
-                    help='Display version info')
+                    help='Display version info.')
     ap.add_argument('-d', '--model-directory', default=os.curdir,
                     help='Location of model dir (default is current dir)')
     ap.add_argument('-e','--ignore-settings', action='store_false',
