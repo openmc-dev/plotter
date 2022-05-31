@@ -3,6 +3,7 @@ from functools import partial
 import os
 import pickle
 from threading import Thread
+import hashlib
 
 from PySide2 import QtCore, QtGui
 from PySide2.QtGui import QKeyEvent
@@ -36,6 +37,17 @@ def _openmcReload():
     openmc.lib.settings.output_summary = False
     openmc.lib.init(["-c"])
     openmc.lib.settings.verbosity = 1
+
+def hash_file(filename):
+    # return the md5 hash of a file
+    h = hashlib.md5()
+    with open(filename,'rb') as file:
+        chunk = 0
+        while chunk != b'':
+            # read 32768 bytes at a time
+            chunk = file.read(32768)
+            h.update(chunk)
+    return h.hexdigest()
 
 class MainWindow(QMainWindow):
     def __init__(self,
@@ -1065,6 +1077,21 @@ class MainWindow(QMainWindow):
             with open('plot_settings.pkl', 'rb') as file:
                 model = pickle.load(file)
 
+                # check if loaded cell/mat ids hash match the pkl file:
+                current_mat_xml_hash = hash_file('materials.xml')
+                current_geom_xml_hash = hash_file('geometry.xml')
+                if (current_mat_xml_hash != model.mat_xml_hash) or \
+                    (current_geom_xml_hash != model.geom_xml_hash):
+                    # hashes do not match so ignore plot_settings.pkl file
+                    msg_box = QMessageBox()
+                    msg = "WARNING: Model has changed since storing plot " +\
+                          "settings. Ignoring previous plot settings."
+                    msg_box.setText(msg)
+                    msg_box.setIcon(QMessageBox.Warning)
+                    msg_box.setStandardButtons(QMessageBox.Ok)
+                    msg_box.exec_()
+                    return
+
             # do not replace model if the version is out of date
             if model.version != self.model.version:
                 print("WARNING: previous plot settings are for a different "
@@ -1185,6 +1212,10 @@ class MainWindow(QMainWindow):
         if len(self.model.subsequentViews) > 10:
             self.model.subsequentViews = self.model.subsequentViews[-10:]
 
+        # get hashes for geometry.xml and material.xml at close
+        self.model.mat_xml_hash = hash_file('materials.xml')
+        self.model.geom_xml_hash = hash_file('geometry.xml')
+
         with open('plot_settings.pkl', 'wb') as file:
             if self.model.statepoint:
                 self.model.statepoint.close()
@@ -1193,3 +1224,4 @@ class MainWindow(QMainWindow):
     def exportTallyData(self):
         # show export tool dialog
         self.showExportDialog()
+
