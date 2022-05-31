@@ -19,7 +19,7 @@ def main():
     ap.add_argument('-e','--ignore-settings', action='store_false',
                     help='Ignore plot_settings.pkl file if present.')
     ap.add_argument('-s', '--threads', type=int, default=None,
-                    help='If present, number of threads used to generate plots')
+                    help='If present, number of threads used to generate plots.')
 
     args = ap.parse_args()
 
