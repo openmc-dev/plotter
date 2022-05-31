@@ -29,13 +29,16 @@ from .tools import ExportDataDialog
 
 _COORD_LEVELS = 0
 
-def _openmcReload():
+def _openmcReload(threads=None):
     # reset OpenMC memory, instances
     openmc.lib.reset()
     openmc.lib.finalize()
     # initialize geometry (for volume calculation)
     openmc.lib.settings.output_summary = False
-    openmc.lib.init(["-c"])
+    args = ["-c"]
+    if threads is not None:
+        args += ["-s", str(threads)]
+    openmc.lib.init(args)
     openmc.lib.settings.verbosity = 1
 
 def hash_file(filename):
