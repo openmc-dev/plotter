@@ -1,8 +1,13 @@
 from setuptools import setup
 
+# Get version information from __init__.py. This is ugly, but more reliable than
+# using an import.
+with open('openmc_plotter/__init__.py', 'r') as f:
+    version = f.readlines()[-1].split()[-1].strip("'")
+
 kwargs = {
     'name': 'openmc-plotter',
-    'version': '0.2.0',
+    'version': version,
     'packages': ['openmc_plotter'],
     'package_data': {'openmc_plotter' : ['assets/*.png']},
     'entry_points': {
