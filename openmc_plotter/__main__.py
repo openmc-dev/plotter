@@ -18,15 +18,17 @@ def main():
                     help='Location of model dir (default is current dir)')
     ap.add_argument('-e','--ignore-settings', action='store_false',
                     help='Ignore plot_settings.pkl file if present.')
+    ap.add_argument('-s', '--threads', type=int, default=None,
+                    help='If present, number of threads used to run OpenMC')
 
     args = ap.parse_args()
 
     os.chdir(args.model_directory)
 
-    run_app(use_settings_pkl=args.ignore_settings)
+    run_app(args)
 
 
-def run_app(use_settings_pkl=True):
+def run_app(user_args):
     path_icon = str(Path(__file__).parent / 'assets/openmc_logo.png')
     path_splash = str(Path(__file__).parent / 'assets/splash.png')
 
@@ -47,7 +49,8 @@ def run_app(use_settings_pkl=True):
                        QtCore.Qt.AlignHCenter | QtCore.Qt.AlignBottom)
     app.processEvents()
     # load OpenMC model on another thread
-    loader_thread = Thread(target=_openmcReload)
+    openmc_args = {'threads': user_args.threads}
+    loader_thread = Thread(target=_openmcReload, kwargs=openmc_args)
     loader_thread.start()
     # while thread is working, process app events
     while loader_thread.is_alive():
@@ -62,7 +65,7 @@ def run_app(use_settings_pkl=True):
     screen_size = app.primaryScreen().size()
     mainWindow = MainWindow(font_metric, screen_size)
     # connect splashscreen to main window, close when main window opens
-    mainWindow.loadGui(use_settings_pkl=use_settings_pkl)
+    mainWindow.loadGui(use_settings_pkl=user_args.ignore_settings)
     mainWindow.show()
     splash.close()
 
