@@ -1083,10 +1083,13 @@ class MainWindow(QMainWindow):
                 if (current_mat_xml_hash != model.mat_xml_hash) or \
                     (current_geom_xml_hash != model.geom_xml_hash):
                     # hashes do not match so ignore plot_settings.pkl file
-                    pkl_settings_warn = "WARNING: Model has changed since " +\
-                                        "storing plot settings. Ignoring " +\
-                                        "previous plot settings."
-                    print(pkl_settings_warn)
+                    msg_box = QMessageBox()
+                    msg = "WARNING: Model has changed since storing plot " +\
+                          "settings. Ignoring previous plot settings."
+                    msg_box.setText(msg)
+                    msg_box.setIcon(QMessageBox.Warning)
+                    msg_box.setStandardButtons(QMessageBox.Ok)
+                    msg_box.exec_()
                     return
 
             # do not replace model if the version is out of date
