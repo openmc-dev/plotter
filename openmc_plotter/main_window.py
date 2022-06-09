@@ -21,7 +21,7 @@ try:
 except ImportError:
     _HAVE_VTK = False
 
-from .plotmodel import PlotModel, DomainTableModel
+from .plotmodel import PlotModel, DomainTableModel, PlotView
 from .plotgui import PlotImage, ColorDialog
 from .docks import DomainDock, TallyDock
 from .overlays import ShortcutsOverlay
@@ -62,7 +62,7 @@ class MainWindow(QMainWindow):
         self.font_metric = font
         self.setWindowTitle('OpenMC Plot Explorer')
 
-    def loadGui(self, use_settings_pkl=True):
+    def loadGui(self, use_settings_pkl=True, use_saved_view=True):
 
         self.pixmap = None
         self.zoom = 100
@@ -130,6 +130,8 @@ class MainWindow(QMainWindow):
         QtCore.QTimer.singleShot(0, self.showCurrentView)
 
         self.plotIm.frozen = False
+        #print(dir(self.model))
+
 
     def event(self, event):
         # use pinch event to update zoom
@@ -463,10 +465,12 @@ class MainWindow(QMainWindow):
         if reload:
             self.resetModels()
         else:
+            #if use_settings_pkl:
+            #    self.restoreModelSettings()
+            self.model = PlotModel(use_settings_pkl)
             # create new plot model
-            self.model = PlotModel()
-            if use_settings_pkl:
-                self.restoreModelSettings()
+
+
             # update plot and model settings
             self.updateRelativeBases()
 
@@ -1080,20 +1084,20 @@ class MainWindow(QMainWindow):
             with open('plot_settings.pkl', 'rb') as file:
                 model = pickle.load(file)
 
-                # check if loaded cell/mat ids hash match the pkl file:
-                current_mat_xml_hash = hash_file('materials.xml')
-                current_geom_xml_hash = hash_file('geometry.xml')
-                if (current_mat_xml_hash != model.mat_xml_hash) or \
-                    (current_geom_xml_hash != model.geom_xml_hash):
-                    # hashes do not match so ignore plot_settings.pkl file
-                    msg_box = QMessageBox()
-                    msg = "WARNING: Model has changed since storing plot " +\
-                          "settings. Ignoring previous plot settings."
-                    msg_box.setText(msg)
-                    msg_box.setIcon(QMessageBox.Warning)
-                    msg_box.setStandardButtons(QMessageBox.Ok)
-                    msg_box.exec_()
-                    return
+                # # check if loaded cell/mat ids hash match the pkl file:
+                # current_mat_xml_hash = hash_file('materials.xml')
+                # current_geom_xml_hash = hash_file('geometry.xml')
+                # if (current_mat_xml_hash != model.mat_xml_hash) or \
+                #     (current_geom_xml_hash != model.geom_xml_hash):
+                #     # hashes do not match so ignore plot_settings.pkl file
+                #     msg_box = QMessageBox()
+                #     msg = "WARNING: Model has changed since storing plot " +\
+                #           "settings. Ignoring previous plot settings."
+                #     msg_box.setText(msg)
+                #     msg_box.setIcon(QMessageBox.Warning)
+                #     msg_box.setStandardButtons(QMessageBox.Ok)
+                #     msg_box.exec_()
+                #     return
 
             # do not replace model if the version is out of date
             if model.version != self.model.version:
@@ -1114,7 +1118,7 @@ class MainWindow(QMainWindow):
                 msg_box.exec_()
                 self.model.statepoint = None
 
-            self.model.currentView = model.currentView
+            self.model.currentView = PlotView(restore_view=model.currentView)
             self.model.activeView = copy.deepcopy(model.currentView)
             self.model.previousViews = model.previousViews
             self.model.subsequentViews = model.subsequentViews
@@ -1223,6 +1227,9 @@ class MainWindow(QMainWindow):
             if self.model.statepoint:
                 self.model.statepoint.close()
             pickle.dump(self.model, file)
+
+        #with open('view_settings.pkl', 'wb') as file:
+        #    pickle.dump(self.model.currentView, file)
 
     def exportTallyData(self):
         # show export tool dialog

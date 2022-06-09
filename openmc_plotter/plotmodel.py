@@ -1,8 +1,11 @@
 from ast import literal_eval
 from collections import defaultdict
 import copy
+from difflib import restore
 import itertools
 import threading
+import os
+import pickle
 
 from PySide2.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
@@ -92,7 +95,7 @@ class PlotModel():
             have unapplied changes
     """
 
-    def __init__(self):
+    def __init__(self, use_settings_pkl):
         """ Initialize PlotModel class attributes """
 
         # Retrieve OpenMC Cells/Materials
@@ -116,10 +119,39 @@ class PlotModel():
         # reset random number seed for consistent
         # coloring when reloading a model
         reset_seed()
-
         self.previousViews = []
         self.subsequentViews = []
-        self.defaultView = self.getDefaultView()
+
+        if use_settings_pkl and os.path.isfile('plot_settings.pkl'):
+            with open('plot_settings.pkl', 'rb') as file:
+                model = pickle.load(file)
+
+                # check GUI version
+                if model.version != self.version:
+                    print("WARNING: previous plot settings are for a different "
+                        "version of the GUI. They will be ignored.")
+                    wrn_msg = "Existing version: {}, Current GUI version: {}"
+                    print(wrn_msg.format(model.version, self.version))
+                    view = None
+                else:
+                    view = model.currentView
+
+                    # restore statepoint file
+                    try:
+                        self.statepoint = model.statepoint
+                    except OSError:
+                        msg_box = QMessageBox()
+                        msg = "Could not open statepoint file: \n\n {} \n"
+                        msg_box.setText(msg.format(self.model.statepoint.filename))
+                        msg_box.setIcon(QMessageBox.Warning)
+                        msg_box.setStandardButtons(QMessageBox.Ok)
+                        msg_box.exec_()
+                        self.statepoint = None
+
+                self.defaultView = PlotView(restore_view=view)
+        else:
+            self.defaultView = self.getDefaultView()
+
         self.currentView = copy.deepcopy(self.defaultView)
         self.activeView = copy.deepcopy(self.defaultView)
 
@@ -651,8 +683,8 @@ class PlotModel():
         return image_data, extents, data_min, data_max
 
 
-class PlotView(openmc.lib.plot._PlotBase):
-    """ View settings for OpenMC plot.
+class PlotViewIndependent(openmc.lib.plot._PlotBase):
+    """ View settings for OpenMC plot, independent of the model.
 
     Parameters
     ----------
@@ -701,10 +733,6 @@ class PlotView(openmc.lib.plot._PlotBase):
         Indicator of whether or not overlaps will be shown
     overlap_color : 3-tuple of int
         RGB color to apply for cell overlap regions
-    cells : Dict of DomainView instances
-        Dictionary of cell view settings by ID
-    materials : Dict of DomainView instances
-        Dictionary of material view settings by ID
     domainAlpha : float between 0 and 1
         Alpha value of the geometry plot
     plotVisibile : bool
@@ -735,110 +763,106 @@ class PlotView(openmc.lib.plot._PlotBase):
         Indicates whether or not tallies are displayed as contours
     tallyContourLevels : str
         Number of contours levels or explicit level values
-    selectedTally : str
-        Label of the currently selected tally
     """
-
-    def __init__(self, origin, width, height):
+    def __init__(self, origin=(0, 0, 0), width=10, height=10, restore_view=None):
         """ Initialize PlotView attributes """
 
         super().__init__()
 
-        # View Parameters
-        self.level = -1
-        self.origin = origin
-        self.width = width
-        self.height = height
-        self.h_res = 1000
-        self.v_res = 1000
-        self.aspectLock = True
-        self.basis = 'xy'
+        if restore_view is not None:
+            # View Parameters
+            self.level = restore_view.level
+            self.origin = restore_view.origin
+            self.width = restore_view.width
+            self.height = restore_view.height
+            self.h_res = restore_view.h_res
+            self.v_res = restore_view.v_res
+            self.aspectLock = restore_view.aspectLock
+            self.basis = restore_view.basis
 
-        # Geometry Plot
-        self.colorby = 'material'
-        self.masking = True
-        self.maskBackground = (0, 0, 0)
-        self.highlighting = False
-        self.highlightBackground = (80, 80, 80)
-        self.highlightAlpha = 0.5
-        self.highlightSeed = 1
-        self.domainBackground = (50, 50, 50)
-        self.overlap_color = (255, 0, 0)
-        self.domainAlpha = 1.0
-        self.domainVisible = True
-        self.outlines = False
-        self.colormaps = {'temperature': 'Oranges', 'density': 'Greys'}
-        # set defaults for color dialog
-        self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
-        self.user_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
-        self.use_custom_minmax = {prop: False for prop in _MODEL_PROPERTIES}
-        self.data_indicator_enabled = {prop: False for prop in _MODEL_PROPERTIES}
-        self.color_scale_log = {prop: False for prop in _MODEL_PROPERTIES}
-        # Get model domain info
-        self.cells = self.getDomains('cell')
-        self.materials = self.getDomains('material')
+            # Geometry Plot
+            self.colorby = restore_view.colorby
+            self.masking = restore_view.masking
+            self.maskBackground = restore_view.maskBackground
+            self.highlighting = restore_view.highlighting
+            self.highlightBackground = restore_view.highlightBackground
+            self.highlightAlpha = restore_view.highlightAlpha
+            self.highlightSeed = restore_view.highlightSeed
+            self.domainBackground = restore_view.domainBackground
+            self.overlap_color = restore_view.overlap_color
+            self.domainAlpha = restore_view.domainAlpha
+            self.domainVisible = restore_view.domainVisible
+            self.outlines = restore_view.outlines
+            self.colormaps = restore_view.colormaps
+            # set defaults for color dialog
+            self.data_minmax = restore_view.data_minmax
+            self.user_minmax = restore_view.user_minmax
+            self.use_custom_minmax =restore_view.use_custom_minmax
+            self.data_indicator_enabled =restore_view.data_indicator_enabled
+            self.color_scale_log = restore_view.color_scale_log
 
-        # Tally Viz Settings
-        self.tallyDataColormap = 'spectral'
-        self.tallyDataVisible = True
-        self.tallyDataAlpha = 1.0
-        self.tallyDataIndicator = False
-        self.tallyDataUserMinMax = False
-        self.tallyDataMin = 0.0
-        self.tallyDataMax = np.inf
-        self.tallyDataLogScale = False
-        self.tallyMaskZeroValues = False
-        self.clipTallyData = False
-        self.tallyValue = "Mean"
-        self.tallyContours = False
-        self.tallyContourLevels = ""
-        self.selectedTally = None
+            # Tally Viz Settings
+            self.tallyDataColormap =restore_view.tallyDataColormap
+            self.tallyDataVisible =restore_view.tallyDataVisible
+            self.tallyDataAlpha =restore_view.tallyDataAlpha
+            self.tallyDataIndicator =restore_view.tallyDataIndicator
+            self.tallyDataUserMinMax = restore_view.tallyDataUserMinMax
+            self.tallyDataMin =restore_view.tallyDataMin
+            self.tallyDataMax =restore_view.tallyDataMax
+            self.tallyDataLogScale =restore_view.tallyDataLogScale
+            self.tallyMaskZeroValues = restore_view.tallyMaskZeroValues
+            self.clipTallyData = restore_view.clipTallyData
+            self.tallyValue = restore_view.tallyValue
+            self.tallyContours = restore_view.tallyContours
+            self.tallyContourLevels =restore_view.tallyContourLevels
 
-    def __hash__(self):
-        return hash(self.__dict__.__str__() + self.__str__())
+        else:
+            # set defaults
+            # View Parameters
+            self.level = -1
+            self.origin = origin
+            self.width = width
+            self.height = height
+            self.h_res = 1000
+            self.v_res = 1000
+            self.aspectLock = True
+            self.basis = 'xy'
 
-    @staticmethod
-    def getDomains(domain_type):
-        """ Return dictionary of domain settings.
+            # Geometry Plot
+            self.colorby = 'material'
+            self.masking = True
+            self.maskBackground = (0, 0, 0)
+            self.highlighting = False
+            self.highlightBackground = (80, 80, 80)
+            self.highlightAlpha = 0.5
+            self.highlightSeed = 1
+            self.domainBackground = (50, 50, 50)
+            self.overlap_color = (255, 0, 0)
+            self.domainAlpha = 1.0
+            self.domainVisible = True
+            self.outlines = False
+            self.colormaps = {'temperature': 'Oranges', 'density': 'Greys'}
+            # set defaults for color dialog
+            self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
+            self.user_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
+            self.use_custom_minmax = {prop: False for prop in _MODEL_PROPERTIES}
+            self.data_indicator_enabled = {prop: False for prop in _MODEL_PROPERTIES}
+            self.color_scale_log = {prop: False for prop in _MODEL_PROPERTIES}
 
-        Retrieve cell or material ID numbers and names from .xml files
-        and convert to DomainView instances with default view settings.
-
-        Parameters
-        ----------
-        domain_type : {'cell', 'material'}
-            Type of domain to retrieve for dictionary
-
-        Returns
-        -------
-        domains : Dictionary of DomainView instances
-            Dictionary of cell/material DomainView instances keyed by ID
-        """
-
-        if domain_type not in ('cell', 'material'):
-            raise ValueError("Domain type, {}, requested is neither "
-                             "'cell' nor 'material'.".format(domain_type))
-
-        lib_domain = None
-        if domain_type == 'cell':
-            lib_domain = openmc.lib.cells
-        elif domain_type == 'material':
-            lib_domain = openmc.lib.materials
-
-        domains = {}
-        for domain, domain_obj in lib_domain.items():
-            name = domain_obj.name
-            domains[domain] = DomainView(domain, name, random_rgb())
-
-        # always add void to a material domain at the end
-        if domain_type == 'material':
-            void_id = _VOID_REGION
-            domains[void_id] = DomainView(void_id, "VOID",
-                                          (255, 255, 255),
-                                          False,
-                                          False)
-
-        return domains
+            # Tally Viz Settings
+            self.tallyDataColormap = 'spectral'
+            self.tallyDataVisible = True
+            self.tallyDataAlpha = 1.0
+            self.tallyDataIndicator = False
+            self.tallyDataUserMinMax = False
+            self.tallyDataMin = 0.0
+            self.tallyDataMax = np.inf
+            self.tallyDataLogScale = False
+            self.tallyMaskZeroValues = False
+            self.clipTallyData = False
+            self.tallyValue = "Mean"
+            self.tallyContours = False
+            self.tallyContourLevels = ""
 
     def getDataLimits(self):
         return self.data_minmax
@@ -896,6 +920,75 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.h_res = self.h_res
         self.v_res = self.v_res
         self.basis = view.basis
+
+class PlotView(PlotViewIndependent):
+    """ View settings for OpenMC plot.
+
+    Attributes
+    ----------
+    cells : Dict of DomainView instances
+        Dictionary of cell view settings by ID
+    materials : Dict of DomainView instances
+        Dictionary of material view settings by ID
+    selectedTally : str
+        Label of the currently selected tally
+    """
+
+    def __init__(self, origin=(0, 0, 0), width=10, height=10, restore_view=None):
+        """ Initialize PlotView attributes """
+        super().__init__(origin=origin, width=width, height=height, restore_view=restore_view)
+
+        # Get model domain info
+        self.cells = self.getDomains('cell')
+        self.materials = self.getDomains('material')
+        self.selectedTally = None
+
+    def __hash__(self):
+        return hash(self.__dict__.__str__() + self.__str__())
+
+    @staticmethod
+    def getDomains(domain_type):
+        """ Return dictionary of domain settings.
+
+        Retrieve cell or material ID numbers and names from .xml files
+        and convert to DomainView instances with default view settings.
+
+        Parameters
+        ----------
+        domain_type : {'cell', 'material'}
+            Type of domain to retrieve for dictionary
+
+        Returns
+        -------
+        domains : Dictionary of DomainView instances
+            Dictionary of cell/material DomainView instances keyed by ID
+        """
+
+        if domain_type not in ('cell', 'material'):
+            raise ValueError("Domain type, {}, requested is neither "
+                             "'cell' nor 'material'.".format(domain_type))
+
+        lib_domain = None
+        if domain_type == 'cell':
+            lib_domain = openmc.lib.cells
+        elif domain_type == 'material':
+            lib_domain = openmc.lib.materials
+
+        domains = {}
+        for domain, domain_obj in lib_domain.items():
+            name = domain_obj.name
+            domains[domain] = DomainView(domain, name, random_rgb())
+
+        # always add void to a material domain at the end
+        if domain_type == 'material':
+            void_id = _VOID_REGION
+            domains[void_id] = DomainView(void_id, "VOID",
+                                          (255, 255, 255),
+                                          False,
+                                          False)
+
+        return domains
+
 
 class DomainView():
     """ Represents view settings for OpenMC cell or material.
