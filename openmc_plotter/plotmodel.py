@@ -684,7 +684,7 @@ class PlotModel():
 
 
 class PlotViewIndependent(openmc.lib.plot._PlotBase):
-    """ View settings for OpenMC plot, independent of the model.
+    """View settings for OpenMC plot, independent of the model.
 
     Parameters
     ----------
@@ -694,6 +694,8 @@ class PlotViewIndependent(openmc.lib.plot._PlotBase):
         Width of plot view in model units
     height : float
         Height of plot view in model units
+    restore_view : PlotView or PlotViewIndependent or None
+        view object with specified parameters to restore
 
     Attributes
     ----------
@@ -770,6 +772,8 @@ class PlotViewIndependent(openmc.lib.plot._PlotBase):
         super().__init__()
 
         if restore_view is not None:
+            # set parameters based on supplied view
+
             # View Parameters
             self.level = restore_view.level
             self.origin = restore_view.origin
@@ -818,6 +822,7 @@ class PlotViewIndependent(openmc.lib.plot._PlotBase):
 
         else:
             # set defaults
+
             # View Parameters
             self.level = -1
             self.origin = origin
@@ -922,7 +927,7 @@ class PlotViewIndependent(openmc.lib.plot._PlotBase):
         self.basis = view.basis
 
 class PlotView(PlotViewIndependent):
-    """ View settings for OpenMC plot.
+    """Setup the view of the model.
 
     Attributes
     ----------
