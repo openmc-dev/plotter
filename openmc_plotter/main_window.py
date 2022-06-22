@@ -10,7 +10,7 @@ from PySide2.QtGui import QKeyEvent
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMessageBox, QAction, QFileDialog,
                                QColorDialog, QInputDialog, QWidget,
-                               QGestureEvent)
+                               QGestureEvent, QDialog)
 
 import openmc
 import openmc.lib
@@ -528,6 +528,11 @@ class MainWindow(QMainWindow):
             else:
                 message = 'Error loading plot settings. Incompatible model.'
             self.statusBar().showMessage(message, 5000)
+
+    def viewMaterialProps(self, id):
+        msg_box = QMessageBox()
+        msg_box.setText("Testing mat prop box for mat {}".format(id))
+        msg_box.exec_()
 
     def openStatePoint(self):
         # check for an alread-open statepoint
