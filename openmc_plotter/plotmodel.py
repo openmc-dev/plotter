@@ -228,12 +228,21 @@ class PlotModel():
         """
 
         cv = self.currentView = copy.deepcopy(self.activeView)
-        ids = openmc.lib.id_map(cv.view_ind)
-        props = openmc.lib.property_map(cv.view_ind)
+        pv = self.previousViews[-1]  # pv will always be at least 1 to store current views, so only do this if len > 1
+        print(cv.view_ind == pv.view_ind)
 
-        self.cell_ids = ids[:, :, 0]
-        self.instances = ids[:, :, 1]
-        self.mat_ids = ids[:, :, 2]
+        if (len(self.previousViews) == 1 and cv.view_ind == pv.view_ind) or \
+            (cv.view_ind != pv.view_ind):
+            print('here')
+            # we are at the first view and need to populate OR view has changed and need to populate
+            ids = openmc.lib.id_map(cv.view_ind)
+            props = openmc.lib.property_map(cv.view_ind)
+            self.cell_ids = ids[:, :, 0]
+            self.instances = ids[:, :, 1]
+            self.mat_ids = ids[:, :, 2]
+        else:
+            # take ids from last view??
+            pass
 
         # set model ids based on domain
         if cv.colorby == 'cell':
@@ -805,7 +814,7 @@ class PlotViewIndependent(openmc.lib.plot._PlotBase):
         self.color_scale_log = {prop: False for prop in _MODEL_PROPERTIES}
 
         # Tally Viz Settings
-        self.tallyDataColormap = 'spectral'
+        self.tallyDataColormap = 'Spectral'
         self.tallyDataVisible = True
         self.tallyDataAlpha = 1.0
         self.tallyDataIndicator = False
@@ -818,6 +827,16 @@ class PlotViewIndependent(openmc.lib.plot._PlotBase):
         self.tallyValue = "Mean"
         self.tallyContours = False
         self.tallyContourLevels = ""
+
+    def __eq__(self, other):
+        if (isinstance(other, PlotViewIndependent)):
+            for name in self.__dict__:
+                if self.__dict__[name] != other.__dict__[name]:
+                    print(name)
+                    return False
+            return True
+        else:
+            return False
 
     def getDataLimits(self):
         return self.data_minmax
