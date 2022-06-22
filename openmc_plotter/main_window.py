@@ -119,8 +119,6 @@ class MainWindow(QMainWindow):
         QtCore.QTimer.singleShot(0, self.showCurrentView)
 
         self.plotIm.frozen = False
-        #print(dir(self.model))
-
 
     def event(self, event):
         # use pinch event to update zoom
