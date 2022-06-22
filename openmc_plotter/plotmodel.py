@@ -1,6 +1,7 @@
 from ast import literal_eval
 from collections import defaultdict
 import copy
+from curses import resize_term
 import itertools
 import threading
 import os
@@ -147,7 +148,7 @@ class PlotModel():
                         msg_box.exec_()
                         self.statepoint = None
 
-                self.defaultView = PlotView(restore_view=view)
+                self.defaultView = PlotView(restore_view=view.view_ind)
         else:
             self.defaultView = self.getDefaultView()
 
@@ -227,8 +228,8 @@ class PlotModel():
         """
 
         cv = self.currentView = copy.deepcopy(self.activeView)
-        ids = openmc.lib.id_map(cv)
-        props = openmc.lib.property_map(cv)
+        ids = openmc.lib.id_map(cv.view_ind)
+        props = openmc.lib.property_map(cv.view_ind)
 
         self.cell_ids = ids[:, :, 0]
         self.instances = ids[:, :, 1]
@@ -765,108 +766,58 @@ class PlotViewIndependent(openmc.lib.plot._PlotBase):
     tallyContourLevels : str
         Number of contours levels or explicit level values
     """
-    def __init__(self, origin=(0, 0, 0), width=10, height=10, restore_view=None):
+    def __init__(self, origin=(0, 0, 0), width=10, height=10):
         """ Initialize PlotView attributes """
 
         super().__init__()
 
-        if restore_view is not None:
-            # set parameters based on supplied view
+        # set defaults
 
-            # View Parameters
-            self.level = restore_view.level
-            self.origin = restore_view.origin
-            self.width = restore_view.width
-            self.height = restore_view.height
-            self.h_res = restore_view.h_res
-            self.v_res = restore_view.v_res
-            self.aspectLock = restore_view.aspectLock
-            self.basis = restore_view.basis
+        # View Parameters
+        self.level = -1
+        self.origin = origin
+        self.width = width
+        self.height = height
+        self.h_res = 1000
+        self.v_res = 1000
+        self.aspectLock = True
+        self.basis = 'xy'
 
-            # Geometry Plot
-            self.colorby = restore_view.colorby
-            self.masking = restore_view.masking
-            self.maskBackground = restore_view.maskBackground
-            self.highlighting = restore_view.highlighting
-            self.highlightBackground = restore_view.highlightBackground
-            self.highlightAlpha = restore_view.highlightAlpha
-            self.highlightSeed = restore_view.highlightSeed
-            self.domainBackground = restore_view.domainBackground
-            self.overlap_color = restore_view.overlap_color
-            self.domainAlpha = restore_view.domainAlpha
-            self.domainVisible = restore_view.domainVisible
-            self.outlines = restore_view.outlines
-            self.colormaps = restore_view.colormaps
-            # set defaults for color dialog
-            self.data_minmax = restore_view.data_minmax
-            self.user_minmax = restore_view.user_minmax
-            self.use_custom_minmax =restore_view.use_custom_minmax
-            self.data_indicator_enabled =restore_view.data_indicator_enabled
-            self.color_scale_log = restore_view.color_scale_log
+        # Geometry Plot
+        self.colorby = 'material'
+        self.masking = True
+        self.maskBackground = (0, 0, 0)
+        self.highlighting = False
+        self.highlightBackground = (80, 80, 80)
+        self.highlightAlpha = 0.5
+        self.highlightSeed = 1
+        self.domainBackground = (50, 50, 50)
+        self.overlap_color = (255, 0, 0)
+        self.domainAlpha = 1.0
+        self.domainVisible = True
+        self.outlines = False
+        self.colormaps = {'temperature': 'Oranges', 'density': 'Greys'}
+        # set defaults for color dialog
+        self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
+        self.user_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
+        self.use_custom_minmax = {prop: False for prop in _MODEL_PROPERTIES}
+        self.data_indicator_enabled = {prop: False for prop in _MODEL_PROPERTIES}
+        self.color_scale_log = {prop: False for prop in _MODEL_PROPERTIES}
 
-            # Tally Viz Settings
-            self.tallyDataColormap =restore_view.tallyDataColormap
-            self.tallyDataVisible =restore_view.tallyDataVisible
-            self.tallyDataAlpha =restore_view.tallyDataAlpha
-            self.tallyDataIndicator =restore_view.tallyDataIndicator
-            self.tallyDataUserMinMax = restore_view.tallyDataUserMinMax
-            self.tallyDataMin =restore_view.tallyDataMin
-            self.tallyDataMax =restore_view.tallyDataMax
-            self.tallyDataLogScale =restore_view.tallyDataLogScale
-            self.tallyMaskZeroValues = restore_view.tallyMaskZeroValues
-            self.clipTallyData = restore_view.clipTallyData
-            self.tallyValue = restore_view.tallyValue
-            self.tallyContours = restore_view.tallyContours
-            self.tallyContourLevels =restore_view.tallyContourLevels
-
-        else:
-            # set defaults
-
-            # View Parameters
-            self.level = -1
-            self.origin = origin
-            self.width = width
-            self.height = height
-            self.h_res = 1000
-            self.v_res = 1000
-            self.aspectLock = True
-            self.basis = 'xy'
-
-            # Geometry Plot
-            self.colorby = 'material'
-            self.masking = True
-            self.maskBackground = (0, 0, 0)
-            self.highlighting = False
-            self.highlightBackground = (80, 80, 80)
-            self.highlightAlpha = 0.5
-            self.highlightSeed = 1
-            self.domainBackground = (50, 50, 50)
-            self.overlap_color = (255, 0, 0)
-            self.domainAlpha = 1.0
-            self.domainVisible = True
-            self.outlines = False
-            self.colormaps = {'temperature': 'Oranges', 'density': 'Greys'}
-            # set defaults for color dialog
-            self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
-            self.user_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}
-            self.use_custom_minmax = {prop: False for prop in _MODEL_PROPERTIES}
-            self.data_indicator_enabled = {prop: False for prop in _MODEL_PROPERTIES}
-            self.color_scale_log = {prop: False for prop in _MODEL_PROPERTIES}
-
-            # Tally Viz Settings
-            self.tallyDataColormap = 'spectral'
-            self.tallyDataVisible = True
-            self.tallyDataAlpha = 1.0
-            self.tallyDataIndicator = False
-            self.tallyDataUserMinMax = False
-            self.tallyDataMin = 0.0
-            self.tallyDataMax = np.inf
-            self.tallyDataLogScale = False
-            self.tallyMaskZeroValues = False
-            self.clipTallyData = False
-            self.tallyValue = "Mean"
-            self.tallyContours = False
-            self.tallyContourLevels = ""
+        # Tally Viz Settings
+        self.tallyDataColormap = 'spectral'
+        self.tallyDataVisible = True
+        self.tallyDataAlpha = 1.0
+        self.tallyDataIndicator = False
+        self.tallyDataUserMinMax = False
+        self.tallyDataMin = 0.0
+        self.tallyDataMax = np.inf
+        self.tallyDataLogScale = False
+        self.tallyMaskZeroValues = False
+        self.clipTallyData = False
+        self.tallyValue = "Mean"
+        self.tallyContours = False
+        self.tallyContourLevels = ""
 
     def getDataLimits(self):
         return self.data_minmax
@@ -925,7 +876,7 @@ class PlotViewIndependent(openmc.lib.plot._PlotBase):
         self.v_res = self.v_res
         self.basis = view.basis
 
-class PlotView(PlotViewIndependent):
+class PlotView():
     """Setup the view of the model.
 
     Attributes
@@ -940,12 +891,41 @@ class PlotView(PlotViewIndependent):
 
     def __init__(self, origin=(0, 0, 0), width=10, height=10, restore_view=None):
         """ Initialize PlotView attributes """
-        super().__init__(origin=origin, width=width, height=height, restore_view=restore_view)
+
+        if restore_view is not None:
+            self.view_ind = copy.copy(restore_view)
+        else:
+            self.view_ind = PlotViewIndependent(origin=origin, width=width, height=height)
 
         # Get model domain info
         self.cells = self.getDomains('cell')
         self.materials = self.getDomains('material')
         self.selectedTally = None
+
+    #@property  # do property and setter for every attribute
+    #def basis(self):
+    #    return self.view_ind.basis
+#
+    #@basis.setter
+    #def basis(self, basis):
+    #    self.view_ind.basis = basis
+
+    def __getattr__(self, name):
+        if name in ['view_ind', 'cells', 'materials', 'selectedTally']:
+            if name not in self.__dict__:
+                raise AttributeError('error')
+            return self.__dict__[name]
+        #print(name, type(self.view_ind))
+        return getattr(self.view_ind, name)
+
+    def __setattr__(self, name, value):
+        #if name == 'view_ind':
+        #    return
+        if name in ['view_ind', 'cells', 'materials', 'selectedTally']:
+            #self.__dict__[name] = value
+            super().__setattr__(name, value)
+        else:
+            setattr(self.view_ind, name, value)
 
     def __hash__(self):
         return hash(self.__dict__.__str__() + self.__str__())
