@@ -230,24 +230,28 @@ class PlotModel():
         Creates corresponding .xml files from user-chosen settings.
         Runs OpenMC in plot mode to generate new plot image.
         """
-
         cv = self.currentView = copy.deepcopy(self.activeView)
         pv = self.previousViews[-1]  # pv will always be at least 1 to store current views, so only do this if len > 1
-        print(cv.view_ind == pv.view_ind)
 
-        if (self.__props_map is None) or (self.__ids_map is None) or (cv.view_ind != pv.view_ind):
-            print('generating new')
+        print('*** NEW CALL TO MAKEPLOT ***')
+        print(cv.view_params == pv.view_params)
+        print('Previous View Parameters')
+        print(pv.view_params)
+        print('Current View Parameters')
+        print(cv.view_params)
+
+        if (self.__props_map is None) or (self.__ids_map is None) or (cv.view_params != pv.view_params):
+            print('generating new id/prop map')
             # we are at the first view and need to populate OR view has changed and need to populate
-            self.__ids_map = openmc.lib.id_map(cv.view_ind)
-            self.__props_map = openmc.lib.property_map(cv.view_ind)
-            self.cell_ids = self.__ids_map[:, :, 0]
-            self.instances = self.__ids_map[:, :, 1]
-            self.mat_ids = self.__ids_map[:, :, 2]
+            self.__ids_map = openmc.lib.id_map(cv.view_params)
+            self.__props_map = openmc.lib.property_map(cv.view_params)
+
         else:
             print('no change')
-            print(cv.view_ind.__dict__)
-            print(pv.view_ind.__dict__)
-            #print(self.__ids_map)
+
+        self.cell_ids = self.__ids_map[:, :, 0]
+        self.instances = self.__ids_map[:, :, 1]
+        self.mat_ids = self.__ids_map[:, :, 2]
 
         # set model ids based on domain
         if cv.colorby == 'cell':
@@ -707,17 +711,26 @@ class ViewParam(openmc.lib.plot._PlotBase):
         self.h_res = 1000
         self.v_res = 1000
         self.basis = 'xy'
-        self.aspectLock = True
+        self.color_overlaps = False
 
     def __eq__(self, other):
         if (isinstance(other, ViewParam)):
-            print(sorted(self.__dict__))
-            for name in self.__dict__:
-                if self.__dict__[name] != other.__dict__[name]:
+            for name in ['level', 'origin', 'width', 'height', 'h_res',
+                         'v_res', 'basis', 'color_overlaps']:
+                if self.__getattr__(name) != other.__getattr__(name):
                     return False
             return True
         else:
             return False
+
+    def __getattr__(self, name):
+        if name not in self.__dict__:
+            raise AttributeError('{} not in ViewParam dict'.format(name))
+        return self.__dict__[name]
+
+    def __setattr__(self, name, value):
+        super().__setattr__(name, value)
+        self.__dict__[name] = value
 
 
 class PlotViewIndependent():
@@ -821,6 +834,7 @@ class PlotViewIndependent():
         self.basis = 'xy'
         self.aspectLock = True
         """
+        self.aspectLock = True
 
         # Geometry Plot
         self.colorby = 'material'
@@ -860,7 +874,7 @@ class PlotViewIndependent():
 
     def __getattr__(self, name):
         if name in ['level', 'origin', 'width', 'height',
-                    'h_res', 'v_res', 'basis']:
+                    'h_res', 'v_res', 'basis', 'color_overlaps']:
             return getattr(self.view_params, name)
         if name not in self.__dict__:
             raise AttributeError('{} not in PlotViewIndependent dict'.format(name))
@@ -868,7 +882,7 @@ class PlotViewIndependent():
 
     def __setattr__(self, name, value):
         if name in ['level', 'origin', 'width', 'height',
-                    'h_res', 'v_res', 'basis']:
+                    'h_res', 'v_res', 'basis', 'color_overlaps']:
             setattr(self.view_params, name, value)
         else:
             super().__setattr__(name, value)
@@ -959,7 +973,7 @@ class PlotView():
     def __getattr__(self, name):
         if name in ['view_ind', 'cells', 'materials', 'selectedTally']:
             if name not in self.__dict__:
-                raise AttributeError('error')
+                raise AttributeError('{} not in PlotView dict'.format(name))
             return self.__dict__[name]
         return getattr(self.view_ind, name)
 
