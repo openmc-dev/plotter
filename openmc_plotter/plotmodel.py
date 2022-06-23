@@ -107,6 +107,10 @@ class PlotModel():
         self.ids = None
         self.instances = None
 
+        # ID and Props (curren)
+        self.__ids_map = None
+        self.__props_map = None
+
         self.version = __VERSION__
 
         # default statepoint value
@@ -231,18 +235,19 @@ class PlotModel():
         pv = self.previousViews[-1]  # pv will always be at least 1 to store current views, so only do this if len > 1
         print(cv.view_ind == pv.view_ind)
 
-        if (len(self.previousViews) == 1 and cv.view_ind == pv.view_ind) or \
-            (cv.view_ind != pv.view_ind):
-            print('here')
+        if (self.__props_map is None) or (self.__ids_map is None) or (cv.view_ind != pv.view_ind):
+            print('generating new')
             # we are at the first view and need to populate OR view has changed and need to populate
-            ids = openmc.lib.id_map(cv.view_ind)
-            props = openmc.lib.property_map(cv.view_ind)
-            self.cell_ids = ids[:, :, 0]
-            self.instances = ids[:, :, 1]
-            self.mat_ids = ids[:, :, 2]
+            self.__ids_map = openmc.lib.id_map(cv.view_ind)
+            self.__props_map = openmc.lib.property_map(cv.view_ind)
+            self.cell_ids = self.__ids_map[:, :, 0]
+            self.instances = self.__ids_map[:, :, 1]
+            self.mat_ids = self.__ids_map[:, :, 2]
         else:
-            # take ids from last view??
-            pass
+            print('no change')
+            print(cv.view_ind.__dict__)
+            print(pv.view_ind.__dict__)
+            #print(self.__ids_map)
 
         # set model ids based on domain
         if cv.colorby == 'cell':
@@ -283,7 +288,7 @@ class PlotModel():
         # set model image
         self.image = image
         # set model properties
-        self.properties = props
+        self.properties = self.__props_map
         # tally data
         self.tally_data = None
 
@@ -691,8 +696,31 @@ class PlotModel():
 
         return image_data, extents, data_min, data_max
 
+class ViewParam(openmc.lib.plot._PlotBase):
+    def __init__(self, origin=(0, 0, 0), width=10, height=10):
+        super().__init__()
+        # View Parameters
+        self.level = -1
+        self.origin = origin
+        self.width = width
+        self.height = height
+        self.h_res = 1000
+        self.v_res = 1000
+        self.basis = 'xy'
+        self.aspectLock = True
 
-class PlotViewIndependent(openmc.lib.plot._PlotBase):
+    def __eq__(self, other):
+        if (isinstance(other, ViewParam)):
+            print(sorted(self.__dict__))
+            for name in self.__dict__:
+                if self.__dict__[name] != other.__dict__[name]:
+                    return False
+            return True
+        else:
+            return False
+
+
+class PlotViewIndependent():
     """View settings for OpenMC plot, independent of the model.
 
     Parameters
@@ -778,10 +806,11 @@ class PlotViewIndependent(openmc.lib.plot._PlotBase):
     def __init__(self, origin=(0, 0, 0), width=10, height=10):
         """ Initialize PlotView attributes """
 
-        super().__init__()
+
+        self.view_params = ViewParam(origin=origin, width=width, height=height)
 
         # set defaults
-
+        """
         # View Parameters
         self.level = -1
         self.origin = origin
@@ -789,8 +818,9 @@ class PlotViewIndependent(openmc.lib.plot._PlotBase):
         self.height = height
         self.h_res = 1000
         self.v_res = 1000
-        self.aspectLock = True
         self.basis = 'xy'
+        self.aspectLock = True
+        """
 
         # Geometry Plot
         self.colorby = 'material'
@@ -828,15 +858,20 @@ class PlotViewIndependent(openmc.lib.plot._PlotBase):
         self.tallyContours = False
         self.tallyContourLevels = ""
 
-    def __eq__(self, other):
-        if (isinstance(other, PlotViewIndependent)):
-            for name in self.__dict__:
-                if self.__dict__[name] != other.__dict__[name]:
-                    print(name)
-                    return False
-            return True
+    def __getattr__(self, name):
+        if name in ['level', 'origin', 'width', 'height',
+                    'h_res', 'v_res', 'basis']:
+            return getattr(self.view_params, name)
+        if name not in self.__dict__:
+            raise AttributeError('{} not in PlotViewIndependent dict'.format(name))
+        return self.__dict__[name]
+
+    def __setattr__(self, name, value):
+        if name in ['level', 'origin', 'width', 'height',
+                    'h_res', 'v_res', 'basis']:
+            setattr(self.view_params, name, value)
         else:
-            return False
+            super().__setattr__(name, value)
 
     def getDataLimits(self):
         return self.data_minmax
@@ -921,27 +956,15 @@ class PlotView():
         self.materials = self.getDomains('material')
         self.selectedTally = None
 
-    #@property  # do property and setter for every attribute
-    #def basis(self):
-    #    return self.view_ind.basis
-#
-    #@basis.setter
-    #def basis(self, basis):
-    #    self.view_ind.basis = basis
-
     def __getattr__(self, name):
         if name in ['view_ind', 'cells', 'materials', 'selectedTally']:
             if name not in self.__dict__:
                 raise AttributeError('error')
             return self.__dict__[name]
-        #print(name, type(self.view_ind))
         return getattr(self.view_ind, name)
 
     def __setattr__(self, name, value):
-        #if name == 'view_ind':
-        #    return
         if name in ['view_ind', 'cells', 'materials', 'selectedTally']:
-            #self.__dict__[name] = value
             super().__setattr__(name, value)
         else:
             setattr(self.view_ind, name, value)
