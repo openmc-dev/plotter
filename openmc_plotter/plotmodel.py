@@ -128,21 +128,21 @@ class PlotModel():
 
         if use_settings_pkl and os.path.isfile('plot_settings.pkl'):
             with open('plot_settings.pkl', 'rb') as file:
-                model = pickle.load(file)
+                data = pickle.load(file)
 
                 # check GUI version
-                if model.version != self.version:
+                if data['version'] != self.version:
                     print("WARNING: previous plot settings are for a different "
                         "version of the GUI. They will be ignored.")
                     wrn_msg = "Existing version: {}, Current GUI version: {}"
-                    print(wrn_msg.format(model.version, self.version))
-                    view = None
+                    print(wrn_msg.format(data['version'], self.version))
+                    view_ind = None
                 else:
-                    view = model.currentView
+                    view_ind = data['currentView_ind']
 
                     # restore statepoint file
                     try:
-                        self.statepoint = model.statepoint
+                        self.statepoint = data['statepoint']
                     except OSError:
                         msg_box = QMessageBox()
                         msg = "Could not open statepoint file: \n\n {} \n"
@@ -152,7 +152,7 @@ class PlotModel():
                         msg_box.exec_()
                         self.statepoint = None
 
-                self.defaultView = PlotView(restore_view=view.view_ind)
+                self.defaultView = PlotView(restore_view=view_ind)
         else:
             self.defaultView = self.getDefaultView()
 

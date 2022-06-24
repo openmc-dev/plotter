@@ -1151,16 +1151,16 @@ class MainWindow(QMainWindow):
         self.saveSettings()
 
     def saveSettings(self):
-
-        if len(self.model.previousViews) > 10:
-            self.model.previousViews = self.model.previousViews[-10:]
-        if len(self.model.subsequentViews) > 10:
-            self.model.subsequentViews = self.model.subsequentViews[-10:]
-
-        with open('plot_settings.pkl', 'wb') as file:
-            if self.model.statepoint:
+        if self.model.statepoint:
                 self.model.statepoint.close()
-            pickle.dump(self.model, file)
+
+        pickle_data = {
+            'version': self.model.version,
+            'currentView_ind': self.model.currentView.view_ind,
+            'statepoint': self.model.statepoint
+        }
+        with open('plot_settings.pkl', 'wb') as file:
+            pickle.dump(pickle_data, file)
 
     def exportTallyData(self):
         # show export tool dialog
