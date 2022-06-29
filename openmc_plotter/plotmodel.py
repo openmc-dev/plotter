@@ -701,8 +701,42 @@ class PlotModel():
         return image_data, extents, data_min, data_max
 
 class ViewParam(openmc.lib.plot._PlotBase):
+    """Viewer settings that are needed for _PlotBase and are independent
+    of all other plotter/model settings.
+
+    Parameters
+    ----------
+    origin : 3-tuple of floats
+        Origin (center) of plot view
+    width: float
+        Width of plot view in model units
+    height : float
+        Height of plot view in model units
+
+    Attributes
+    ----------
+    origin : 3-tuple of floats
+        Origin (center) of plot view
+    width : float
+        Width of the plot view in model units
+    height : float
+        Height of the plot view in model units
+    h_res : int
+        Horizontal resolution of plot image
+    v_res : int
+        Vertical resolution of plot image
+    basis : {'xy', 'xz', 'yz'}
+        The basis directions for the plot
+    color_overlaps : bool
+        Indicator of whether or not overlaps will be shown
+    level : int
+        The universe level for the plot (default: -1 -> all universes shown)
+    """
+
     def __init__(self, origin=(0, 0, 0), width=10, height=10):
+        """Initialize ViewParam attributes"""
         super().__init__()
+
         # View Parameters
         self.level = -1
         self.origin = origin
@@ -749,21 +783,9 @@ class PlotViewIndependent():
 
     Attributes
     ----------
-    origin : 3-tuple of floats
-        Origin (center) of plot view
-    width : float
-        Width of the plot view in model units
-    height : float
-        Height of the plot view in model units
-    h_res : int
-        Horizontal resolution of plot image
-    v_res : int
-        Vertical resolution of plot image
     aspectLock : bool
         Indication of whether aspect lock should be maintained to
         prevent image stretching/warping
-    basis : {'xy', 'xz', 'yz'}
-        The basis directions for the plot
     colorby : {'cell', 'material', 'temperature', 'density'}
         Indication of whether the plot should be colored by cell or material
     masking : bool
@@ -781,8 +803,6 @@ class PlotViewIndependent():
         is active
     domainBackground : 3-tuple of int
         RGB color to apply to plot background
-    color_overlaps : bool
-        Indicator of whether or not overlaps will be shown
     overlap_color : 3-tuple of int
         RGB color to apply for cell overlap regions
     domainAlpha : float between 0 and 1
@@ -816,27 +836,13 @@ class PlotViewIndependent():
     tallyContourLevels : str
         Number of contours levels or explicit level values
     """
+
     def __init__(self, origin=(0, 0, 0), width=10, height=10):
-        """ Initialize PlotView attributes """
-
-
+        """Initialize PlotViewIndependent attributes"""
         self.view_params = ViewParam(origin=origin, width=width, height=height)
 
-        # set defaults
-        """
-        # View Parameters
-        self.level = -1
-        self.origin = origin
-        self.width = width
-        self.height = height
-        self.h_res = 1000
-        self.v_res = 1000
-        self.basis = 'xy'
-        self.aspectLock = True
-        """
-        self.aspectLock = True
-
         # Geometry Plot
+        self.aspectLock = True
         self.colorby = 'material'
         self.masking = True
         self.maskBackground = (0, 0, 0)
@@ -958,7 +964,7 @@ class PlotView():
     """
 
     def __init__(self, origin=(0, 0, 0), width=10, height=10, restore_view=None):
-        """ Initialize PlotView attributes """
+        """Initialize PlotView attributes"""
 
         if restore_view is not None:
             self.view_ind = copy.copy(restore_view)
