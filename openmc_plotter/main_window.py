@@ -10,7 +10,7 @@ from PySide2.QtGui import QKeyEvent
 from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMessageBox, QAction, QFileDialog,
                                QColorDialog, QInputDialog, QWidget,
-                               QGestureEvent, QDialog)
+                               QGestureEvent)
 
 import openmc
 import openmc.lib

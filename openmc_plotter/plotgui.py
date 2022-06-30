@@ -1,5 +1,4 @@
 from functools import partial
-from xml import dom
 
 from PySide2 import QtCore, QtGui
 from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
