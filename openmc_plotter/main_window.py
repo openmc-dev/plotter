@@ -529,11 +529,6 @@ class MainWindow(QMainWindow):
                 message = 'Error loading plot settings. Incompatible model.'
             self.statusBar().showMessage(message, 5000)
 
-    def viewMaterialProps(self, id):
-        msg_box = QMessageBox()
-        msg_box.setText("Testing mat prop box for mat {}".format(id))
-        msg_box.exec_()
-
     def openStatePoint(self):
         # check for an alread-open statepoint
         if self.model.statepoint:
@@ -1233,3 +1228,25 @@ class MainWindow(QMainWindow):
         # show export tool dialog
         self.showExportDialog()
 
+    def viewMaterialProps(self, id):
+        """display material properties in message box"""
+        mat = openmc.lib.materials[id]
+        if mat.name:
+            msg_str = "Material {} ({}) Properties\n\n".format(id, mat.name)
+        else:
+            msg_str = "Material {} Properties\n\n".format(id)
+
+        # get density and temperature
+        dens_g = mat.get_density(units='g/cm3')
+        dens_a = mat.get_density(units='atom/b-cm')
+        msg_str += "Density: {:.3f} g/cm3 ({:.3e} atom/b-cm)\n".format(dens_g, dens_a)
+        msg_str += "Temperature: {} K\n\n".format(mat.temperature)
+
+        # get nuclides and their densities
+        msg_str += "Nuclide densities [atom/b-cm]:\n"
+        for nuc, dens in zip(mat.nuclides, mat.densities):
+            msg_str += '{}: {:5.3e}\n'.format(nuc, dens)
+
+        msg_box = QMessageBox()
+        msg_box.setText(msg_str)
+        msg_box.exec_()
