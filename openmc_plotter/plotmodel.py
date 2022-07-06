@@ -748,24 +748,10 @@ class ViewParam(openmc.lib.plot._PlotBase):
         self.color_overlaps = False
 
     def __eq__(self, other):
-        if (isinstance(other, ViewParam)):
-            for name in ['level', 'origin', 'width', 'height', 'h_res',
-                         'v_res', 'basis', 'color_overlaps']:
-                if self.__getattr__(name) != other.__getattr__(name):
-                    return False
+        if repr(self) == repr(other):
             return True
         else:
             return False
-
-    def __getattr__(self, name):
-        if name not in self.__dict__:
-            raise AttributeError('{} not in ViewParam dict'.format(name))
-        return self.__dict__[name]
-
-    def __setattr__(self, name, value):
-        super().__setattr__(name, value)
-        self.__dict__[name] = value
-
 
 class PlotViewIndependent():
     """View settings for OpenMC plot, independent of the model.
@@ -837,10 +823,8 @@ class PlotViewIndependent():
         Number of contours levels or explicit level values
     """
 
-    def __init__(self, origin=(0, 0, 0), width=10, height=10):
+    def __init__(self):
         """Initialize PlotViewIndependent attributes"""
-        self.view_params = ViewParam(origin=origin, width=width, height=height)
-
         # Geometry Plot
         self.aspectLock = True
         self.colorby = 'material'
@@ -877,21 +861,6 @@ class PlotViewIndependent():
         self.tallyValue = "Mean"
         self.tallyContours = False
         self.tallyContourLevels = ""
-
-    def __getattr__(self, name):
-        if name in ['level', 'origin', 'width', 'height',
-                    'h_res', 'v_res', 'basis', 'color_overlaps']:
-            return getattr(self.view_params, name)
-        if name not in self.__dict__:
-            raise AttributeError('{} not in PlotViewIndependent dict'.format(name))
-        return self.__dict__[name]
-
-    def __setattr__(self, name, value):
-        if name in ['level', 'origin', 'width', 'height',
-                    'h_res', 'v_res', 'basis', 'color_overlaps']:
-            setattr(self.view_params, name, value)
-        else:
-            super().__setattr__(name, value)
 
     def getDataLimits(self):
         return self.data_minmax
@@ -969,7 +938,9 @@ class PlotView():
         if restore_view is not None:
             self.view_ind = copy.copy(restore_view)
         else:
-            self.view_ind = PlotViewIndependent(origin=origin, width=width, height=height)
+            self.view_ind = PlotViewIndependent()
+
+        self.view_params = ViewParam(origin=origin, width=width, height=height)
 
         # Get model domain info
         self.cells = self.getDomains('cell')
@@ -981,11 +952,18 @@ class PlotView():
             if name not in self.__dict__:
                 raise AttributeError('{} not in PlotView dict'.format(name))
             return self.__dict__[name]
-        return getattr(self.view_ind, name)
+        elif name in ['level', 'origin', 'width', 'height',
+                      'h_res', 'v_res', 'basis', 'color_overlaps']:
+            return getattr(self.view_params, name)
+        else:
+            return getattr(self.view_ind, name)
 
     def __setattr__(self, name, value):
         if name in ['view_ind', 'cells', 'materials', 'selectedTally']:
             super().__setattr__(name, value)
+        elif name in ['level', 'origin', 'width', 'height',
+                      'h_res', 'v_res', 'basis', 'color_overlaps']:
+            setattr(self.view_params, name, value)
         else:
             setattr(self.view_ind, name, value)
 
