@@ -1228,3 +1228,26 @@ class MainWindow(QMainWindow):
         # show export tool dialog
         self.showExportDialog()
 
+    def viewMaterialProps(self, id):
+        """display material properties in message box"""
+        mat = openmc.lib.materials[id]
+        if mat.name:
+            msg_str = f"Material {id} ({mat.name}) Properties\n\n"
+        else:
+            msg_str = f"Material {id} Properties\n\n"
+
+        # get density and temperature
+        dens_g = mat.get_density(units='g/cm3')
+        dens_a = mat.get_density(units='atom/b-cm')
+        msg_str += f"Density: {dens_g:.3f} g/cm3 ({dens_a:.3e} atom/b-cm)\n"
+        msg_str += f"Temperature: {mat.temperature} K\n\n"
+
+        # get nuclides and their densities
+        msg_str += "Nuclide densities [atom/b-cm]:\n"
+        for nuc, dens in zip(mat.nuclides, mat.densities):
+            msg_str += f'{nuc}: {dens:5.3e}\n'
+
+        msg_box = QMessageBox(self)
+        msg_box.setText(msg_str)
+        msg_box.setModal(False)
+        msg_box.show()

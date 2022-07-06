@@ -354,9 +354,14 @@ class PlotImage(FigureCanvas):
 
             # Domain ID
             if domain[id].name:
-                domainID = self.menu.addAction("{} {}: \"{}\"".format(domain_kind, id, domain[id].name))
+                domainID = self.menu.addAction("{} {} Info: \"{}\"".format(domain_kind, id, domain[id].name))
             else:
-                domainID = self.menu.addAction("{} {}".format(domain_kind, id))
+                domainID = self.menu.addAction("{} {} Info".format(domain_kind, id))
+
+            # add connector to a new window of info here for material props
+            if domain_kind == 'Material':
+                mat_prop_connector = partial(self.main_window.viewMaterialProps, id)
+                domainID.triggered.connect(mat_prop_connector)
 
             self.menu.addSeparator()
 
