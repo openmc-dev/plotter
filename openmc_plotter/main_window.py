@@ -1247,6 +1247,7 @@ class MainWindow(QMainWindow):
         for nuc, dens in zip(mat.nuclides, mat.densities):
             msg_str += f'{nuc}: {dens:5.3e}\n'
 
-        msg_box = QMessageBox()
+        msg_box = QMessageBox(self)
         msg_box.setText(msg_str)
-        msg_box.exec_()
+        msg_box.setModal(False)
+        msg_box.show()
