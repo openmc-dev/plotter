@@ -231,23 +231,14 @@ class PlotModel():
         Runs OpenMC in plot mode to generate new plot image.
         """
         cv = self.currentView = copy.deepcopy(self.activeView)
-        pv = self.previousViews[-1]  # pv will always be at least 1 to store current views, so only do this if len > 1
+        pv = self.previousViews[-1]
 
-        print('*** NEW CALL TO MAKEPLOT ***')
-        print(cv.view_params == pv.view_params)
-        print('Previous View Parameters')
-        print(pv.view_params)
-        print('Current View Parameters')
-        print(cv.view_params)
-
-        if (self.__props_map is None) or (self.__ids_map is None) or (cv.view_params != pv.view_params):
-            print('generating new id/prop map')
-            # we are at the first view and need to populate OR view has changed and need to populate
+        if (self.__props_map is None) or (self.__ids_map is None) or \
+            (cv.view_params != pv.view_params):
+            # we are at the first view and need to populate OR
+            # view has changed and need to populate
             self.__ids_map = openmc.lib.id_map(cv.view_params)
             self.__props_map = openmc.lib.property_map(cv.view_params)
-
-        else:
-            print('no change')
 
         self.cell_ids = self.__ids_map[:, :, 0]
         self.instances = self.__ids_map[:, :, 1]
