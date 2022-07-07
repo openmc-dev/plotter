@@ -928,10 +928,10 @@ class PlotView():
 
         if restore_view is not None:
             self.view_ind = copy.copy(restore_view)
+            self.view_params = copy.copy(restore_view.view_params)
         else:
             self.view_ind = PlotViewIndependent()
-
-        self.view_params = ViewParam(origin=origin, width=width, height=height)
+            self.view_params = ViewParam(origin=origin, width=width, height=height)
 
         # Get model domain info
         self.cells = self.getDomains('cell')
