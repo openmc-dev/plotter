@@ -747,17 +747,6 @@ class ViewParam(openmc.lib.plot._PlotBase):
 class PlotViewIndependent():
     """View settings for OpenMC plot, independent of the model.
 
-    Parameters
-    ----------
-    origin : 3-tuple of floats
-        Origin (center) of plot view
-    width: float
-        Width of plot view in model units
-    height : float
-        Height of plot view in model units
-    restore_view : PlotView or PlotViewIndependent or None
-        view object with specified parameters to restore
-
     Attributes
     ----------
     aspectLock : bool
@@ -913,8 +902,23 @@ class PlotViewIndependent():
 class PlotView():
     """Setup the view of the model.
 
+    Parameters
+    ----------
+    origin : 3-tuple of floats
+        Origin (center) of plot view
+    width: float
+        Width of plot view in model units
+    height : float
+        Height of plot view in model units
+    restore_view : PlotView or PlotViewIndependent or None
+        view object with specified parameters to restore
+
     Attributes
     ----------
+    view_ind : PlotViewIndependent instance
+        viewing parameters that are independent of the model
+    view_params : ViewParam instance
+        view parameters necesary for _PlotBase
     cells : Dict of DomainView instances
         Dictionary of cell view settings by ID
     materials : Dict of DomainView instances
