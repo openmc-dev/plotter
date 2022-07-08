@@ -739,12 +739,9 @@ class ViewParam(openmc.lib.plot._PlotBase):
         self.color_overlaps = False
 
     def __eq__(self, other):
-        if repr(self) == repr(other):
-            return True
-        else:
-            return False
+        return repr(self) == repr(other)
 
-class PlotViewIndependent():
+class PlotViewIndependent:
     """View settings for OpenMC plot, independent of the model.
 
     Attributes
@@ -899,7 +896,7 @@ class PlotViewIndependent():
         self.v_res = self.v_res
         self.basis = view.basis
 
-class PlotView():
+class PlotView:
     """Setup the view of the model.
 
     Parameters
