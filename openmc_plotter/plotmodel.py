@@ -73,6 +73,10 @@ class PlotModel():
             Dictionary mapping material IDs to openmc.Material instances
         ids : NumPy int array (v_res, h_res, 1)
             Mapping of plot coordinates to cell/material ID by pixel
+        ids_map : NumPy int32 array (v_res, h_res, 3)
+            Mapping of cell and material ids
+        props_map : Numpy float array (v_res, h_res, 3)
+            Mapping of cell temperatures and material densities
         image : NumPy int array (v_res, h_res, 3)
             The current RGB image data
         statepoint : StatePointModel
@@ -107,8 +111,8 @@ class PlotModel():
         self.instances = None
 
         # ID and Props (curren)
-        self.__ids_map = None
-        self.__props_map = None
+        self.ids_map = None
+        self.props_map = None
 
         self.version = __VERSION__
 
@@ -242,16 +246,16 @@ class PlotModel():
         cv = self.currentView = copy.deepcopy(self.activeView)
         pv = self.previousViews[-1]
 
-        if (self.__props_map is None) or (self.__ids_map is None) or \
+        if (self.props_map is None) or (self.ids_map is None) or \
             (cv.view_params != pv.view_params):
             # we are at the first view and need to populate OR
             # view has changed and need to populate
-            self.__ids_map = openmc.lib.id_map(cv.view_params)
-            self.__props_map = openmc.lib.property_map(cv.view_params)
+            self.ids_map = openmc.lib.id_map(cv.view_params)
+            self.props_map = openmc.lib.property_map(cv.view_params)
 
-        self.cell_ids = self.__ids_map[:, :, 0]
-        self.instances = self.__ids_map[:, :, 1]
-        self.mat_ids = self.__ids_map[:, :, 2]
+        self.cell_ids = self.ids_map[:, :, 0]
+        self.instances = self.ids_map[:, :, 1]
+        self.mat_ids = self.ids_map[:, :, 2]
 
         # set model ids based on domain
         if cv.colorby == 'cell':
@@ -292,7 +296,7 @@ class PlotModel():
         # set model image
         self.image = image
         # set model properties
-        self.properties = self.__props_map
+        self.properties = self.props_map
         # tally data
         self.tally_data = None
 
