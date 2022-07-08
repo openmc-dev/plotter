@@ -127,32 +127,42 @@ class PlotModel():
         self.subsequentViews = []
 
         if use_settings_pkl and os.path.isfile('plot_settings.pkl'):
-            with open('plot_settings.pkl', 'rb') as file:
-                data = pickle.load(file)
+            try:
+                with open('plot_settings.pkl', 'rb') as file:
+                    data = pickle.load(file)
 
-                # check GUI version
-                if data['version'] != self.version:
-                    print("WARNING: previous plot settings are for a different "
-                        "version of the GUI. They will be ignored.")
-                    wrn_msg = "Existing version: {}, Current GUI version: {}"
-                    print(wrn_msg.format(data['version'], self.version))
-                    view_ind = None
-                else:
-                    view_ind = data['currentView_ind']
+                    # check GUI version
+                    if data['version'] != self.version:
+                        print("WARNING: previous plot settings are for a different "
+                            "version of the GUI. They will be ignored.")
+                        wrn_msg = "Existing version: {}, Current GUI version: {}"
+                        print(wrn_msg.format(data['version'], self.version))
+                        view_ind = None
+                    else:
+                        view_ind = data['currentView_ind']
 
-                    # restore statepoint file
-                    try:
-                        self.statepoint = data['statepoint']
-                    except OSError:
-                        msg_box = QMessageBox()
-                        msg = "Could not open statepoint file: \n\n {} \n"
-                        msg_box.setText(msg.format(self.model.statepoint.filename))
-                        msg_box.setIcon(QMessageBox.Warning)
-                        msg_box.setStandardButtons(QMessageBox.Ok)
-                        msg_box.exec_()
-                        self.statepoint = None
+                        # restore statepoint file
+                        try:
+                            self.statepoint = data['statepoint']
+                        except OSError:
+                            msg_box = QMessageBox()
+                            msg = "Could not open statepoint file: \n\n {} \n"
+                            msg_box.setText(msg.format(self.model.statepoint.filename))
+                            msg_box.setIcon(QMessageBox.Warning)
+                            msg_box.setStandardButtons(QMessageBox.Ok)
+                            msg_box.exec_()
+                            self.statepoint = None
 
-                self.defaultView = PlotView(restore_view=view_ind)
+                    self.defaultView = PlotView(restore_view=view_ind)
+            except AttributeError:
+                msg_box = QMessageBox()
+                msg = "WARNING: previous plot settings are incorrect format. " +\
+                      "will be ignored."
+                msg_box.setText(msg)
+                msg_box.setIcon(QMessageBox.Warning)
+                msg_box.setStandardButtons(QMessageBox.Ok)
+                msg_box.exec_()
+                self.defaultView = self.getDefaultView()
         else:
             self.defaultView = self.getDefaultView()
 
