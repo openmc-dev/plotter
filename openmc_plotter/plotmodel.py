@@ -1,7 +1,6 @@
 from ast import literal_eval
 from collections import defaultdict
 import copy
-from curses import resize_term
 import itertools
 import threading
 import os

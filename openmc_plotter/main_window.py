@@ -21,7 +21,7 @@ try:
 except ImportError:
     _HAVE_VTK = False
 
-from .plotmodel import PlotModel, DomainTableModel, PlotView
+from .plotmodel import PlotModel, DomainTableModel
 from .plotgui import PlotImage, ColorDialog
 from .docks import DomainDock, TallyDock
 from .overlays import ShortcutsOverlay
