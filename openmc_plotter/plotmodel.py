@@ -157,7 +157,7 @@ class PlotModel():
             except AttributeError:
                 msg_box = QMessageBox()
                 msg = "WARNING: previous plot settings are incorrect format. " +\
-                      "will be ignored."
+                      "They will be ignored."
                 msg_box.setText(msg)
                 msg_box.setIcon(QMessageBox.Warning)
                 msg_box.setStandardButtons(QMessageBox.Ok)
