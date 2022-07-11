@@ -124,7 +124,6 @@ class PlotModel():
 
         # Cell/Material ID by coordinates
         self.ids = None
-        self.instances = None
 
         # Return values from id_map and property_map
         self.ids_map = None
@@ -281,10 +280,6 @@ class PlotModel():
             # view has changed and need to populate
             self.ids_map = openmc.lib.id_map(cv.view_params)
             self.properties = openmc.lib.property_map(cv.view_params)
-
-        self.cell_ids = self.ids_map[:, :, 0]
-        self.instances = self.ids_map[:, :, 1]
-        self.mat_ids = self.ids_map[:, :, 2]
 
         # set model ids based on domain
         if cv.colorby == 'cell':
@@ -731,6 +726,19 @@ class PlotModel():
                    lower_left[v_ind], upper_right[v_ind]]
 
         return image_data, extents, data_min, data_max
+
+    @property
+    def cell_ids(self):
+        return self.ids_map[:, :, 0]
+
+    @property
+    def instances(self):
+        return self.ids_map[:, :, 1]
+
+    @property
+    def mat_ids(self):
+        return self.ids_map[:, :, 2]
+
 
 class ViewParam(openmc.lib.plot._PlotBase):
     """Viewer settings that are needed for _PlotBase and are independent
