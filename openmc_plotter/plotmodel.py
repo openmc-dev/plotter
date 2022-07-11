@@ -920,22 +920,6 @@ class PlotViewIndependent:
             z = self.origin[2] + self.height / 2.0
         return x, y, z
 
-    def adopt_plotbase(self, view):
-        """
-        Applies only the geometric aspects of a view to the current view
-
-        Parameters
-        ----------
-
-        view : PlotView
-            View to take parameters from
-        """
-        self.origin = view.origin
-        self.width = view.width
-        self.height = view.height
-        self.h_res = self.h_res
-        self.v_res = self.v_res
-        self.basis = view.basis
 
 class PlotView:
     """Setup the view of the model.
@@ -1056,6 +1040,23 @@ class PlotView:
                                           False)
 
         return domains
+
+    def adopt_plotbase(self, view):
+        """
+        Applies only the geometric aspects of a view to the current view
+
+        Parameters
+        ----------
+
+        view : PlotView
+            View to take parameters from
+        """
+        self.origin = view.origin
+        self.width = view.width
+        self.height = view.height
+        self.h_res = view.h_res
+        self.v_res = view.v_res
+        self.basis = view.basis
 
 
 class DomainView():
