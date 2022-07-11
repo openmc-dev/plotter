@@ -130,10 +130,20 @@ class PlotModel():
         self.subsequentViews = []
 
         if use_settings_pkl and os.path.isfile('plot_settings.pkl'):
-            try:
-                with open('plot_settings.pkl', 'rb') as file:
+            with open('plot_settings.pkl', 'rb') as file:
+                try:
                     data = pickle.load(file)
+                except AttributeError:
+                    msg_box = QMessageBox()
+                    msg = "WARNING: previous plot settings are in an incompatible format. " +\
+                          "They will be ignored."
+                    msg_box.setText(msg)
+                    msg_box.setIcon(QMessageBox.Warning)
+                    msg_box.setStandardButtons(QMessageBox.Ok)
+                    msg_box.exec_()
+                    self.defaultView = self.getDefaultView()
 
+                else:
                     # check GUI version
                     if data['version'] != self.version:
                         print("WARNING: previous plot settings are for a different "
@@ -157,15 +167,7 @@ class PlotModel():
                             self.statepoint = None
 
                     self.defaultView = PlotView(restore_view=view_ind)
-            except AttributeError:
-                msg_box = QMessageBox()
-                msg = "WARNING: previous plot settings are in an incompatible format. " +\
-                      "They will be ignored."
-                msg_box.setText(msg)
-                msg_box.setIcon(QMessageBox.Warning)
-                msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.exec_()
-                self.defaultView = self.getDefaultView()
+
         else:
             self.defaultView = self.getDefaultView()
 
