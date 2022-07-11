@@ -110,7 +110,7 @@ class PlotModel():
         self.ids = None
         self.instances = None
 
-        # ID and Props (curren)
+        # Return values from id_map and property_map
         self.ids_map = None
         self.props_map = None
 
@@ -159,7 +159,7 @@ class PlotModel():
                     self.defaultView = PlotView(restore_view=view_ind)
             except AttributeError:
                 msg_box = QMessageBox()
-                msg = "WARNING: previous plot settings are incorrect format. " +\
+                msg = "WARNING: previous plot settings are in an incompatible format. " +\
                       "They will be ignored."
                 msg_box.setText(msg)
                 msg_box.setIcon(QMessageBox.Warning)
@@ -916,7 +916,7 @@ class PlotView:
     ----------
     origin : 3-tuple of floats
         Origin (center) of plot view
-    width: float
+    width : float
         Width of plot view in model units
     height : float
         Height of plot view in model units
