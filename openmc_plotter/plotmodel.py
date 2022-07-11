@@ -5,6 +5,7 @@ import itertools
 import threading
 import os
 import pickle
+import hashlib
 
 from PySide2.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
@@ -60,6 +61,16 @@ _TALLY_VALUES = {'Mean': 'mean',
                  'Std. Dev.': 'std_dev',
                  'Rel. Error': 'rel_err'}
 
+def hash_file(filename):
+    # return the md5 hash of a file
+    h = hashlib.md5()
+    with open(filename,'rb') as file:
+        chunk = 0
+        while chunk != b'':
+            # read 32768 bytes at a time
+            chunk = file.read(32768)
+            h.update(chunk)
+    return h.hexdigest()
 class PlotModel():
     """ Geometry and plot settings for OpenMC Plot Explorer model
 
@@ -149,6 +160,8 @@ class PlotModel():
                     self.defaultView = self.getDefaultView()
 
                 else:
+                    restore_domains = False
+
                     # check GUI version
                     if data['version'] != self.version:
                         print("WARNING: previous plot settings are for a different "
@@ -158,6 +171,14 @@ class PlotModel():
                         view = None
                     else:
                         view = data['currentView']
+
+                        # get materials.xml and geometry.xml hashes to
+                        # restore additional settings if possible
+                        mat_xml_hash = hash_file('materials.xml')
+                        geom_xml_hash = hash_file('geometry.xml')
+                        if mat_xml_hash == data['mat_xml_hash'] and \
+                            geom_xml_hash == data['geom_xml_hash']:
+                            restore_domains = True
 
                         # restore statepoint file
                         try:
@@ -171,7 +192,8 @@ class PlotModel():
                             msg_box.exec_()
                             self.statepoint = None
 
-                    self.defaultView = PlotView(restore_view=view)
+                    self.defaultView = PlotView(restore_view=view,
+                                                restore_domains=restore_domains)
 
         else:
             self.defaultView = self.getDefaultView()
@@ -929,6 +951,9 @@ class PlotView:
         Height of plot view in model units
     restore_view : PlotView or None
         view object with specified parameters to restore
+    restore_domains : bool (optional)
+        If True and restore_view is provided, then also restore domain
+        properties. Default False.
 
     Attributes
     ----------
@@ -948,7 +973,8 @@ class PlotView:
     plotbase_attrs = ('level', 'origin', 'width', 'height',
                       'h_res', 'v_res', 'basis', 'color_overlaps')
 
-    def __init__(self, origin=(0, 0, 0), width=10, height=10, restore_view=None):
+    def __init__(self, origin=(0, 0, 0), width=10, height=10, restore_view=None,
+                 restore_domains=False):
         """Initialize PlotView attributes"""
 
         if restore_view is not None:
@@ -959,9 +985,14 @@ class PlotView:
             self.view_params = ViewParam(origin=origin, width=width, height=height)
 
         # Get model domain info
-        self.cells = self.getDomains('cell')
-        self.materials = self.getDomains('material')
-        self.selectedTally = None
+        if restore_domains and restore_view is not None:
+            self.cells = restore_view.cells
+            self.materials = restore_view.materials
+            self.selectedTally = restore_view.selectedTally
+        else:
+            self.cells = self.getDomains('cell')
+            self.materials = self.getDomains('material')
+            self.selectedTally = None
 
     def __getattr__(self, name):
         if name in self.attrs:

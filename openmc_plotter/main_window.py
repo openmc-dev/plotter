@@ -3,7 +3,6 @@ from functools import partial
 import os
 import pickle
 from threading import Thread
-import hashlib
 
 from PySide2 import QtCore, QtGui
 from PySide2.QtGui import QKeyEvent
@@ -21,7 +20,7 @@ try:
 except ImportError:
     _HAVE_VTK = False
 
-from .plotmodel import PlotModel, DomainTableModel
+from .plotmodel import PlotModel, DomainTableModel, hash_file
 from .plotgui import PlotImage, ColorDialog
 from .docks import DomainDock, TallyDock
 from .overlays import ShortcutsOverlay
@@ -1154,10 +1153,16 @@ class MainWindow(QMainWindow):
         if self.model.statepoint:
                 self.model.statepoint.close()
 
+        # get hashes for geometry.xml and material.xml at close
+        mat_xml_hash = hash_file('materials.xml')
+        geom_xml_hash = hash_file('geometry.xml')
+
         pickle_data = {
             'version': self.model.version,
             'currentView': self.model.currentView,
-            'statepoint': self.model.statepoint
+            'statepoint': self.model.statepoint,
+            'mat_xml_hash': mat_xml_hash,
+            'geom_xml_hash': geom_xml_hash
         }
         with open('plot_settings.pkl', 'wb') as file:
             pickle.dump(pickle_data, file)
