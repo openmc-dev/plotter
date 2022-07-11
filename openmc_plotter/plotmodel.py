@@ -944,6 +944,10 @@ class PlotView:
         Label of the currently selected tally
     """
 
+    attrs = ('view_ind', 'view_params', 'cells', 'materials', 'selectedTally')
+    plotbase_attrs = ('level', 'origin', 'width', 'height',
+                      'h_res', 'v_res', 'basis', 'color_overlaps')
+
     def __init__(self, origin=(0, 0, 0), width=10, height=10, restore_view=None):
         """Initialize PlotView attributes"""
 
@@ -960,21 +964,19 @@ class PlotView:
         self.selectedTally = None
 
     def __getattr__(self, name):
-        if name in ['view_ind', 'view_params', 'cells', 'materials', 'selectedTally']:
+        if name in self.attrs:
             if name not in self.__dict__:
                 raise AttributeError('{} not in PlotView dict'.format(name))
             return self.__dict__[name]
-        elif name in ['level', 'origin', 'width', 'height',
-                      'h_res', 'v_res', 'basis', 'color_overlaps']:
+        elif name in self.plotbase_attrs:
             return getattr(self.view_params, name)
         else:
             return getattr(self.view_ind, name)
 
     def __setattr__(self, name, value):
-        if name in ['view_ind', 'view_params', 'cells', 'materials', 'selectedTally']:
+        if name in self.attrs:
             super().__setattr__(name, value)
-        elif name in ['level', 'origin', 'width', 'height',
-                      'h_res', 'v_res', 'basis', 'color_overlaps']:
+        elif name in self.plotbase_attrs:
             setattr(self.view_params, name, value)
         else:
             setattr(self.view_ind, name, value)
