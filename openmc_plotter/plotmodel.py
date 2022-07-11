@@ -91,7 +91,7 @@ class PlotModel():
             Mapping of plot coordinates to cell/material ID by pixel
         ids_map : NumPy int32 array (v_res, h_res, 3)
             Mapping of cell and material ids
-        props_map : Numpy float array (v_res, h_res, 3)
+        properties : Numpy float array (v_res, h_res, 3)
             Mapping of cell temperatures and material densities
         image : NumPy int array (v_res, h_res, 3)
             The current RGB image data
@@ -128,7 +128,7 @@ class PlotModel():
 
         # Return values from id_map and property_map
         self.ids_map = None
-        self.props_map = None
+        self.properties = None
 
         self.version = __VERSION__
 
@@ -275,12 +275,12 @@ class PlotModel():
         cv = self.currentView = copy.deepcopy(self.activeView)
         pv = self.previousViews[-1]
 
-        if (self.props_map is None) or (self.ids_map is None) or \
+        if (self.properties is None) or (self.ids_map is None) or \
             (cv.view_params != pv.view_params):
             # we are at the first view and need to populate OR
             # view has changed and need to populate
             self.ids_map = openmc.lib.id_map(cv.view_params)
-            self.props_map = openmc.lib.property_map(cv.view_params)
+            self.properties = openmc.lib.property_map(cv.view_params)
 
         self.cell_ids = self.ids_map[:, :, 0]
         self.instances = self.ids_map[:, :, 1]
@@ -324,8 +324,7 @@ class PlotModel():
 
         # set model image
         self.image = image
-        # set model properties
-        self.properties = self.props_map
+
         # tally data
         self.tally_data = None
 
