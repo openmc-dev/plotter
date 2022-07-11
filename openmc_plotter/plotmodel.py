@@ -155,9 +155,9 @@ class PlotModel():
                             "version of the GUI. They will be ignored.")
                         wrn_msg = "Existing version: {}, Current GUI version: {}"
                         print(wrn_msg.format(data['version'], self.version))
-                        view_ind = None
+                        view = None
                     else:
-                        view_ind = data['currentView_ind']
+                        view = data['currentView']
 
                         # restore statepoint file
                         try:
@@ -171,7 +171,7 @@ class PlotModel():
                             msg_box.exec_()
                             self.statepoint = None
 
-                    self.defaultView = PlotView(restore_view=view_ind)
+                    self.defaultView = PlotView(restore_view=view)
 
         else:
             self.defaultView = self.getDefaultView()
@@ -927,7 +927,7 @@ class PlotView:
         Width of plot view in model units
     height : float
         Height of plot view in model units
-    restore_view : PlotView or PlotViewIndependent or None
+    restore_view : PlotView or None
         view object with specified parameters to restore
 
     Attributes
@@ -948,7 +948,7 @@ class PlotView:
         """Initialize PlotView attributes"""
 
         if restore_view is not None:
-            self.view_ind = copy.copy(restore_view)
+            self.view_ind = copy.copy(restore_view.view_ind)
             self.view_params = copy.copy(restore_view.view_params)
         else:
             self.view_ind = PlotViewIndependent()

@@ -1156,7 +1156,7 @@ class MainWindow(QMainWindow):
 
         pickle_data = {
             'version': self.model.version,
-            'currentView_ind': self.model.currentView.view_ind,
+            'currentView': self.model.currentView,
             'statepoint': self.model.statepoint
         }
         with open('plot_settings.pkl', 'wb') as file:
