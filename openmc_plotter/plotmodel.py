@@ -63,6 +63,11 @@ _TALLY_VALUES = {'Mean': 'mean',
 class PlotModel():
     """ Geometry and plot settings for OpenMC Plot Explorer model
 
+        Parameters
+        ----------
+        use_settings_pkl : bool
+            If True, use plot_settings.pkl file to reload settings
+
         Attributes
         ----------
         geom : openmc.Geometry instance
