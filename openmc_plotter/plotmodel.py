@@ -953,7 +953,7 @@ class PlotView:
         self.selectedTally = None
 
     def __getattr__(self, name):
-        if name in ['view_ind', 'cells', 'materials', 'selectedTally']:
+        if name in ['view_ind', 'view_params', 'cells', 'materials', 'selectedTally']:
             if name not in self.__dict__:
                 raise AttributeError('{} not in PlotView dict'.format(name))
             return self.__dict__[name]
@@ -964,7 +964,7 @@ class PlotView:
             return getattr(self.view_ind, name)
 
     def __setattr__(self, name, value):
-        if name in ['view_ind', 'cells', 'materials', 'selectedTally']:
+        if name in ['view_ind', 'view_params', 'cells', 'materials', 'selectedTally']:
             super().__setattr__(name, value)
         elif name in ['level', 'origin', 'width', 'height',
                       'h_res', 'v_res', 'basis', 'color_overlaps']:
