@@ -144,6 +144,8 @@ class PlotModel():
         self.previousViews = []
         self.subsequentViews = []
 
+        self.defaultView = self.getDefaultView()
+
         if use_settings_pkl and os.path.isfile('plot_settings.pkl'):
             with open('plot_settings.pkl', 'rb') as file:
                 try:
@@ -156,7 +158,7 @@ class PlotModel():
                     msg_box.setIcon(QMessageBox.Warning)
                     msg_box.setStandardButtons(QMessageBox.Ok)
                     msg_box.exec_()
-                    self.defaultView = self.getDefaultView()
+                    self.currentView = copy.deepcopy(self.defaultView)
 
                 else:
                     restore_domains = False
@@ -191,14 +193,13 @@ class PlotModel():
                             msg_box.exec_()
                             self.statepoint = None
 
-                    self.defaultView = PlotView(restore_view=view,
+                    self.currentView = PlotView(restore_view=view,
                                                 restore_domains=restore_domains)
 
         else:
-            self.defaultView = self.getDefaultView()
+            self.currentView = copy.deepcopy(self.defaultView)
 
-        self.currentView = copy.deepcopy(self.defaultView)
-        self.activeView = copy.deepcopy(self.defaultView)
+        self.activeView = copy.deepcopy(self.currentView)
 
     def openStatePoint(self, filename):
         self.statepoint = StatePointModel(filename, open_file=True)
