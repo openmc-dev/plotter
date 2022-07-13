@@ -71,6 +71,8 @@ def hash_file(filename):
             chunk = file.read(32768)
             h.update(chunk)
     return h.hexdigest()
+
+
 class PlotModel():
     """ Geometry and plot settings for OpenMC Plot Explorer model
 
@@ -272,15 +274,17 @@ class PlotModel():
         Creates corresponding .xml files from user-chosen settings.
         Runs OpenMC in plot mode to generate new plot image.
         """
-        cv = self.currentView = copy.deepcopy(self.activeView)
-        pv = self.previousViews[-1]
+        # update/call maps under 2 circumstances
+        #   1. this is the intial plot (ids_map/properties are None)
+        #   2. The active (desired) view differs from the current view parameters
+        if (self.currentView.view_params != self.activeView.view_params) or \
+            (self.ids_map is None) or (self.properties is None):
+            # get ids from the active (desired) view
+            self.ids_map = openmc.lib.id_map(self.activeView.view_params)
+            self.properties = openmc.lib.property_map(self.activeView.view_params)
 
-        if (self.properties is None) or (self.ids_map is None) or \
-            (cv.view_params != pv.view_params):
-            # we are at the first view and need to populate OR
-            # view has changed and need to populate
-            self.ids_map = openmc.lib.id_map(cv.view_params)
-            self.properties = openmc.lib.property_map(cv.view_params)
+        # update current view
+        cv = self.currentView = copy.deepcopy(self.activeView)
 
         # set model ids based on domain
         if cv.colorby == 'cell':
