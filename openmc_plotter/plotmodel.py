@@ -3,6 +3,9 @@ from collections import defaultdict
 import copy
 import itertools
 import threading
+import os
+import pickle
+import hashlib
 
 from PySide2.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
@@ -16,7 +19,7 @@ from .plot_colors import random_rgb, reset_seed
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = tuple(range(0, 6))
 
-__VERSION__ = "0.2.1"
+__VERSION__ = "0.2.2"
 
 _VOID_REGION = -1
 _NOT_FOUND = -2
@@ -58,8 +61,25 @@ _TALLY_VALUES = {'Mean': 'mean',
                  'Std. Dev.': 'std_dev',
                  'Rel. Error': 'rel_err'}
 
+def hash_file(filename):
+    # return the md5 hash of a file
+    h = hashlib.md5()
+    with open(filename,'rb') as file:
+        chunk = 0
+        while chunk != b'':
+            # read 32768 bytes at a time
+            chunk = file.read(32768)
+            h.update(chunk)
+    return h.hexdigest()
+
+
 class PlotModel():
     """ Geometry and plot settings for OpenMC Plot Explorer model
+
+        Parameters
+        ----------
+        use_settings_pkl : bool
+            If True, use plot_settings.pkl file to reload settings
 
         Attributes
         ----------
@@ -71,6 +91,10 @@ class PlotModel():
             Dictionary mapping material IDs to openmc.Material instances
         ids : NumPy int array (v_res, h_res, 1)
             Mapping of plot coordinates to cell/material ID by pixel
+        ids_map : NumPy int32 array (v_res, h_res, 3)
+            Mapping of cell and material ids
+        properties : Numpy float array (v_res, h_res, 3)
+            Mapping of cell temperatures and material densities
         image : NumPy int array (v_res, h_res, 3)
             The current RGB image data
         statepoint : StatePointModel
@@ -92,7 +116,7 @@ class PlotModel():
             have unapplied changes
     """
 
-    def __init__(self):
+    def __init__(self, use_settings_pkl):
         """ Initialize PlotModel class attributes """
 
         # Retrieve OpenMC Cells/Materials
@@ -102,7 +126,10 @@ class PlotModel():
 
         # Cell/Material ID by coordinates
         self.ids = None
-        self.instances = None
+
+        # Return values from id_map and property_map
+        self.ids_map = None
+        self.properties = None
 
         self.version = __VERSION__
 
@@ -116,12 +143,65 @@ class PlotModel():
         # reset random number seed for consistent
         # coloring when reloading a model
         reset_seed()
-
         self.previousViews = []
         self.subsequentViews = []
+
         self.defaultView = self.getDefaultView()
-        self.currentView = copy.deepcopy(self.defaultView)
-        self.activeView = copy.deepcopy(self.defaultView)
+
+        if use_settings_pkl and os.path.isfile('plot_settings.pkl'):
+            with open('plot_settings.pkl', 'rb') as file:
+                try:
+                    data = pickle.load(file)
+                except AttributeError:
+                    msg_box = QMessageBox()
+                    msg = "WARNING: previous plot settings are in an incompatible format. " +\
+                          "They will be ignored."
+                    msg_box.setText(msg)
+                    msg_box.setIcon(QMessageBox.Warning)
+                    msg_box.setStandardButtons(QMessageBox.Ok)
+                    msg_box.exec_()
+                    self.currentView = copy.deepcopy(self.defaultView)
+
+                else:
+                    restore_domains = False
+
+                    # check GUI version
+                    if data['version'] != self.version:
+                        print("WARNING: previous plot settings are for a different "
+                            "version of the GUI. They will be ignored.")
+                        wrn_msg = "Existing version: {}, Current GUI version: {}"
+                        print(wrn_msg.format(data['version'], self.version))
+                        view = None
+                    else:
+                        view = data['currentView']
+
+                        # get materials.xml and geometry.xml hashes to
+                        # restore additional settings if possible
+                        mat_xml_hash = hash_file('materials.xml')
+                        geom_xml_hash = hash_file('geometry.xml')
+                        if mat_xml_hash == data['mat_xml_hash'] and \
+                            geom_xml_hash == data['geom_xml_hash']:
+                            restore_domains = True
+
+                        # restore statepoint file
+                        try:
+                            self.statepoint = data['statepoint']
+                        except OSError:
+                            msg_box = QMessageBox()
+                            msg = "Could not open statepoint file: \n\n {} \n"
+                            msg_box.setText(msg.format(self.model.statepoint.filename))
+                            msg_box.setIcon(QMessageBox.Warning)
+                            msg_box.setStandardButtons(QMessageBox.Ok)
+                            msg_box.exec_()
+                            self.statepoint = None
+
+                    self.currentView = PlotView(restore_view=view,
+                                                restore_domains=restore_domains)
+
+        else:
+            self.currentView = copy.deepcopy(self.defaultView)
+
+        self.activeView = copy.deepcopy(self.currentView)
 
     def openStatePoint(self, filename):
         self.statepoint = StatePointModel(filename, open_file=True)
@@ -194,14 +274,17 @@ class PlotModel():
         Creates corresponding .xml files from user-chosen settings.
         Runs OpenMC in plot mode to generate new plot image.
         """
+        # update/call maps under 2 circumstances
+        #   1. this is the intial plot (ids_map/properties are None)
+        #   2. The active (desired) view differs from the current view parameters
+        if (self.currentView.view_params != self.activeView.view_params) or \
+            (self.ids_map is None) or (self.properties is None):
+            # get ids from the active (desired) view
+            self.ids_map = openmc.lib.id_map(self.activeView.view_params)
+            self.properties = openmc.lib.property_map(self.activeView.view_params)
 
+        # update current view
         cv = self.currentView = copy.deepcopy(self.activeView)
-        ids = openmc.lib.id_map(cv)
-        props = openmc.lib.property_map(cv)
-
-        self.cell_ids = ids[:, :, 0]
-        self.instances = ids[:, :, 1]
-        self.mat_ids = ids[:, :, 2]
 
         # set model ids based on domain
         if cv.colorby == 'cell':
@@ -241,8 +324,7 @@ class PlotModel():
 
         # set model image
         self.image = image
-        # set model properties
-        self.properties = props
+
         # tally data
         self.tally_data = None
 
@@ -650,9 +732,22 @@ class PlotModel():
 
         return image_data, extents, data_min, data_max
 
+    @property
+    def cell_ids(self):
+        return self.ids_map[:, :, 0]
 
-class PlotView(openmc.lib.plot._PlotBase):
-    """ View settings for OpenMC plot.
+    @property
+    def instances(self):
+        return self.ids_map[:, :, 1]
+
+    @property
+    def mat_ids(self):
+        return self.ids_map[:, :, 2]
+
+
+class ViewParam(openmc.lib.plot._PlotBase):
+    """Viewer settings that are needed for _PlotBase and are independent
+    of all other plotter/model settings.
 
     Parameters
     ----------
@@ -675,11 +770,39 @@ class PlotView(openmc.lib.plot._PlotBase):
         Horizontal resolution of plot image
     v_res : int
         Vertical resolution of plot image
+    basis : {'xy', 'xz', 'yz'}
+        The basis directions for the plot
+    color_overlaps : bool
+        Indicator of whether or not overlaps will be shown
+    level : int
+        The universe level for the plot (default: -1 -> all universes shown)
+    """
+
+    def __init__(self, origin=(0, 0, 0), width=10, height=10):
+        """Initialize ViewParam attributes"""
+        super().__init__()
+
+        # View Parameters
+        self.level = -1
+        self.origin = origin
+        self.width = width
+        self.height = height
+        self.h_res = 1000
+        self.v_res = 1000
+        self.basis = 'xy'
+        self.color_overlaps = False
+
+    def __eq__(self, other):
+        return repr(self) == repr(other)
+
+class PlotViewIndependent:
+    """View settings for OpenMC plot, independent of the model.
+
+    Attributes
+    ----------
     aspectLock : bool
         Indication of whether aspect lock should be maintained to
         prevent image stretching/warping
-    basis : {'xy', 'xz', 'yz'}
-        The basis directions for the plot
     colorby : {'cell', 'material', 'temperature', 'density'}
         Indication of whether the plot should be colored by cell or material
     masking : bool
@@ -697,14 +820,8 @@ class PlotView(openmc.lib.plot._PlotBase):
         is active
     domainBackground : 3-tuple of int
         RGB color to apply to plot background
-    color_overlaps : bool
-        Indicator of whether or not overlaps will be shown
     overlap_color : 3-tuple of int
         RGB color to apply for cell overlap regions
-    cells : Dict of DomainView instances
-        Dictionary of cell view settings by ID
-    materials : Dict of DomainView instances
-        Dictionary of material view settings by ID
     domainAlpha : float between 0 and 1
         Alpha value of the geometry plot
     plotVisibile : bool
@@ -735,26 +852,12 @@ class PlotView(openmc.lib.plot._PlotBase):
         Indicates whether or not tallies are displayed as contours
     tallyContourLevels : str
         Number of contours levels or explicit level values
-    selectedTally : str
-        Label of the currently selected tally
     """
 
-    def __init__(self, origin, width, height):
-        """ Initialize PlotView attributes """
-
-        super().__init__()
-
-        # View Parameters
-        self.level = -1
-        self.origin = origin
-        self.width = width
-        self.height = height
-        self.h_res = 1000
-        self.v_res = 1000
-        self.aspectLock = True
-        self.basis = 'xy'
-
+    def __init__(self):
+        """Initialize PlotViewIndependent attributes"""
         # Geometry Plot
+        self.aspectLock = True
         self.colorby = 'material'
         self.masking = True
         self.maskBackground = (0, 0, 0)
@@ -774,12 +877,9 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.use_custom_minmax = {prop: False for prop in _MODEL_PROPERTIES}
         self.data_indicator_enabled = {prop: False for prop in _MODEL_PROPERTIES}
         self.color_scale_log = {prop: False for prop in _MODEL_PROPERTIES}
-        # Get model domain info
-        self.cells = self.getDomains('cell')
-        self.materials = self.getDomains('material')
 
         # Tally Viz Settings
-        self.tallyDataColormap = 'spectral'
+        self.tallyDataColormap = 'Spectral'
         self.tallyDataVisible = True
         self.tallyDataAlpha = 1.0
         self.tallyDataIndicator = False
@@ -792,7 +892,121 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.tallyValue = "Mean"
         self.tallyContours = False
         self.tallyContourLevels = ""
-        self.selectedTally = None
+
+    def getDataLimits(self):
+        return self.data_minmax
+
+    def getColorLimits(self, property):
+        if self.use_custom_minmax[property]:
+            return self.user_minmax[property]
+        else:
+            return self.data_minmax[property]
+
+    @property
+    def llc(self):
+        if self.basis == 'xy':
+            x = self.origin[0] - self.width / 2.0
+            y = self.origin[1] - self.height / 2.0
+            z = self.origin[2]
+        elif self.basis == 'yz':
+            x = self.origin[0]
+            y = self.origin[1] - self.width / 2.0
+            z = self.origin[2] - self.height / 2.0
+        else:
+            x = self.origin[0] - self.width / 2.0
+            y = self.origin[1]
+            z = self.origin[2] - self.height / 2.0
+        return x, y, z
+    @property
+    def urc(self):
+        if self.basis == 'xy':
+            x = self.origin[0] + self.width / 2.0
+            y = self.origin[1] + self.height / 2.0
+            z = self.origin[2]
+        elif self.basis == 'yz':
+            x = self.origin[0]
+            y = self.origin[1] + self.width / 2.0
+            z = self.origin[2] + self.height / 2.0
+        else:
+            x = self.origin[0] + self.width / 2.0
+            y = self.origin[1]
+            z = self.origin[2] + self.height / 2.0
+        return x, y, z
+
+
+class PlotView:
+    """Setup the view of the model.
+
+    Parameters
+    ----------
+    origin : 3-tuple of floats
+        Origin (center) of plot view
+    width : float
+        Width of plot view in model units
+    height : float
+        Height of plot view in model units
+    restore_view : PlotView or None
+        view object with specified parameters to restore
+    restore_domains : bool (optional)
+        If True and restore_view is provided, then also restore domain
+        properties. Default False.
+
+    Attributes
+    ----------
+    view_ind : PlotViewIndependent instance
+        viewing parameters that are independent of the model
+    view_params : ViewParam instance
+        view parameters necesary for _PlotBase
+    cells : Dict of DomainView instances
+        Dictionary of cell view settings by ID
+    materials : Dict of DomainView instances
+        Dictionary of material view settings by ID
+    selectedTally : str
+        Label of the currently selected tally
+    """
+
+    attrs = ('view_ind', 'view_params', 'cells', 'materials', 'selectedTally')
+    plotbase_attrs = ('level', 'origin', 'width', 'height',
+                      'h_res', 'v_res', 'basis', 'color_overlaps')
+
+    def __init__(self, origin=(0, 0, 0), width=10, height=10, restore_view=None,
+                 restore_domains=False):
+        """Initialize PlotView attributes"""
+
+        if restore_view is not None:
+            self.view_ind = copy.copy(restore_view.view_ind)
+            self.view_params = copy.copy(restore_view.view_params)
+        else:
+            self.view_ind = PlotViewIndependent()
+            self.view_params = ViewParam(origin=origin, width=width, height=height)
+
+        # Get model domain info
+        if restore_domains and restore_view is not None:
+            self.cells = restore_view.cells
+            self.materials = restore_view.materials
+            self.selectedTally = restore_view.selectedTally
+        else:
+            self.cells = self.getDomains('cell')
+            self.materials = self.getDomains('material')
+            self.selectedTally = None
+
+    def __getattr__(self, name):
+        if name in self.attrs:
+            if name not in self.__dict__:
+                raise AttributeError('{} not in PlotView dict'.format(name))
+            return self.__dict__[name]
+        elif name in self.plotbase_attrs:
+            return getattr(self.view_params, name)
+        else:
+            return getattr(self.view_ind, name)
+
+    def __setattr__(self, name, value):
+        if name in self.attrs:
+            super().__setattr__(name, value)
+        elif name in self.plotbase_attrs:
+            setattr(self.view_params, name, value)
+        else:
+            setattr(self.view_ind, name, value)
 
     def __hash__(self):
         return hash(self.__dict__.__str__() + self.__str__())
@@ -840,46 +1054,6 @@ class PlotView(openmc.lib.plot._PlotBase):
 
         return domains
 
-    def getDataLimits(self):
-        return self.data_minmax
-
-    def getColorLimits(self, property):
-        if self.use_custom_minmax[property]:
-            return self.user_minmax[property]
-        else:
-            return self.data_minmax[property]
-
-    @property
-    def llc(self):
-        if self.basis == 'xy':
-            x = self.origin[0] - self.width / 2.0
-            y = self.origin[1] - self.height / 2.0
-            z = self.origin[2]
-        elif self.basis == 'yz':
-            x = self.origin[0]
-            y = self.origin[1] - self.width / 2.0
-            z = self.origin[2] - self.height / 2.0
-        else:
-            x = self.origin[0] - self.width / 2.0
-            y = self.origin[1]
-            z = self.origin[2] - self.height / 2.0
-        return x, y, z
-    @property
-    def urc(self):
-        if self.basis == 'xy':
-            x = self.origin[0] + self.width / 2.0
-            y = self.origin[1] + self.height / 2.0
-            z = self.origin[2]
-        elif self.basis == 'yz':
-            x = self.origin[0]
-            y = self.origin[1] + self.width / 2.0
-            z = self.origin[2] + self.height / 2.0
-        else:
-            x = self.origin[0] + self.width / 2.0
-            y = self.origin[1]
-            z = self.origin[2] + self.height / 2.0
-        return x, y, z
-
     def adopt_plotbase(self, view):
         """
         Applies only the geometric aspects of a view to the current view
@@ -893,9 +1067,10 @@ class PlotView(openmc.lib.plot._PlotBase):
         self.origin = view.origin
         self.width = view.width
         self.height = view.height
-        self.h_res = self.h_res
-        self.v_res = self.v_res
+        self.h_res = view.h_res
+        self.v_res = view.v_res
         self.basis = view.basis
+
 
 class DomainView():
     """ Represents view settings for OpenMC cell or material.

@@ -3,7 +3,6 @@ from functools import partial
 import os
 import pickle
 from threading import Thread
-import hashlib
 
 from PySide2 import QtCore, QtGui
 from PySide2.QtGui import QKeyEvent
@@ -21,7 +20,7 @@ try:
 except ImportError:
     _HAVE_VTK = False
 
-from .plotmodel import PlotModel, DomainTableModel
+from .plotmodel import PlotModel, DomainTableModel, hash_file
 from .plotgui import PlotImage, ColorDialog
 from .docks import DomainDock, TallyDock
 from .overlays import ShortcutsOverlay
@@ -40,17 +39,6 @@ def _openmcReload(threads=None):
         args += ["-s", str(threads)]
     openmc.lib.init(args)
     openmc.lib.settings.verbosity = 1
-
-def hash_file(filename):
-    # return the md5 hash of a file
-    h = hashlib.md5()
-    with open(filename,'rb') as file:
-        chunk = 0
-        while chunk != b'':
-            # read 32768 bytes at a time
-            chunk = file.read(32768)
-            h.update(chunk)
-    return h.hexdigest()
 
 class MainWindow(QMainWindow):
     def __init__(self,
@@ -463,10 +451,8 @@ class MainWindow(QMainWindow):
         if reload:
             self.resetModels()
         else:
-            # create new plot model
-            self.model = PlotModel()
-            if use_settings_pkl:
-                self.restoreModelSettings()
+            self.model = PlotModel(use_settings_pkl)
+
             # update plot and model settings
             self.updateRelativeBases()
 
@@ -1074,51 +1060,6 @@ class MainWindow(QMainWindow):
 
         self.colorDialog.setVisible(is_visible)
 
-    def restoreModelSettings(self):
-        if os.path.isfile("plot_settings.pkl"):
-
-            with open('plot_settings.pkl', 'rb') as file:
-                model = pickle.load(file)
-
-                # check if loaded cell/mat ids hash match the pkl file:
-                current_mat_xml_hash = hash_file('materials.xml')
-                current_geom_xml_hash = hash_file('geometry.xml')
-                if (current_mat_xml_hash != model.mat_xml_hash) or \
-                    (current_geom_xml_hash != model.geom_xml_hash):
-                    # hashes do not match so ignore plot_settings.pkl file
-                    msg_box = QMessageBox()
-                    msg = "WARNING: Model has changed since storing plot " +\
-                          "settings. Ignoring previous plot settings."
-                    msg_box.setText(msg)
-                    msg_box.setIcon(QMessageBox.Warning)
-                    msg_box.setStandardButtons(QMessageBox.Ok)
-                    msg_box.exec_()
-                    return
-
-            # do not replace model if the version is out of date
-            if model.version != self.model.version:
-                print("WARNING: previous plot settings are for a different "
-                      "version of the GUI. They will be ignored.")
-                wrn_msg = "Existing version: {}, Current GUI version: {}"
-                print(wrn_msg.format(model.version, self.model.version))
-                return
-
-            try:
-                self.model.statepoint = model.statepoint
-            except OSError:
-                msg_box = QMessageBox()
-                msg = "Could not open statepoint file: \n\n {} \n"
-                msg_box.setText(msg.format(self.model.statepoint.filename))
-                msg_box.setIcon(QMessageBox.Warning)
-                msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.exec_()
-                self.model.statepoint = None
-
-            self.model.currentView = model.currentView
-            self.model.activeView = copy.deepcopy(model.currentView)
-            self.model.previousViews = model.previousViews
-            self.model.subsequentViews = model.subsequentViews
-
     def resetModels(self):
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
@@ -1209,20 +1150,22 @@ class MainWindow(QMainWindow):
         self.saveSettings()
 
     def saveSettings(self):
-
-        if len(self.model.previousViews) > 10:
-            self.model.previousViews = self.model.previousViews[-10:]
-        if len(self.model.subsequentViews) > 10:
-            self.model.subsequentViews = self.model.subsequentViews[-10:]
+        if self.model.statepoint:
+                self.model.statepoint.close()
 
         # get hashes for geometry.xml and material.xml at close
-        self.model.mat_xml_hash = hash_file('materials.xml')
-        self.model.geom_xml_hash = hash_file('geometry.xml')
+        mat_xml_hash = hash_file('materials.xml')
+        geom_xml_hash = hash_file('geometry.xml')
 
+        pickle_data = {
+            'version': self.model.version,
+            'currentView': self.model.currentView,
+            'statepoint': self.model.statepoint,
+            'mat_xml_hash': mat_xml_hash,
+            'geom_xml_hash': geom_xml_hash
+        }
         with open('plot_settings.pkl', 'wb') as file:
-            if self.model.statepoint:
-                self.model.statepoint.close()
-            pickle.dump(self.model, file)
+            pickle.dump(pickle_data, file)
 
     def exportTallyData(self):
         # show export tool dialog
