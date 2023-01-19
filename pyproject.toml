@@ -1,2 +1,57 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools >= 65.4.0", "setuptools_scm[toml]>=7.0.5"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openmc_plotter"
+authors = [
+  { name="OpenMC Development Team", email="openmc@anl.gov" },
+]
+
+license = {file = "LICENSE"}
+description = "Native plotting GUI for model design and verification"
+readme = "README.md"
+requires-python = ">=3.6"
+keywords = ["openmc", "plotter"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+dependencies = [
+    "numpy",
+    "matplotlib",
+    "PySide2",
+]
+dynamic = ["version"]
+
+[tool.setuptools.package-data]
+myModule = ["assets/*.png"]
+
+[tool.setuptools_scm]
+write_to = "src/_version.py"
+
+
+[project.optional-dependencies]
+tests = [
+    "pytest",
+    "pytest-qt"
+]
+vtk = [
+    "vtk"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/openmc-dev/plotter"
+"Bug Tracker" = "https://github.com/openmc-dev/plotter/issues"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[project.scripts]
+openmc_geometry_plot = "openmc_plotter.__main__:main"
