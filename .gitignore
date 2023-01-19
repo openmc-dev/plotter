@@ -2,3 +2,8 @@
 __pycache__
 plot_settings.pkl
 *.egg-info
+
+# local version file
+src/_version.py
+
+build/

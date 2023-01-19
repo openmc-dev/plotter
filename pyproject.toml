@@ -38,7 +38,7 @@ write_to = "src/_version.py"
 
 
 [project.optional-dependencies]
-tests = [
+test = [
     "pytest",
     "pytest-qt"
 ]
