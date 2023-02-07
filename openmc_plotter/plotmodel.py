@@ -792,6 +792,38 @@ class ViewParam(openmc.lib.plot._PlotBase):
         self.basis = 'xy'
         self.color_overlaps = False
 
+    @property
+    def llc(self):
+        if self.basis == 'xy':
+            x = self.origin[0] - self.width / 2.0
+            y = self.origin[1] - self.height / 2.0
+            z = self.origin[2]
+        elif self.basis == 'yz':
+            x = self.origin[0]
+            y = self.origin[1] - self.width / 2.0
+            z = self.origin[2] - self.height / 2.0
+        else:
+            x = self.origin[0] - self.width / 2.0
+            y = self.origin[1]
+            z = self.origin[2] - self.height / 2.0
+        return x, y, z
+
+    @property
+    def urc(self):
+        if self.basis == 'xy':
+            x = self.origin[0] + self.width / 2.0
+            y = self.origin[1] + self.height / 2.0
+            z = self.origin[2]
+        elif self.basis == 'yz':
+            x = self.origin[0]
+            y = self.origin[1] + self.width / 2.0
+            z = self.origin[2] + self.height / 2.0
+        else:
+            x = self.origin[0] + self.width / 2.0
+            y = self.origin[1]
+            z = self.origin[2] + self.height / 2.0
+        return x, y, z
+
     def __eq__(self, other):
         return repr(self) == repr(other)
 
@@ -902,37 +934,6 @@ class PlotViewIndependent:
         else:
             return self.data_minmax[property]
 
-    @property
-    def llc(self):
-        if self.basis == 'xy':
-            x = self.origin[0] - self.width / 2.0
-            y = self.origin[1] - self.height / 2.0
-            z = self.origin[2]
-        elif self.basis == 'yz':
-            x = self.origin[0]
-            y = self.origin[1] - self.width / 2.0
-            z = self.origin[2] - self.height / 2.0
-        else:
-            x = self.origin[0] - self.width / 2.0
-            y = self.origin[1]
-            z = self.origin[2] - self.height / 2.0
-        return x, y, z
-    @property
-    def urc(self):
-        if self.basis == 'xy':
-            x = self.origin[0] + self.width / 2.0
-            y = self.origin[1] + self.height / 2.0
-            z = self.origin[2]
-        elif self.basis == 'yz':
-            x = self.origin[0]
-            y = self.origin[1] + self.width / 2.0
-            z = self.origin[2] + self.height / 2.0
-        else:
-            x = self.origin[0] + self.width / 2.0
-            y = self.origin[1]
-            z = self.origin[2] + self.height / 2.0
-        return x, y, z
-
 
 class PlotView:
     """Setup the view of the model.
@@ -967,7 +968,7 @@ class PlotView:
 
     attrs = ('view_ind', 'view_params', 'cells', 'materials', 'selectedTally')
     plotbase_attrs = ('level', 'origin', 'width', 'height',
-                      'h_res', 'v_res', 'basis', 'color_overlaps')
+                      'h_res', 'v_res', 'basis', 'llc', 'urc', 'color_overlaps')
 
     def __init__(self, origin=(0, 0, 0), width=10, height=10, restore_view=None,
                  restore_domains=False):
