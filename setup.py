@@ -1,9 +1,14 @@
+from pathlib import Path
+
 from setuptools import setup
 
 # Get version information from __init__.py. This is ugly, but more reliable than
 # using an import.
 with open('openmc_plotter/__init__.py', 'r') as f:
     version = f.readlines()[-1].split()[-1].strip("'")
+
+# read the contents of your README file
+long_description = Path(__file__).with_name("README.md").read_text()
 
 kwargs = {
     'name': 'openmc-plotter',
@@ -20,6 +25,8 @@ kwargs = {
     'author': 'OpenMC Development Team',
     'author_email': 'openmc@anl.gov',
     'description': 'Plotting tool for OpenMC models and tally data',
+    'long_description': long_description,
+    'long_description_content_type': 'text/markdown',
     'url': 'https://github.com/openmc-dev/plotter',
     'download_url': 'https://github.com/openmc-dev/plotter',
     'project_urls': {
