@@ -14,12 +14,11 @@ import openmc
 import openmc.lib
 import numpy as np
 
+from . import __version__
 from .statepointmodel import StatePointModel
 from .plot_colors import random_rgb, reset_seed
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = tuple(range(0, 6))
-
-__VERSION__ = "0.2.2"
 
 _VOID_REGION = -1
 _NOT_FOUND = -2
@@ -131,7 +130,7 @@ class PlotModel():
         self.ids_map = None
         self.properties = None
 
-        self.version = __VERSION__
+        self.version = __version__
 
         # default statepoint value
         self._statepoint = None
@@ -527,7 +526,7 @@ class PlotModel():
                     slc = tuple(slc)
                     data = _do_op(data[slc], tally_value, n_spatial_filters)
             else:
-                data[:, ...] = 0.0
+                data[:] = 0.0
                 data = _do_op(data, tally_value, n_spatial_filters)
 
         # filter by selected scores
@@ -620,7 +619,6 @@ class PlotModel():
         if view is None:
             view = self.currentView
 
-        sp = self.statepoint
         mesh_filter = tally.find_filter(openmc.MeshFilter)
         mesh = mesh_filter.mesh
 
@@ -695,8 +693,8 @@ class PlotModel():
                 data = data[np.array(selected_bins)].sum(axis=0)
             else:
                 # if the filter is completely unselected,
-                # set all of it's data to zero and remove the axis
-                data[:, ...] = 0.0
+                # set all of its data to zero and remove the axis
+                data[:] = 0.0
                 data = _do_op(data, tally_value)
 
         # filter by selected nuclides
