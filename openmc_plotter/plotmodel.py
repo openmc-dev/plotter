@@ -61,10 +61,10 @@ _TALLY_VALUES = {'Mean': 'mean',
                  'Rel. Error': 'rel_err'}
 
 
-def hash_file(filename):
+def hash_file(path):
     # return the md5 hash of a file
     h = hashlib.md5()
-    with open(filename,'rb') as file:
+    with path.open('rb') as file:
         chunk = 0
         while chunk != b'':
             # read 32768 bytes at a time
@@ -73,15 +73,17 @@ def hash_file(filename):
     return h.hexdigest()
 
 
-def hash_model():
+def hash_model(model_path):
     """Get hash values for materials.xml and geometry.xml (or model.xml)"""
-    # TODO: Add support for model in file other than model.xml
-    if Path('model.xml').is_file():
-        mat_xml_hash = hash_file('model.xml')
+    if model_path.is_file():
+        mat_xml_hash = hash_file(model_path)
+        geom_xml_hash = ""
+    elif (model_path / 'model.xml').exists():
+        mat_xml_hash = hash_file(model_path / 'model.xml')
         geom_xml_hash = ""
     else:
-        mat_xml_hash = hash_file('materials.xml')
-        geom_xml_hash = hash_file('geometry.xml')
+        mat_xml_hash = hash_file(model_path / 'materials.xml')
+        geom_xml_hash = hash_file(model_path / 'geometry.xml')
     return mat_xml_hash, geom_xml_hash
 
 
@@ -92,6 +94,8 @@ class PlotModel:
     ----------
     use_settings_pkl : bool
         If True, use plot_settings.pkl file to reload settings
+    model_path : pathlib.Path
+        Path to model XML file or directory
 
     Attributes
     ----------
@@ -128,7 +132,7 @@ class PlotModel:
         have unapplied changes
     """
 
-    def __init__(self, use_settings_pkl):
+    def __init__(self, use_settings_pkl, model_path):
         """ Initialize PlotModel class attributes """
 
         # Retrieve OpenMC Cells/Materials
@@ -160,8 +164,13 @@ class PlotModel:
 
         self.defaultView = self.getDefaultView()
 
-        if use_settings_pkl and os.path.isfile('plot_settings.pkl'):
-            with open('plot_settings.pkl', 'rb') as file:
+        if model_path.is_file():
+            settings_pkl = model_path.with_name('plot_settings.pkl')
+        else:
+            settings_pkl = model_path / 'plot_settings.pkl'
+
+        if use_settings_pkl and settings_pkl.is_file():
+            with settings_pkl.open('rb') as file:
                 try:
                     data = pickle.load(file)
                 except AttributeError:
@@ -189,7 +198,7 @@ class PlotModel:
 
                         # get materials.xml and geometry.xml hashes to
                         # restore additional settings if possible
-                        mat_xml_hash, geom_xml_hash = hash_model()
+                        mat_xml_hash, geom_xml_hash = hash_model(model_path)
                         if mat_xml_hash == data['mat_xml_hash'] and \
                             geom_xml_hash == data['geom_xml_hash']:
                             restore_domains = True
