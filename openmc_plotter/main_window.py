@@ -1,6 +1,5 @@
 import copy
 from functools import partial
-import os
 import pickle
 from threading import Thread
 
@@ -20,13 +19,12 @@ try:
 except ImportError:
     _HAVE_VTK = False
 
-from .plotmodel import PlotModel, DomainTableModel, hash_file
+from .plotmodel import PlotModel, DomainTableModel, hash_model
 from .plotgui import PlotImage, ColorDialog
 from .docks import DomainDock, TallyDock
 from .overlays import ShortcutsOverlay
 from .tools import ExportDataDialog
 
-_COORD_LEVELS = 0
 
 def _openmcReload(threads=None):
     # reset OpenMC memory, instances
@@ -1151,11 +1149,10 @@ class MainWindow(QMainWindow):
 
     def saveSettings(self):
         if self.model.statepoint:
-                self.model.statepoint.close()
+            self.model.statepoint.close()
 
-        # get hashes for geometry.xml and material.xml at close
-        mat_xml_hash = hash_file('materials.xml')
-        geom_xml_hash = hash_file('geometry.xml')
+        # get hashes for material.xml and geometry.xml at close
+        mat_xml_hash, geom_xml_hash = hash_model()
 
         pickle_data = {
             'version': self.model.version,

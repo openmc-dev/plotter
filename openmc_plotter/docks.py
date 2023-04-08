@@ -678,9 +678,9 @@ class TallyDock(PlotterDock):
             self.tallySelector.addItem("None")
             for idx, tally in enumerate(self.model.statepoint.tallies.values()):
                 if tally.name == "":
-                    self.tallySelector.addItem('Tally {}'.format(tally.id), userData=tally.id)
+                    self.tallySelector.addItem(f'Tally {tally.id}', userData=tally.id)
                 else:
-                    self.tallySelector.addItem('Tally {} "{}"'.format(tally.id, tally.name), userData=tally.id)
+                    self.tallySelector.addItem(f'Tally {tally.id} "{tally.name}"', userData=tally.id)
                 self.tally_map[idx] = tally
             self.updateSelectedTally()
             self.updateMinMax()

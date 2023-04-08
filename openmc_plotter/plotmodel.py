@@ -1,11 +1,12 @@
 from ast import literal_eval
 from collections import defaultdict
 import copy
-import itertools
-import threading
-import os
-import pickle
 import hashlib
+import itertools
+import os
+from pathlib import Path
+import pickle
+import threading
 
 from PySide2.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
@@ -18,7 +19,7 @@ from . import __version__
 from .statepointmodel import StatePointModel
 from .plot_colors import random_rgb, reset_seed
 
-ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = tuple(range(0, 6))
+ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = range(6)
 
 _VOID_REGION = -1
 _NOT_FOUND = -2
@@ -28,7 +29,6 @@ _MODEL_PROPERTIES = ('temperature', 'density')
 _PROPERTY_INDICES = {'temperature': 0, 'density': 1}
 
 _REACTION_UNITS = 'Reactions per Source Particle'
-_FLUX_UNITS = 'Particle-cm per Source Particle'
 _PRODUCTION_UNITS = 'Particles Produced per Source Particle'
 _ENERGY_UNITS = 'eV per Source Particle'
 
@@ -60,6 +60,7 @@ _TALLY_VALUES = {'Mean': 'mean',
                  'Std. Dev.': 'std_dev',
                  'Rel. Error': 'rel_err'}
 
+
 def hash_file(filename):
     # return the md5 hash of a file
     h = hashlib.md5()
@@ -72,47 +73,59 @@ def hash_file(filename):
     return h.hexdigest()
 
 
-class PlotModel():
-    """ Geometry and plot settings for OpenMC Plot Explorer model
+def hash_model():
+    """Get hash values for materials.xml and geometry.xml (or model.xml)"""
+    # TODO: Add support for model in file other than model.xml
+    if Path('model.xml').is_file():
+        mat_xml_hash = hash_file('model.xml')
+        geom_xml_hash = ""
+    else:
+        mat_xml_hash = hash_file('materials.xml')
+        geom_xml_hash = hash_file('geometry.xml')
+    return mat_xml_hash, geom_xml_hash
 
-        Parameters
-        ----------
-        use_settings_pkl : bool
-            If True, use plot_settings.pkl file to reload settings
 
-        Attributes
-        ----------
-        geom : openmc.Geometry instance
-            OpenMC Geometry of the model
-        modelCells : collections.OrderedDict
-            Dictionary mapping cell IDs to openmc.Cell instances
-        modelMaterials : collections.OrderedDict
-            Dictionary mapping material IDs to openmc.Material instances
-        ids : NumPy int array (v_res, h_res, 1)
-            Mapping of plot coordinates to cell/material ID by pixel
-        ids_map : NumPy int32 array (v_res, h_res, 3)
-            Mapping of cell and material ids
-        properties : Numpy float array (v_res, h_res, 3)
-            Mapping of cell temperatures and material densities
-        image : NumPy int array (v_res, h_res, 3)
-            The current RGB image data
-        statepoint : StatePointModel
-            Simulation data model used to display tally results
-        applied_filters : tuple of ints
-            IDs of the applied filters for the displayed tally
-        previousViews : list of PlotView instances
-            List of previously created plot view settings used to undo
-            changes made in plot explorer
-        subsequentViews : list of PlotView instances
-            List of undone plot view settings used to redo changes made
-            in plot explorer
-        defaultView : PlotView instance
-            Default settings for given geometry
-        currentView : PlotView instance
-            Currently displayed plot settings in plot explorer
-        activeView : PlotView instance
-            Active state of settings in plot explorer, which may or may not
-            have unapplied changes
+class PlotModel:
+    """Geometry and plot settings for OpenMC Plot Explorer model
+
+    Parameters
+    ----------
+    use_settings_pkl : bool
+        If True, use plot_settings.pkl file to reload settings
+
+    Attributes
+    ----------
+    geom : openmc.Geometry
+        OpenMC Geometry of the model
+    modelCells : collections.OrderedDict
+        Dictionary mapping cell IDs to openmc.Cell instances
+    modelMaterials : collections.OrderedDict
+        Dictionary mapping material IDs to openmc.Material instances
+    ids : NumPy int array (v_res, h_res, 1)
+        Mapping of plot coordinates to cell/material ID by pixel
+    ids_map : NumPy int32 array (v_res, h_res, 3)
+        Mapping of cell and material ids
+    properties : Numpy float array (v_res, h_res, 3)
+        Mapping of cell temperatures and material densities
+    image : NumPy int array (v_res, h_res, 3)
+        The current RGB image data
+    statepoint : StatePointModel
+        Simulation data model used to display tally results
+    applied_filters : tuple of ints
+        IDs of the applied filters for the displayed tally
+    previousViews : list of PlotView instances
+        List of previously created plot view settings used to undo
+        changes made in plot explorer
+    subsequentViews : list of PlotView instances
+        List of undone plot view settings used to redo changes made
+        in plot explorer
+    defaultView : PlotView
+        Default settings for given geometry
+    currentView : PlotView
+        Currently displayed plot settings in plot explorer
+    activeView : PlotView
+        Active state of settings in plot explorer, which may or may not
+        have unapplied changes
     """
 
     def __init__(self, use_settings_pkl):
@@ -176,8 +189,7 @@ class PlotModel():
 
                         # get materials.xml and geometry.xml hashes to
                         # restore additional settings if possible
-                        mat_xml_hash = hash_file('materials.xml')
-                        geom_xml_hash = hash_file('geometry.xml')
+                        mat_xml_hash, geom_xml_hash = hash_model()
                         if mat_xml_hash == data['mat_xml_hash'] and \
                             geom_xml_hash == data['geom_xml_hash']:
                             restore_domains = True
@@ -1071,8 +1083,8 @@ class PlotView:
         self.basis = view.basis
 
 
-class DomainView():
-    """ Represents view settings for OpenMC cell or material.
+class DomainView:
+    """Represents view settings for OpenMC cell or material.
 
     Parameters
     ----------
