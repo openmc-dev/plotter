@@ -587,7 +587,7 @@ class TallyDock(PlotterDock):
                 applied_filters[f] = tuple()
             elif filter_checked == QtCore.Qt.Checked:
                 if isinstance(f, openmc.EnergyFunctionFilter):
-                    bins = [0]
+                    applied_filters[f] = (0,)
                 else:
                     for i in range(f_item.childCount()):
                         bin_item = f_item.child(i)
