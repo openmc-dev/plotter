@@ -1,6 +1,6 @@
 import copy
 from functools import partial
-import os
+from pathlib import Path
 import pickle
 from threading import Thread
 
@@ -20,15 +20,14 @@ try:
 except ImportError:
     _HAVE_VTK = False
 
-from .plotmodel import PlotModel, DomainTableModel, hash_file
+from .plotmodel import PlotModel, DomainTableModel, hash_model
 from .plotgui import PlotImage, ColorDialog
 from .docks import DomainDock, TallyDock
 from .overlays import ShortcutsOverlay
 from .tools import ExportDataDialog
 
-_COORD_LEVELS = 0
 
-def _openmcReload(threads=None):
+def _openmcReload(threads=None, model_path='.'):
     # reset OpenMC memory, instances
     openmc.lib.reset()
     openmc.lib.finalize()
@@ -37,18 +36,22 @@ def _openmcReload(threads=None):
     args = ["-c"]
     if threads is not None:
         args += ["-s", str(threads)]
+    args.append(model_path)
     openmc.lib.init(args)
     openmc.lib.settings.verbosity = 1
+
 
 class MainWindow(QMainWindow):
     def __init__(self,
                  font=QtGui.QFontMetrics(QtGui.QFont()),
-                 screen_size=QtCore.QSize()):
+                 screen_size=QtCore.QSize(),
+                 model_path='.'):
         super().__init__()
 
         self.screen = screen_size
         self.font_metric = font
         self.setWindowTitle('OpenMC Plot Explorer')
+        self.model_path = Path(model_path)
 
     def loadGui(self, use_settings_pkl=True):
 
@@ -451,7 +454,7 @@ class MainWindow(QMainWindow):
         if reload:
             self.resetModels()
         else:
-            self.model = PlotModel(use_settings_pkl)
+            self.model = PlotModel(use_settings_pkl, self.model_path)
 
             # update plot and model settings
             self.updateRelativeBases()
@@ -1151,11 +1154,10 @@ class MainWindow(QMainWindow):
 
     def saveSettings(self):
         if self.model.statepoint:
-                self.model.statepoint.close()
+            self.model.statepoint.close()
 
-        # get hashes for geometry.xml and material.xml at close
-        mat_xml_hash = hash_file('materials.xml')
-        geom_xml_hash = hash_file('geometry.xml')
+        # get hashes for material.xml and geometry.xml at close
+        mat_xml_hash, geom_xml_hash = hash_model(self.model_path)
 
         pickle_data = {
             'version': self.model.version,
@@ -1164,7 +1166,11 @@ class MainWindow(QMainWindow):
             'mat_xml_hash': mat_xml_hash,
             'geom_xml_hash': geom_xml_hash
         }
-        with open('plot_settings.pkl', 'wb') as file:
+        if self.model_path.is_file():
+            settings_pkl = self.model_path.with_name('plot_settings.pkl')
+        else:
+            settings_pkl = self.model_path / 'plot_settings.pkl'
+        with settings_pkl.open('wb') as file:
             pickle.dump(pickle_data, file)
 
     def exportTallyData(self):

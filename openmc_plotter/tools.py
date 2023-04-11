@@ -1,12 +1,12 @@
 import copy
-from time import sleep
 
 import numpy as np
 import openmc
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2 import QtCore, QtWidgets
 
 from .custom_widgets import HorizontalLine
 from .scientific_spin_box import ScientificDoubleSpinBox
+
 
 class ExportDataDialog(QtWidgets.QDialog):
     """
