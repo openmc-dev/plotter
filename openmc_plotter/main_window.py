@@ -159,7 +159,8 @@ class MainWindow(QMainWindow):
         self.saveImageAction.setShortcut("Ctrl+Shift+S")
         self.saveImageAction.setToolTip('Save plot image')
         self.saveImageAction.setStatusTip('Save plot image')
-        self.saveImageAction.triggered.connect(self.saveImage)
+        save_image_connector = partial(self.saveImage, filename=None)
+        self.saveImageAction.triggered.connect(save_image_connector)
 
         self.saveViewAction = QAction("Save &View...", self)
         self.saveViewAction.setShortcut(QtGui.QKeySequence.Save)

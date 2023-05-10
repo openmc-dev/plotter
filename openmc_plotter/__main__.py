@@ -46,7 +46,8 @@ def run_app(user_args):
     splash_pix = QtGui.QPixmap(path_splash)
     splash = QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)
     splash.setMask(splash_pix.mask())
-    splash.show()
+    if not user_args.batch_mode:
+        splash.show()
     app.processEvents()
     splash.setMask(splash_pix.mask())
     splash.showMessage("Loading Model...",
