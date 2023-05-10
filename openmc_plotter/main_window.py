@@ -36,7 +36,7 @@ def _openmcReload(threads=None, model_path='.'):
     args = ["-c"]
     if threads is not None:
         args += ["-s", str(threads)]
-    args.append(model_path)
+    args.append(str(model_path))
     openmc.lib.init(args)
     openmc.lib.settings.verbosity = 1
 
@@ -450,6 +450,14 @@ class MainWindow(QMainWindow):
         self.mainWindowAction.setChecked(self.isActiveWindow())
 
     def saveBatchImage(self, view_file):
+        """
+        Loads a view in the GUI and generates an image
+
+        Parameters
+        ----------
+        view_file : str or pathlib.Path
+            The path to a view file that is compatible with the loaded model.
+        """
         # store the
         cv = self.model.currentView
         # load the view from file

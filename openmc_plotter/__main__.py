@@ -75,7 +75,6 @@ def run_app(user_args):
 
     if user_args.batch_mode:
         for view_file in user_args.batch_mode:
-            print(view_file)
             mainWindow.saveBatchImage(view_file)
         mainWindow.close()
         sys.exit()
