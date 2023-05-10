@@ -479,14 +479,15 @@ class MainWindow(QMainWindow):
             self.plotIm.model = self.model
             self.applyChanges()
 
-    def saveImage(self):
-        filename, ext = QFileDialog.getSaveFileName(self,
-                                                    "Save Plot Image",
-                                                    "untitled",
-                                                    "Images (*.png)")
+    def saveImage(self, filename=None):
+        if filename is None:
+            filename, ext = QFileDialog.getSaveFileName(self,
+                                                        "Save Plot Image",
+                                                        "untitled",
+                                                        "Images (*.png)")
         if filename:
             self.plotIm.saveImage(filename)
-        self.statusBar().showMessage('Plot Image Saved', 5000)
+            self.statusBar().showMessage('Plot Image Saved', 5000)
 
     def saveView(self):
         filename, ext = QFileDialog.getSaveFileName(self,

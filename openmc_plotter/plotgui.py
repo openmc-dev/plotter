@@ -119,7 +119,7 @@ class PlotImage(FigureCanvas):
         filename : str or pathlib.Path
             Name of the image to save
         """
-        if "." not in filename:
+        if "." not in str(filename):
             filename += ".png"
         self.figure.savefig(filename, transparent=True)
 
