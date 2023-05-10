@@ -24,6 +24,8 @@ def main():
     ap.add_argument('model_path', nargs='?', default=os.curdir,
                     help='Location of model XML file or a directory containing '
                     'XML files (default is current dir)')
+    ap.add_argument('-b', '--batch-mode', nargs='+', default=False,
+                    help='View files used to generate plots in batch mode')
 
     args = ap.parse_args()
 
@@ -68,8 +70,17 @@ def run_app(user_args):
     mainWindow = MainWindow(font_metric, screen_size, user_args.model_path)
     # connect splashscreen to main window, close when main window opens
     mainWindow.loadGui(use_settings_pkl=user_args.ignore_settings)
-    mainWindow.show()
+
     splash.close()
+
+    if user_args.batch_mode:
+        for view_file in user_args.batch_mode:
+            print(view_file)
+            mainWindow.saveBatchImage(view_file)
+        mainWindow.close()
+        sys.exit()
+    else:
+        mainWindow.show()
 
     # connect interrupt signal to close call
     signal.signal(signal.SIGINT, lambda *args: mainWindow.close())

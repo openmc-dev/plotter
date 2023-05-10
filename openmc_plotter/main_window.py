@@ -449,6 +449,13 @@ class MainWindow(QMainWindow):
         self.colorDialogAction.setChecked(self.colorDialog.isActiveWindow())
         self.mainWindowAction.setChecked(self.isActiveWindow())
 
+    def saveBatchImage(self, view_file):
+        # store the
+        cv = self.model.currentView
+        # load the view from file
+        self.loadViewFile(view_file)
+        self.plotIm.saveImage(view_file.replace('.pltvw', ''))
+
     # Menu and shared methods
     def loadModel(self, reload=False, use_settings_pkl=True):
         if reload:
@@ -478,10 +485,8 @@ class MainWindow(QMainWindow):
                                                     "untitled",
                                                     "Images (*.png)")
         if filename:
-            if "." not in filename:
-                filename += ".png"
-            self.plotIm.figure.savefig(filename, transparent=True)
-            self.statusBar().showMessage('Plot Image Saved', 5000)
+            self.plotIm.saveImage(filename)
+        self.statusBar().showMessage('Plot Image Saved', 5000)
 
     def saveView(self):
         filename, ext = QFileDialog.getSaveFileName(self,
@@ -497,26 +502,29 @@ class MainWindow(QMainWindow):
             with open(filename, 'wb') as file:
                 pickle.dump(saved, file)
 
+    def loadViewFile(self, filename):
+        try:
+            with open(filename, 'rb') as file:
+                saved = pickle.load(file)
+        except Exception:
+            message = 'Error loading plot settings'
+            saved = {'version': None,
+                        'current': None}
+        if saved['version'] == self.model.version:
+            self.model.activeView = saved['current']
+            self.dock.updateDock()
+            self.colorDialog.updateDialogValues()
+            self.applyChanges()
+            message = '{} settings loaded'.format(filename)
+        else:
+            message = 'Error loading plot settings. Incompatible model.'
+        self.statusBar().showMessage(message, 5000)
+
     def openView(self):
         filename, ext = QFileDialog.getOpenFileName(self, "Open View Settings",
                                                     ".", "*.pltvw")
         if filename:
-            try:
-                with open(filename, 'rb') as file:
-                    saved = pickle.load(file)
-            except Exception:
-                message = 'Error loading plot settings'
-                saved = {'version': None,
-                         'current': None}
-            if saved['version'] == self.model.version:
-                self.model.activeView = saved['current']
-                self.dock.updateDock()
-                self.colorDialog.updateDialogValues()
-                self.applyChanges()
-                message = '{} settings loaded'.format(filename)
-            else:
-                message = 'Error loading plot settings. Incompatible model.'
-            self.statusBar().showMessage(message, 5000)
+            self.loadViewFile(filename)
 
     def openStatePoint(self):
         # check for an alread-open statepoint

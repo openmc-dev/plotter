@@ -111,6 +111,18 @@ class PlotImage(FigureCanvas):
         self.resize(self.parent.width() * z,
                     self.parent.height() * z)
 
+    def saveImage(self, filename):
+        """Save an image of the current view
+
+        Parameters
+        ----------
+        filename : str or pathlib.Path
+            Name of the image to save
+        """
+        if "." not in filename:
+            filename += ".png"
+        self.figure.savefig(filename, transparent=True)
+
     def getDataIndices(self, event):
         cv = self.model.currentView
 
