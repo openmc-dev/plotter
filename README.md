@@ -47,8 +47,8 @@ Once the viewer has opened, press `?` to view a variety of keyboard shortcuts.
 
 ## Batch Mode
 
-Plot view (`.pltvw`) files can be used to generate images from the command line without
-opening the plotter GUI.
+Plot view (`.pltvw`) files generated in interactive sessions (see [Saving and Exporting](#saving-and-exporting))
+can be used to generate images from the command line without opening the plotter GUI.
 
 ```console
 $ openmc-plotter -b view1.pltvw view1.pltvw view1.pltvw
