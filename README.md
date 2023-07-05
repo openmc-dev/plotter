@@ -30,7 +30,7 @@ pip install openmc-plotter
 From a directory containing an OpenMC model run:
 
 ```console
-$ openmc-plotter -d <path_to_openmc_model_dir>
+$ openmc-plotter <path_to_openmc_model_dir>
 ```
 
 or simply run
@@ -44,6 +44,15 @@ from the directory containing the model.
 Once the viewer has opened, press `?` to view a variety of keyboard shortcuts.
 
 ![shortcuts](./screenshots/shortcuts.png)
+
+## Batch Mode
+
+Plot view (`.pltvw`) files generated in interactive sessions (see [Saving and Exporting](#saving-and-exporting))
+can be used to generate images from the command line without opening the plotter GUI.
+
+```console
+$ openmc-plotter -b view1.pltvw view1.pltvw view1.pltvw
+```
 
 ## Features
 

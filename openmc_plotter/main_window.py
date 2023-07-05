@@ -36,7 +36,7 @@ def _openmcReload(threads=None, model_path='.'):
     args = ["-c"]
     if threads is not None:
         args += ["-s", str(threads)]
-    args.append(model_path)
+    args.append(str(model_path))
     openmc.lib.init(args)
     openmc.lib.settings.verbosity = 1
 
@@ -159,7 +159,8 @@ class MainWindow(QMainWindow):
         self.saveImageAction.setShortcut("Ctrl+Shift+S")
         self.saveImageAction.setToolTip('Save plot image')
         self.saveImageAction.setStatusTip('Save plot image')
-        self.saveImageAction.triggered.connect(self.saveImage)
+        save_image_connector = partial(self.saveImage, filename=None)
+        self.saveImageAction.triggered.connect(save_image_connector)
 
         self.saveViewAction = QAction("Save &View...", self)
         self.saveViewAction.setShortcut(QtGui.QKeySequence.Save)
@@ -449,6 +450,21 @@ class MainWindow(QMainWindow):
         self.colorDialogAction.setChecked(self.colorDialog.isActiveWindow())
         self.mainWindowAction.setChecked(self.isActiveWindow())
 
+    def saveBatchImage(self, view_file):
+        """
+        Loads a view in the GUI and generates an image
+
+        Parameters
+        ----------
+        view_file : str or pathlib.Path
+            The path to a view file that is compatible with the loaded model.
+        """
+        # store the
+        cv = self.model.currentView
+        # load the view from file
+        self.loadViewFile(view_file)
+        self.plotIm.saveImage(view_file.replace('.pltvw', ''))
+
     # Menu and shared methods
     def loadModel(self, reload=False, use_settings_pkl=True):
         if reload:
@@ -472,15 +488,14 @@ class MainWindow(QMainWindow):
             self.plotIm.model = self.model
             self.applyChanges()
 
-    def saveImage(self):
-        filename, ext = QFileDialog.getSaveFileName(self,
-                                                    "Save Plot Image",
-                                                    "untitled",
-                                                    "Images (*.png)")
+    def saveImage(self, filename=None):
+        if filename is None:
+            filename, ext = QFileDialog.getSaveFileName(self,
+                                                        "Save Plot Image",
+                                                        "untitled",
+                                                        "Images (*.png)")
         if filename:
-            if "." not in filename:
-                filename += ".png"
-            self.plotIm.figure.savefig(filename, transparent=True)
+            self.plotIm.saveImage(filename)
             self.statusBar().showMessage('Plot Image Saved', 5000)
 
     def saveView(self):
@@ -497,26 +512,29 @@ class MainWindow(QMainWindow):
             with open(filename, 'wb') as file:
                 pickle.dump(saved, file)
 
+    def loadViewFile(self, filename):
+        try:
+            with open(filename, 'rb') as file:
+                saved = pickle.load(file)
+        except Exception:
+            message = 'Error loading plot settings'
+            saved = {'version': None,
+                        'current': None}
+        if saved['version'] == self.model.version:
+            self.model.activeView = saved['current']
+            self.dock.updateDock()
+            self.colorDialog.updateDialogValues()
+            self.applyChanges()
+            message = '{} settings loaded'.format(filename)
+        else:
+            message = 'Error loading plot settings. Incompatible model.'
+        self.statusBar().showMessage(message, 5000)
+
     def openView(self):
         filename, ext = QFileDialog.getOpenFileName(self, "Open View Settings",
                                                     ".", "*.pltvw")
         if filename:
-            try:
-                with open(filename, 'rb') as file:
-                    saved = pickle.load(file)
-            except Exception:
-                message = 'Error loading plot settings'
-                saved = {'version': None,
-                         'current': None}
-            if saved['version'] == self.model.version:
-                self.model.activeView = saved['current']
-                self.dock.updateDock()
-                self.colorDialog.updateDialogValues()
-                self.applyChanges()
-                message = '{} settings loaded'.format(filename)
-            else:
-                message = 'Error loading plot settings. Incompatible model.'
-            self.statusBar().showMessage(message, 5000)
+            self.loadViewFile(filename)
 
     def openStatePoint(self):
         # check for an alread-open statepoint
