@@ -267,7 +267,7 @@ class PlotImage(FigureCanvas):
                                   domain[id].name,
                                   density,
                                   temperature
-                             ))
+                              ))
             elif id != _NOT_FOUND:
                 domainInfo = ("{} {}{}\t Density: {} g/cc\t"
                               "Temperature: {} K".format(domain_kind,
@@ -282,7 +282,8 @@ class PlotImage(FigureCanvas):
                 tid, value = self.getTallyInfo(event)
                 if value is not None and value != np.nan:
                     self.updateTallyDataIndicatorValue(value)
-                    tallyInfo = "Tally {} {}: {:.5E}".format(tid, cv.tallyValue, value)
+                    tallyInfo = "Tally {} {}: {:.5E}".format(
+                        tid, cv.tallyValue, value)
                 else:
                     self.updateTallyDataIndicatorValue(0.0)
         else:
@@ -348,8 +349,10 @@ class PlotImage(FigureCanvas):
 
         self.menu.clear()
 
-        self.main_window.undoAction.setText('&Undo ({})'.format(len(self.model.previousViews)))
-        self.main_window.redoAction.setText('&Redo ({})'.format(len(self.model.subsequentViews)))
+        self.main_window.undoAction.setText(
+            '&Undo ({})'.format(len(self.model.previousViews)))
+        self.main_window.redoAction.setText(
+            '&Redo ({})'.format(len(self.model.subsequentViews)))
 
         id, instance, properties, domain, domain_kind = self.getIDinfo(event)
 
@@ -366,18 +369,22 @@ class PlotImage(FigureCanvas):
 
             # Domain ID
             if domain[id].name:
-                domainID = self.menu.addAction("{} {} Info: \"{}\"".format(domain_kind, id, domain[id].name))
+                domainID = self.menu.addAction(
+                    "{} {} Info: \"{}\"".format(domain_kind, id, domain[id].name))
             else:
-                domainID = self.menu.addAction("{} {} Info".format(domain_kind, id))
+                domainID = self.menu.addAction(
+                    "{} {} Info".format(domain_kind, id))
 
             # add connector to a new window of info here for material props
             if domain_kind == 'Material':
-                mat_prop_connector = partial(self.main_window.viewMaterialProps, id)
+                mat_prop_connector = partial(
+                    self.main_window.viewMaterialProps, id)
                 domainID.triggered.connect(mat_prop_connector)
 
             self.menu.addSeparator()
 
-            colorAction = self.menu.addAction('Edit {} Color...'.format(domain_kind))
+            colorAction = self.menu.addAction(
+                'Edit {} Color...'.format(domain_kind))
             colorAction.setDisabled(cv.highlighting)
             colorAction.setToolTip('Edit {} color'.format(domain_kind))
             colorAction.setStatusTip('Edit {} color'.format(domain_kind))
@@ -397,12 +404,15 @@ class PlotImage(FigureCanvas):
                                      id=id)
             maskAction.toggled.connect(mask_connector)
 
-            highlightAction = self.menu.addAction('Highlight {}'.format(domain_kind))
+            highlightAction = self.menu.addAction(
+                'Highlight {}'.format(domain_kind))
             highlightAction.setCheckable(True)
             highlightAction.setChecked(domain[id].highlight)
             highlightAction.setDisabled(not cv.highlighting)
-            highlightAction.setToolTip('Toggle {} highlight'.format(domain_kind))
-            highlightAction.setStatusTip('Toggle {} highlight'.format(domain_kind))
+            highlightAction.setToolTip(
+                'Toggle {} highlight'.format(domain_kind))
+            highlightAction.setStatusTip(
+                'Toggle {} highlight'.format(domain_kind))
             highlight_connector = partial(self.main_window.toggleDomainHighlight,
                                           kind=domain_kind,
                                           id=id)
@@ -415,14 +425,16 @@ class PlotImage(FigureCanvas):
             if cv.colorby not in _MODEL_PROPERTIES:
                 self.menu.addSeparator()
                 if int(id) == _NOT_FOUND:
-                    bgColorAction = self.menu.addAction('Edit Background Color...')
+                    bgColorAction = self.menu.addAction(
+                        'Edit Background Color...')
                     bgColorAction.setToolTip('Edit background color')
                     bgColorAction.setStatusTip('Edit plot background color')
                     connector = partial(self.main_window.editBackgroundColor,
                                         apply=True)
                     bgColorAction.triggered.connect(connector)
                 elif int(id) == _OVERLAP:
-                    olapColorAction = self.menu.addAction('Edit Overlap Color...')
+                    olapColorAction = self.menu.addAction(
+                        'Edit Overlap Color...')
                     olapColorAction.setToolTip('Edit overlap color')
                     olapColorAction.setStatusTip('Edit plot overlap color')
                     connector = partial(self.main_window.editOverlapColor,
@@ -503,7 +515,8 @@ class PlotImage(FigureCanvas):
                 idx = 1
                 cmap_label = "Density (g/cc)"
 
-            norm = SymLogNorm(1E-10) if cv.color_scale_log[cv.colorby] else None
+            norm = SymLogNorm(
+                1E-10) if cv.color_scale_log[cv.colorby] else None
 
             data = self.model.properties[:, :, idx]
             self.image = self.figure.subplots().imshow(data,
@@ -526,7 +539,7 @@ class PlotImage(FigureCanvas):
                                                 color='blue',
                                                 clip_on=True)
             self.colorbar.ax.add_line(self.data_indicator)
-            self.colorbar.ax.margins(0.0 ,0.0)
+            self.colorbar.ax.margins(0.0, 0.0)
             self.updateDataIndicatorVisibility()
             self.updateColorMinMax(cv.colorby)
 
@@ -667,7 +680,7 @@ class PlotImage(FigureCanvas):
         cv = self.model.currentView
 
         if not cv.tallyDataVisible or not cv.tallyDataIndicator:
-             return
+            return
 
         if self.tally_data_indicator is not None:
             data = self.tally_data_indicator.get_data()
@@ -719,6 +732,7 @@ class PlotImage(FigureCanvas):
             self.colorbar.draw_all()
             self.draw()
 
+
 class ColorDialog(QDialog):
 
     def __init__(self, model, font_metric, parent=None):
@@ -745,7 +759,8 @@ class ColorDialog(QDialog):
 
         self.tab_bar = QTabWidget()
         self.tab_bar.setMaximumHeight(800)
-        self.tab_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.tab_bar.setSizePolicy(
+            QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.tab_bar.addTab(self.generalTab, 'General')
         self.tab_bar.addTab(self.tabs['cell'], 'Cells')
         self.tab_bar.addTab(self.tabs['material'], 'Materials')
@@ -805,13 +820,15 @@ class ColorDialog(QDialog):
         self.colorbyBox.addItem("cell")
         self.colorbyBox.addItem("temperature")
         self.colorbyBox.addItem("density")
-        self.colorbyBox.currentTextChanged[str].connect(main_window.editColorBy)
+        self.colorbyBox.currentTextChanged[str].connect(
+            main_window.editColorBy)
 
         self.universeLevelBox = QComboBox(self)
         self.universeLevelBox.addItem('all')
         for i in range(self.model.max_universe_levels):
             self.universeLevelBox.addItem(str(i))
-        self.universeLevelBox.currentTextChanged[str].connect(main_window.editUniverseLevel)
+        self.universeLevelBox.currentTextChanged[str].connect(
+            main_window.editUniverseLevel)
 
         # Overlap plotting
         self.overlapCheck = QCheckBox('', self)
@@ -910,7 +927,8 @@ class ColorDialog(QDialog):
         propertyTab.maxBox.valueChanged.connect(connector3)
 
         propertyTab.colormapBox = QComboBox(self)
-        cmaps = sorted(m for m in mcolormaps.datad if not m.endswith("_r"))
+        cmaps = sorted(m for m in mcolormaps._gen_cmap_registry()
+                       if not m.endswith("_r"))
         for cmap in cmaps:
             propertyTab.colormapBox.addItem(cmap)
 
@@ -958,8 +976,8 @@ class ColorDialog(QDialog):
         cmaps = self.model.activeView.colormaps
         for key, val in cmaps.items():
             idx = self.tabs[key].colormapBox.findText(
-                    val,
-                    QtCore.Qt.MatchFixedString)
+                val,
+                QtCore.Qt.MatchFixedString)
             if idx >= 0:
                 self.tabs[key].colormapBox.setCurrentIndex(idx)
 
