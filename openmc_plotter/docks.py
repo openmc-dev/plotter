@@ -8,7 +8,7 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QComboBox, QSpinBox, QDoubleSpinBox, QSizePolicy,
                                QCheckBox, QDockWidget, QScrollArea, QListWidget,
                                QListWidgetItem, QTreeWidget, QTreeWidgetItem)
-from matplotlib import cm as mcolormaps
+import matplotlib.pyplot as plt
 import numpy as np
 import openmc
 
@@ -16,7 +16,6 @@ from .custom_widgets import HorizontalLine, Expander
 from .scientific_spin_box import ScientificDoubleSpinBox
 from .plotmodel import (_SCORE_UNITS, _TALLY_VALUES,
                         _REACTION_UNITS, _SPATIAL_FILTERS)
-import matplotlib.pyplot as plt
 
 
 class PlotterDock(QDockWidget):
@@ -635,8 +634,8 @@ class TallyDock(PlotterDock):
                 empty_item = QListWidgetItem()
                 score_box.setFlags(empty_item.flags() |
                                    QtCore.Qt.ItemIsUserCheckable)
-                score_box.setFlags(empty_item.flags() & ~
-                                   QtCore.Qt.ItemIsSelectable)
+                score_box.setFlags(empty_item.flags() &
+                                   ~QtCore.Qt.ItemIsSelectable)
         elif 'total' in applied_scores:
             self.model.appliedScores = ('total',)
             # if total is selected, disable all other scores
@@ -659,8 +658,8 @@ class TallyDock(PlotterDock):
                 else:
                     score_box.setFlags(score_box.flags() |
                                        QtCore.Qt.ItemIsUserCheckable)
-                    score_box.setFlags(score_box.flags() & ~
-                                       QtCore.Qt.ItemIsSelectable)
+                    score_box.setFlags(score_box.flags() &
+                                       ~QtCore.Qt.ItemIsSelectable)
 
     def updateNuclides(self):
         applied_nuclides = []

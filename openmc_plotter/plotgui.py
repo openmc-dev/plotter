@@ -8,8 +8,9 @@ from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QTabWidget, QTableView, QHeaderView)
 from matplotlib.figure import Figure
 from matplotlib import lines as mlines
-from matplotlib import cm as mcolormaps
 from matplotlib.colors import SymLogNorm
+from matplotlib.backends.backend_qt5agg import FigureCanvas
+import matplotlib.pyplot as plt
 import numpy as np
 
 from .plot_colors import rgb_normalize, invert_rgb
@@ -18,8 +19,6 @@ from .plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
 from .scientific_spin_box import ScientificDoubleSpinBox
 from .custom_widgets import HorizontalLine
 
-from matplotlib.backends.backend_qt5agg import FigureCanvas
-import matplotlib.pyplot as plt
 
 
 class PlotImage(FigureCanvas):
