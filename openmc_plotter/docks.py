@@ -16,6 +16,7 @@ from .custom_widgets import HorizontalLine, Expander
 from .scientific_spin_box import ScientificDoubleSpinBox
 from .plotmodel import (_SCORE_UNITS, _TALLY_VALUES,
                         _REACTION_UNITS, _SPATIAL_FILTERS)
+import matplotlib.pyplot as plt
 
 
 class PlotterDock(QDockWidget):
@@ -785,7 +786,7 @@ class ColorForm(QWidget):
         self.colormapBox = QComboBox()
         if colormaps is None:
             colormaps = sorted(
-                m for m in mcolormaps._gen_cmap_registry() if not m.endswith("_r"))
+                m for m in plt.colormaps() if not m.endswith("_r"))
         for colormap in colormaps:
             self.colormapBox.addItem(colormap)
         cmap_connector = partial(main_window.editTallyDataColormap)

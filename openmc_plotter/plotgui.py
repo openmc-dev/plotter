@@ -19,6 +19,7 @@ from .scientific_spin_box import ScientificDoubleSpinBox
 from .custom_widgets import HorizontalLine
 
 from matplotlib.backends.backend_qt5agg import FigureCanvas
+import matplotlib.pyplot as plt
 
 
 class PlotImage(FigureCanvas):
@@ -927,7 +928,7 @@ class ColorDialog(QDialog):
         propertyTab.maxBox.valueChanged.connect(connector3)
 
         propertyTab.colormapBox = QComboBox(self)
-        cmaps = sorted(m for m in mcolormaps._gen_cmap_registry()
+        cmaps = sorted(m for m in plt.colormaps()
                        if not m.endswith("_r"))
         for cmap in cmaps:
             propertyTab.colormapBox.addItem(cmap)
