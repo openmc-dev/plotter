@@ -375,7 +375,7 @@ class MainWindow(QMainWindow):
         self.outlineAct.setToolTip('Display Cell/Material Boundaries')
         self.outlineAct.setStatusTip('Toggle display of domain '
                                      'outlines when enabled')
-        outline_connector = partial(self.toggleOutlines, apply=True)
+        outline_connector = partial(self.toggleOutlinesCell, apply=True)
         self.outlineAct.toggled.connect(outline_connector)
         self.editMenu.addAction(self.outlineAct)
 
@@ -444,7 +444,7 @@ class MainWindow(QMainWindow):
 
         self.maskingAction.setChecked(self.model.currentView.masking)
         self.highlightingAct.setChecked(self.model.currentView.highlighting)
-        self.outlineAct.setChecked(self.model.currentView.outlines)
+        self.outlineAct.setChecked(self.model.currentView.outlinesCell)
         self.overlapAct.setChecked(self.model.currentView.color_overlaps)
 
         num_previous_views = len(self.model.previousViews)
@@ -877,8 +877,15 @@ class MainWindow(QMainWindow):
     def editPlotVisibility(self, value):
         self.model.activeView.domainVisible = bool(value)
 
-    def toggleOutlines(self, value, apply=False):
-        self.model.activeView.outlines = bool(value)
+    def toggleOutlinesCell(self, value, apply=False):
+        self.model.activeView.outlinesCell = bool(value)
+        self.dock.updateOutlines()
+
+        if apply:
+            self.applyChanges()
+
+    def toggleOutlinesMat(self, value, apply=False):
+        self.model.activeView.outlinesMat = bool(value)
         self.dock.updateOutlines()
 
         if apply:

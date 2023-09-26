@@ -919,8 +919,10 @@ class PlotViewIndependent:
         Alpha value of the geometry plot
     plotVisibile : bool
         Controls visibility of geometry
-    outlines: bool
-        Controls visibility of geometry outlines
+    outlinesCell : bool
+        Controls visibility of cell outlines
+    outlinesMat : bool
+        Controls visibility of material outlines
     tallyDataColormap : str
         Name of the colormap used for tally data
     tallyDataVisible : bool
@@ -962,7 +964,8 @@ class PlotViewIndependent:
         self.overlap_color = (255, 0, 0)
         self.domainAlpha = 1.0
         self.domainVisible = True
-        self.outlines = False
+        self.outlinesCell = False
+        self.outlinesMat = False
         self.colormaps = {'temperature': 'Oranges', 'density': 'Greys'}
         # set defaults for color dialog
         self.data_minmax = {prop: (0.0, 0.0) for prop in _MODEL_PROPERTIES}

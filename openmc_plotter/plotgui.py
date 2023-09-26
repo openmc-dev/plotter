@@ -705,17 +705,28 @@ class PlotImage(FigureCanvas):
     def add_outlines(self):
         cv = self.model.currentView
         # draw outlines as isocontours
-        if cv.outlines:
+        if cv.outlinesCell or cv.outlinesMat:
             # set data extents for automatic reporting of pointer location
             data_bounds = self.current_view_data_bounds()
-            levels = np.unique(self.model.ids)
-            self.contours = self.ax.contour(self.model.ids,
-                                            origin='upper',
-                                            colors='k',
-                                            linestyles='solid',
-                                            levels=levels,
-                                            extent=data_bounds,
-                                            algorithm='serial')
+            if cv.outlinesCell:
+                levels = np.unique(self.model.cell_ids)
+                self.ax.contour(self.model.cell_ids,
+                                origin='upper',
+                                colors='k',
+                                linestyles='solid',
+                                levels=levels,
+                                extent=data_bounds,
+                                algorithm='serial')
+            if cv.outlinesMat:
+                levels = np.unique(self.model.mat_ids)
+                self.ax.contour(self.model.mat_ids,
+                                origin='upper',
+                                colors='k',
+                                linestyles='solid',
+                                levels=levels,
+                                extent=data_bounds,
+                                algorithm='serial')
+
 
     @staticmethod
     def parseContoursLine(line):
