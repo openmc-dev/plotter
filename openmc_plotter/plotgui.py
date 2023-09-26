@@ -482,7 +482,7 @@ class PlotImage(FigureCanvas):
 
         cv = self.model.currentView
         # set figure bg color to match window
-        window_bg = self.parent.palette().color(QtGui.QPalette.Background)
+        window_bg = self.parent.palette().color(QtGui.QPalette.Window)
         self.figure.patch.set_facecolor(rgb_normalize(window_bg.getRgb()))
 
         # set data extents for automatic reporting of pointer location

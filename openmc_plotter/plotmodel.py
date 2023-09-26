@@ -1182,7 +1182,7 @@ class DomainTableModel(QAbstractTableModel):
             else:
                 return int(Qt.AlignLeft | Qt.AlignVCenter)
 
-        elif role == Qt.BackgroundColorRole:
+        elif role == Qt.BackgroundRole:
             color = domain.color
             if column == COLOR:
                 if isinstance(color, tuple):
