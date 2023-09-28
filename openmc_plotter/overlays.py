@@ -101,18 +101,18 @@ class ShortcutsOverlay(QWidget):
         for menu in self.shortcuts:
             # set menu header
             header_item = self.tableWidget.item(row_idx, col_idx)
-            header_item.setTextColor(QtGui.QColor(150, 150, 150, 255))
+            header_item.setForeground(QtGui.QColor(150, 150, 150, 255))
             header_item.setText(menu)
             header_item.setFlags(QtCore.Qt.NoItemFlags)
             row_idx += 1
 
             for shortcut in self.shortcuts[menu]:
                 desc_item = self.tableWidget.item(row_idx, col_idx)
-                desc_item.setTextColor(self.textPenColor)
+                desc_item.setForeground(self.textPenColor)
                 desc_item.setText(shortcut[0])
 
                 key_item = self.tableWidget.item(row_idx, col_idx + 1)
-                key_item.setTextColor(self.textPenColor)
+                key_item.setForeground(self.textPenColor)
                 key_item.setText(shortcut[1])
                 row_idx += 1
             # update for next menu
