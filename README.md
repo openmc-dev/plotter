@@ -25,6 +25,12 @@ This package is most easily installed by running
 pip install openmc-plotter
 ```
 
+The development version can be installed with
+
+```
+pip install git+https://github.com/openmc-dev/openmc.git@develop
+```
+
 ## Usage
 
 From a directory containing an OpenMC model run:
