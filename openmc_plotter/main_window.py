@@ -45,13 +45,14 @@ class MainWindow(QMainWindow):
     def __init__(self,
                  font=QtGui.QFontMetrics(QtGui.QFont()),
                  screen_size=QtCore.QSize(),
-                 model_path='.'):
+                 model_path='.', threads=None):
         super().__init__()
 
         self.screen = screen_size
         self.font_metric = font
         self.setWindowTitle('OpenMC Plot Explorer')
         self.model_path = Path(model_path)
+        self.threads = threads
 
     def loadGui(self, use_settings_pkl=True):
 
@@ -478,8 +479,10 @@ class MainWindow(QMainWindow):
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
 
+        openmc_args = {'threads': self.threads, 'model_path': self.model_path}
+
         if reload:
-            loader_thread = Thread(target=_openmcReload)
+            loader_thread = Thread(target=_openmcReload, kwargs=openmc_args)
             loader_thread.start()
             while loader_thread.is_alive():
                 self.statusBar().showMessage("Reloading model...")
