@@ -68,7 +68,7 @@ def run_app(user_args):
 
     font_metric = QtGui.QFontMetrics(app.font())
     screen_size = app.primaryScreen().size()
-    mainWindow = MainWindow(font_metric, screen_size, user_args.model_path)
+    mainWindow = MainWindow(font_metric, screen_size, user_args.model_path, user_args.threads)
     # connect splashscreen to main window, close when main window opens
     mainWindow.loadGui(use_settings_pkl=user_args.ignore_settings)
 
