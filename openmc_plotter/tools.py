@@ -2,7 +2,7 @@ import copy
 
 import numpy as np
 import openmc
-from PySide2 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from .custom_widgets import HorizontalLine
 from .scientific_spin_box import ScientificDoubleSpinBox

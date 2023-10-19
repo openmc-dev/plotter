@@ -2,8 +2,8 @@ from functools import partial
 from collections.abc import Iterable
 from collections import defaultdict
 
-from PySide2 import QtCore
-from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
+from PySide6 import QtCore
+from PySide6.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QGroupBox, QFormLayout, QLabel, QLineEdit,
                                QComboBox, QSpinBox, QDoubleSpinBox, QSizePolicy,
                                QCheckBox, QDockWidget, QScrollArea, QListWidget,
