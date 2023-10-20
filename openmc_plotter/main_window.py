@@ -547,7 +547,7 @@ class MainWindow(QMainWindow):
                             "opening a new one.")
             msg_box.setIcon(QMessageBox.Information)
             msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.exec_()
+            msg_box.exec()
             return
         filename, ext = QFileDialog.getOpenFileName(self, "Open StatePoint",
                                                     ".", "statepoint*.h5")
@@ -562,7 +562,7 @@ class MainWindow(QMainWindow):
                 msg_box.setText(msg.format(filename))
                 msg_box.setIcon(QMessageBox.Warning)
                 msg_box.setStandardButtons(QMessageBox.Ok)
-                msg_box.exec_()
+                msg_box.exec()
             finally:
                 self.statusBar().showMessage(message.format(filename), 5000)
             self.updateDataMenu()
@@ -583,7 +583,7 @@ class MainWindow(QMainWindow):
             msg_box.setText(f"Error opening properties file: \n\n {e} \n")
             msg_box.setIcon(QMessageBox.Warning)
             msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.exec_()
+            msg_box.exec()
         finally:
             self.statusBar().showMessage(message.format(filename), 5000)
 
@@ -869,7 +869,7 @@ class MainWindow(QMainWindow):
         dlg = QColorDialog(self)
 
         dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
-        if dlg.exec_():
+        if dlg.exec():
             new_color = dlg.currentColor().getRgb()[:3]
             self.model.activeView.maskBackground = new_color
             self.colorDialog.updateMaskingColor()
@@ -879,7 +879,7 @@ class MainWindow(QMainWindow):
         dlg = QColorDialog(self)
 
         dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
-        if dlg.exec_():
+        if dlg.exec():
             new_color = dlg.currentColor().getRgb()[:3]
             self.model.activeView.highlightBackground = new_color
             self.colorDialog.updateHighlightColor()
@@ -894,7 +894,7 @@ class MainWindow(QMainWindow):
         current_color = self.model.activeView.overlap_color
         dlg = QColorDialog(self)
         dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
-        if dlg.exec_():
+        if dlg.exec():
             new_color = dlg.currentColor().getRgb()[:3]
             self.model.activeView.overlap_color = new_color
             self.colorDialog.updateOverlapColor()
@@ -907,7 +907,7 @@ class MainWindow(QMainWindow):
         dlg = QColorDialog(self)
 
         dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
-        if dlg.exec_():
+        if dlg.exec():
             new_color = dlg.currentColor().getRgb()[:3]
             self.model.activeView.domainBackground = new_color
             self.colorDialog.updateBackgroundColor()
@@ -1036,7 +1036,7 @@ class MainWindow(QMainWindow):
         elif isinstance(current_color, str):
             current_color = openmc.plots._SVG_COLORS[current_color]
             dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
-        if dlg.exec_():
+        if dlg.exec():
             new_color = dlg.currentColor().getRgb()[:3]
             domain[id].color = new_color
 

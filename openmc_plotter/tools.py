@@ -36,7 +36,7 @@ class ExportDataDialog(QtWidgets.QDialog):
         msg_box.setText(msg)
         msg_box.setIcon(QtWidgets.QMessageBox.Information)
         msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
-        msg_box.exec_()
+        msg_box.exec()
 
     def populate(self):
         cv = self.model.currentView
@@ -378,4 +378,4 @@ class ExportDataDialog(QtWidgets.QDialog):
         msg.setText("Export complete!")
         msg.setIcon(QtWidgets.QMessageBox.Information)
         msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
-        msg.exec_()
+        msg.exec()

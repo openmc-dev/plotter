@@ -465,7 +465,7 @@ class PlotImage(FigureCanvas):
         else:
             self.main_window.dockAction.setText('Show &Dock')
 
-        self.menu.exec_(event.globalPos())
+        self.menu.exec(event.globalPos())
 
     def generatePixmap(self, update=False):
         if self.frozen:

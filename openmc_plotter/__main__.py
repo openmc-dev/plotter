@@ -90,7 +90,7 @@ def run_app(user_args):
     timer.start(500)
     timer.timeout.connect(lambda: None)
 
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 if __name__ == '__main__':
     main()
