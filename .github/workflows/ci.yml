@@ -27,7 +27,7 @@ jobs:
         shell: bash
         run: |
           apt update
-          apt install -y libglu1-mesa libglib2.0-0 libfontconfig1
+          apt install -y libglu1-mesa libglib2.0-0 libfontconfig1 libegl-dev
       -
         uses: actions/checkout@v2
       -
