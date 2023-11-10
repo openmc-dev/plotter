@@ -5,9 +5,9 @@ import pickle
 from threading import Thread
 
 from PySide6 import QtCore, QtGui
-from PySide6.QtGui import QKeyEvent
+from PySide6.QtGui import QKeyEvent, QAction
 from PySide6.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
-                               QScrollArea, QMessageBox, QAction, QFileDialog,
+                               QScrollArea, QMessageBox, QFileDialog,
                                QColorDialog, QInputDialog, QWidget,
                                QGestureEvent)
 
