@@ -8,14 +8,14 @@ from pathlib import Path
 import pickle
 import threading
 
-from PySide2.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
-from PySide2.QtGui import QColor
+from PySide6.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
+from PySide6.QtGui import QColor
 import openmc
 import openmc.lib
 import numpy as np
 
-from . import __version__
+from .version import __version__
 from .statepointmodel import StatePointModel
 from .plot_colors import random_rgb, reset_seed
 

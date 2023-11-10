@@ -4,9 +4,9 @@ from pathlib import Path
 import pickle
 from threading import Thread
 
-from PySide2 import QtCore, QtGui
-from PySide2.QtGui import QKeyEvent
-from PySide2.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
+from PySide6 import QtCore, QtGui
+from PySide6.QtGui import QKeyEvent
+from PySide6.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMessageBox, QAction, QFileDialog,
                                QColorDialog, QInputDialog, QWidget,
                                QGestureEvent)

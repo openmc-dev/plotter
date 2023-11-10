@@ -5,10 +5,10 @@ import os
 import signal
 import sys
 
-from PySide2 import QtCore, QtGui
-from PySide2.QtWidgets import QApplication, QSplashScreen
+from PySide6 import QtCore, QtGui
+from PySide6.QtWidgets import QApplication, QSplashScreen
 
-from . import __version__
+from .version import __version__
 from .main_window import MainWindow, _openmcReload
 
 
