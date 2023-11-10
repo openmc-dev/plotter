@@ -384,7 +384,8 @@ class TallyDock(PlotterDock):
 
         header = QTreeWidgetItem(["Filters"])
         self.filterTree.setHeaderItem(header)
-        self.filterTree.setItemHidden(header, True)
+        header.setHidden(True)
+        # self.filterTree.setItemHidden(header, True)
         self.filterTree.setColumnCount(1)
 
         self.filter_map = {}
@@ -402,7 +403,7 @@ class TallyDock(PlotterDock):
                     0, "Only tallies with spatial filters are viewable.")
             else:
                 filter_item.setFlags(
-                    filter_item.flags() | QtCore.Qt.ItemIsTristate | QtCore.Qt.ItemIsUserCheckable)
+                    filter_item.flags() | QtCore.Qt.ItemIsAutoTristate | QtCore.Qt.ItemIsUserCheckable)
             filter_item.setCheckState(0, QtCore.Qt.Unchecked)
 
             # all mesh bins are selected by default and not shown in the dock
