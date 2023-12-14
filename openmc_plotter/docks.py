@@ -670,7 +670,7 @@ class TallyDock(PlotterDock):
         self.model.appliedNuclides = tuple(applied_nuclides)
 
         if 'total' in applied_nuclides:
-            self.model.appliedNuclides = ['total',]
+            self.model.appliedNuclides = ('total',)
             for nuclide, nuclide_box in self.nuclide_map.items():
                 if nuclide != 'total':
                     nuclide_box.setFlags(QtCore.Qt.ItemIsUserCheckable)

@@ -1,12 +1,12 @@
+from __future__ import annotations
 from ast import literal_eval
 from collections import defaultdict
 import copy
 import hashlib
 import itertools
-import os
-from pathlib import Path
 import pickle
 import threading
+from typing import Literal, Tuple
 
 from PySide6.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
@@ -59,6 +59,8 @@ _SCORE_UNITS['damage-energy'] = _ENERGY_UNITS
 _TALLY_VALUES = {'Mean': 'mean',
                  'Std. Dev.': 'std_dev',
                  'Rel. Error': 'rel_err'}
+
+TallyValueType = Literal['mean', 'std_dev', 'rel_err']
 
 
 def hash_file(path):
@@ -386,7 +388,7 @@ class PlotModel:
         """
         Parameters
         ----------
-        view :
+        view : PlotView
             View used to set bounds of the tally data
 
         Returns
@@ -635,7 +637,10 @@ class PlotModel:
 
         return image_data, None, data_min, data_max
 
-    def _create_tally_mesh_image(self, tally, tally_value, scores, nuclides, view=None):
+    def _create_tally_mesh_image(
+            self, tally: openmc.Tally, tally_value: TallyValueType,
+            scores: Tuple[str], nuclides: Tuple[str], view: PlotView = None
+        ):
         # some variables used throughout
         if view is None:
             view = self.currentView
