@@ -657,56 +657,9 @@ class PlotModel:
         # start with reshaped data
         data = tally.get_reshaped_data(tally_value)
 
-        # determine basis indices
-        if view.basis == 'xy':
-            h_ind = 0
-            v_ind = 1
-            ax = 2
-        elif view.basis == 'yz':
-            h_ind = 1
-            v_ind = 2
-            ax = 0
-        else:
-            h_ind = 0
-            v_ind = 2
-            ax = 1
-
-        # adjust corners of the mesh for a translation
-        # applied to the mesh filter
-        lower_left = mesh.lower_left
-        upper_right = mesh.upper_right
-        width = mesh.width
-        dimension = mesh.dimension
-        if hasattr(mesh_filter, 'translation') and mesh_filter.translation is not None:
-            lower_left += mesh_filter.translation
-            upper_right += mesh_filter.translation
-
-        # For 2D meshes, add an extra z dimension
-        if len(mesh.dimension) == 2:
-            lower_left = np.hstack((lower_left, -1e50))
-            upper_right = np.hstack((upper_right, 1e50))
-            width = np.hstack((width, 2e50))
-            dimension = np.hstack((dimension, 1))
-
-        # reduce data to the visible slice of the mesh values
-        k = int((view.origin[ax] - lower_left[ax]) // width[ax])
-
-        # setup slice
-        data_slice = [None, None, None]
-        data_slice[h_ind] = slice(dimension[h_ind])
-        data_slice[v_ind] = slice(dimension[v_ind])
-        data_slice[ax] = k
-
-        if k < 0 or k > dimension[ax]:
-            return (None, None, None, None)
-
         # move mesh axes to the end of the filters
         filter_idx = [type(filter) for filter in tally.filters].index(openmc.MeshFilter)
         data = np.moveaxis(data, filter_idx, -1)
-
-        # reshape data (with zyx ordering for mesh data)
-        data = data.reshape(data.shape[:-1] + tuple(dimension[::-1]))
-        data = data[..., data_slice[2], data_slice[1], data_slice[0]]
 
         # sum over the rest of the tally filters
         for tally_filter in tally.filters:
@@ -747,14 +700,21 @@ class PlotModel:
         data_min = np.min(data)
         data_max = np.max(data)
 
-        # set image data, reverse y-axis
-        image_data = data[::-1, ...]
+        # Get mesh bins from openmc.lib
+        mesh_cpp = openmc.lib.meshes[mesh.id]
+        mesh_bins = mesh_cpp.get_plot_bins(
+            origin=view.origin,
+            width=(view.width, view.height),
+            basis=view.basis,
+            pixels=(view.h_res, view.v_res),
+        )
 
-        # return data extents (in cm) for the tally
-        extents = [lower_left[h_ind], upper_right[h_ind],
-                   lower_left[v_ind], upper_right[v_ind]]
+        # set image data
+        image_data = np.full_like(self.ids, np.nan, dtype=float)
+        mask = (mesh_bins >= 0)
+        image_data[mask] = data[mesh_bins[mask]]
 
-        return image_data, extents, data_min, data_max
+        return image_data, None, data_min, data_max
 
     @property
     def cell_ids(self):
