@@ -1,8 +1,8 @@
 from functools import partial
 import warnings
 
-from PySide2 import QtWidgets, QtCore
-from PySide2.QtWidgets import QFrame
+from PySide6 import QtWidgets, QtCore
+from PySide6.QtWidgets import QFrame
 
 
 class HorizontalLine(QFrame):

@@ -1,7 +1,7 @@
 from functools import partial
 
-from PySide2 import QtCore, QtGui
-from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
+from PySide6 import QtCore, QtGui
+from PySide6.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QFormLayout, QComboBox, QSpinBox,
                                QDoubleSpinBox, QSizePolicy, QMessageBox,
                                QCheckBox, QRubberBand, QMenu, QDialog,
@@ -465,7 +465,7 @@ class PlotImage(FigureCanvas):
         else:
             self.main_window.dockAction.setText('Show &Dock')
 
-        self.menu.exec_(event.globalPos())
+        self.menu.exec(event.globalPos())
 
     def generatePixmap(self, update=False):
         if self.frozen:

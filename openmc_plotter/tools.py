@@ -2,7 +2,7 @@ import copy
 
 import numpy as np
 import openmc
-from PySide2 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from .custom_widgets import HorizontalLine
 from .scientific_spin_box import ScientificDoubleSpinBox
@@ -36,7 +36,7 @@ class ExportDataDialog(QtWidgets.QDialog):
         msg_box.setText(msg)
         msg_box.setIcon(QtWidgets.QMessageBox.Information)
         msg_box.setStandardButtons(QtWidgets.QMessageBox.Ok)
-        msg_box.exec_()
+        msg_box.exec()
 
     def populate(self):
         cv = self.model.currentView
@@ -378,4 +378,4 @@ class ExportDataDialog(QtWidgets.QDialog):
         msg.setText("Export complete!")
         msg.setIcon(QtWidgets.QMessageBox.Information)
         msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
-        msg.exec_()
+        msg.exec()

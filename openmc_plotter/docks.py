@@ -2,8 +2,8 @@ from functools import partial
 from collections.abc import Iterable
 from collections import defaultdict
 
-from PySide2 import QtCore
-from PySide2.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
+from PySide6 import QtCore
+from PySide6.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QGroupBox, QFormLayout, QLabel, QLineEdit,
                                QComboBox, QSpinBox, QDoubleSpinBox, QSizePolicy,
                                QCheckBox, QDockWidget, QScrollArea, QListWidget,
@@ -384,7 +384,8 @@ class TallyDock(PlotterDock):
 
         header = QTreeWidgetItem(["Filters"])
         self.filterTree.setHeaderItem(header)
-        self.filterTree.setItemHidden(header, True)
+        header.setHidden(True)
+        #self.filterTree.setItemHidden(header, True)
         self.filterTree.setColumnCount(1)
 
         self.filter_map = {}
@@ -402,7 +403,7 @@ class TallyDock(PlotterDock):
                     0, "Only tallies with spatial filters are viewable.")
             else:
                 filter_item.setFlags(
-                    filter_item.flags() | QtCore.Qt.ItemIsTristate | QtCore.Qt.ItemIsUserCheckable)
+                    filter_item.flags() | QtCore.Qt.ItemIsUserCheckable)
             filter_item.setCheckState(0, QtCore.Qt.Unchecked)
 
             # all mesh bins are selected by default and not shown in the dock

@@ -1,7 +1,7 @@
 import re
 
-from PySide2 import QtGui
-from PySide2.QtWidgets import QDoubleSpinBox
+from PySide6 import QtGui
+from PySide6.QtWidgets import QDoubleSpinBox
 import numpy as np
 
 # Regular expression to find floats. Match groups are the whole string, the

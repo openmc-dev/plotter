@@ -15,7 +15,7 @@ repository](https://github.com/landonjmitchell/openmc-plotgui)).
 
 ## Dependencies
 
-OpenMC, Matplotlib, NumPy, PySide2
+OpenMC, Matplotlib, NumPy, PySide6
 
 ## Installation
 

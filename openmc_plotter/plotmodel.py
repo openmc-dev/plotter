@@ -8,9 +8,9 @@ from pathlib import Path
 import pickle
 import threading
 
-from PySide2.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
-from PySide2.QtGui import QColor
+from PySide6.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
+from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
+from PySide6.QtGui import QColor
 import openmc
 import openmc.lib
 import numpy as np
@@ -180,7 +180,7 @@ class PlotModel:
                     msg_box.setText(msg)
                     msg_box.setIcon(QMessageBox.Warning)
                     msg_box.setStandardButtons(QMessageBox.Ok)
-                    msg_box.exec_()
+                    msg_box.exec()
                     self.currentView = copy.deepcopy(self.defaultView)
 
                 else:
@@ -212,7 +212,7 @@ class PlotModel:
                             msg_box.setText(msg.format(self.model.statepoint.filename))
                             msg_box.setIcon(QMessageBox.Warning)
                             msg_box.setStandardButtons(QMessageBox.Ok)
-                            msg_box.exec_()
+                            msg_box.exec()
                             self.statepoint = None
 
                     self.currentView = PlotView(restore_view=view,
@@ -427,7 +427,7 @@ class PlotModel:
             msg_box.setText(msg)
             msg_box.setIcon(QMessageBox.Information)
             msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.exec_()
+            msg_box.exec()
             return (None, None, None, None, None)
 
         units_out = list(units)[0]

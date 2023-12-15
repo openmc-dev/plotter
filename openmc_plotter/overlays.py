@@ -1,7 +1,7 @@
 from sys import platform
 
-from PySide2 import QtGui, QtCore
-from PySide2.QtWidgets import (QWidget, QTableWidget, QSizePolicy,
+from PySide6 import QtGui, QtCore
+from PySide6.QtWidgets import (QWidget, QTableWidget, QSizePolicy,
                                QPushButton, QTableWidgetItem, QVBoxLayout)
 
 c_key = "⌘" if platform == 'darwin' else "Ctrl"
