@@ -28,7 +28,7 @@ pip install openmc-plotter
 The development version can be installed with
 
 ```
-pip install git+https://github.com/openmc-dev/openmc.git@develop
+pip install git+https://github.com/openmc-dev/plotter.git@develop
 ```
 
 ## Usage
