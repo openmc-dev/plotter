@@ -24,7 +24,7 @@ from .plotmodel import PlotModel, DomainTableModel, hash_model
 from .plotgui import PlotImage, ColorDialog
 from .docks import DomainDock, TallyDock
 from .overlays import ShortcutsOverlay
-from .tools import ExportDataDialog
+from .tools import ExportDataDialog, SourceSitesDialog
 
 
 def _openmcReload(threads=None, model_path='.'):
@@ -94,6 +94,8 @@ class MainWindow(QMainWindow):
 
         # Tools
         self.exportDataDialog = ExportDataDialog(self.model, self.font_metric, self)
+
+        self.sourceSitesDialog = SourceSitesDialog(self.model, self.font_metric, self)
 
         # Restore Window Settings
         self.restoreWindowSettings()
@@ -203,12 +205,18 @@ class MainWindow(QMainWindow):
         self.openStatePointAction.setToolTip('Open statepoint file')
         self.openStatePointAction.triggered.connect(self.openStatePoint)
 
+        self.sourceSitesAction = QAction('&Sample Source Sites...', self)
+        self.sourceSitesAction.setToolTip('Add source sites to plot')
+        self.setStatusTip('Sample and add source sites to the plot')
+        self.sourceSitesAction.triggered.connect(self.plotSourceSites)
+
         self.importPropertiesAction = QAction("&Import properties...", self)
         self.importPropertiesAction.setToolTip("Import properties")
         self.importPropertiesAction.triggered.connect(self.importProperties)
 
         self.dataMenu = self.mainMenu.addMenu('D&ata')
         self.dataMenu.addAction(self.openStatePointAction)
+        self.dataMenu.addAction(self.sourceSitesAction)
         self.dataMenu.addAction(self.importPropertiesAction)
         self.updateDataMenu()
 
@@ -522,13 +530,15 @@ class MainWindow(QMainWindow):
         except Exception:
             message = 'Error loading plot settings'
             saved = {'version': None,
-                        'current': None}
+                     'current': None}
+
+        print(saved['current'])
         if saved['version'] == self.model.version:
             self.model.activeView = saved['current']
             self.dock.updateDock()
             self.colorDialog.updateDialogValues()
             self.applyChanges()
-            message = '{} settings loaded'.format(filename)
+            message = '{} loaded'.format(filename)
         else:
             message = 'Error loading plot settings. Incompatible model.'
         self.statusBar().showMessage(message, 5000)
@@ -612,6 +622,12 @@ class MainWindow(QMainWindow):
             self.dataMenu.addAction(self.closeStatePointAction)
         elif hasattr(self, "closeStatePointAction"):
             self.dataMenu.removeAction(self.closeStatePointAction)
+
+    def plotSourceSites(self):
+        self.sourceSitesDialog.show()
+        self.sourceSitesDialog.raise_()
+        self.sourceSitesDialog.activateWindow()
+        self.applyChanges()
 
     def applyChanges(self):
         if self.model.activeView != self.model.currentView:
