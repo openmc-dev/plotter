@@ -8,6 +8,40 @@ from .custom_widgets import HorizontalLine
 from .scientific_spin_box import ScientificDoubleSpinBox
 
 
+class SourceSitesDialog(QtWidgets.QDialog):
+    def __init__(self, model, font_metric, parent=None):
+        super().__init__(parent)
+
+        self.model = model
+        self.font_metric = font_metric
+        self.parent = parent
+
+        self.layout = QtWidgets.QGridLayout()
+        self.setLayout(self.layout)
+
+        # disable interaction with main window while this is open
+        self.setModal(True)
+
+    def show(self):
+        self.populate()
+        super().show()
+
+    def populate(self):
+        self.layout.addWidget(QtWidgets.QLabel("# Source Sites:"), 0, 0)
+        self.nSitesBox = QtWidgets.QSpinBox()
+        self.nSitesBox.setMaximum(10000)
+        self.nSitesBox.setMinimum(0)
+        self.layout.addWidget(self.nSitesBox, 0, 1)
+
+        self.sampleButton = QtWidgets.QPushButton("Sample Sites")
+        self.sampleButton.clicked.connect(self._sample_sites)
+
+        self.layout.addWidget(self.sampleButton, 1, 0, 1, 2)
+
+    def _sample_sites(self):
+        self.model.getExternalSourceSites(self.nSitesBox.value())
+        self.close()
+
 class ExportDataDialog(QtWidgets.QDialog):
     """
     A dialog to facilitate generation of VTK files for
