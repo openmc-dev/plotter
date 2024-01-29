@@ -550,7 +550,7 @@ class MainWindow(QMainWindow):
             msg_box.exec()
             return
         filename, ext = QFileDialog.getOpenFileName(self, "Open StatePoint",
-                                                    ".", "statepoint*.h5")
+                                                    ".", "*.h5")
         if filename:
             try:
                 self.model.openStatePoint(filename)
