@@ -19,15 +19,14 @@ OpenMC, Matplotlib, NumPy, PySide6
 
 ## Installation
 
-This package is available from PyPI and Conda
-
-To install from PyPI run the following command from the terminal.
-
+This package is available from PyPI and conda-forge. To install from PyPI run
+the following command from the terminal:
 ```console
 python -m pip install openmc-plotter
 ```
 
-Or alternativly Conda can be used to install the plotter (recommend option for Conda enviroments)
+Alternatively, conda can be used to install the plotter (recommended option for
+conda enviroments):
 ```console
 conda install -c conda-forge openmc-plotter
 ```
