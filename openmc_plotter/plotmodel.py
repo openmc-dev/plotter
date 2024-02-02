@@ -700,10 +700,17 @@ class PlotModel:
         data_min = np.min(data)
         data_max = np.max(data)
 
+        # Account for mesh filter translation
+        if mesh_filter.translation is not None:
+            t = mesh_filter.translation
+            origin = (view.origin[0] - t[0], view.origin[1] - t[1], view.origin[2] - t[2])
+        else:
+            origin = view.origin
+
         # Get mesh bins from openmc.lib
         mesh_cpp = openmc.lib.meshes[mesh.id]
         mesh_bins = mesh_cpp.get_plot_bins(
-            origin=view.origin,
+            origin=origin,
             width=(view.width, view.height),
             basis=view.basis,
             pixels=(view.h_res, view.v_res),
