@@ -339,8 +339,8 @@ class PlotImage(FigureCanvas):
 
     def wheelEvent(self, event):
 
-        if event.delta() and event.modifiers() == QtCore.Qt.ShiftModifier:
-            numDegrees = event.delta() / 8
+        if event.angleDelta() and event.modifiers() == QtCore.Qt.ShiftModifier:
+            numDegrees = event.angleDelta() / 8
 
             if 24 < self.main_window.zoom + numDegrees < 5001:
                 self.main_window.editZoom(self.main_window.zoom + numDegrees)
