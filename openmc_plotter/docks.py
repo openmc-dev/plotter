@@ -887,6 +887,10 @@ class ColorForm(QWidget):
         cv = self.model.currentView
         self.maskZeroBox.setChecked(cv.tallyMaskZeroValues)
 
+    def updateVolumeNorm(self):
+        cv = self.model.currentView
+        self.volumeNormBox.setChecked(cv.tallyVolumeNorm)
+
     def updateDataClip(self):
         cv = self.model.currentView
         self.clipDataBox.setChecked(cv.clipTallyData)
@@ -906,6 +910,7 @@ class ColorForm(QWidget):
 
         self.updateMinMax()
         self.updateMaskZeros()
+        self.updateVolumeNorm()
         self.updateDataClip()
         self.updateDataIndicator()
         self.updateTallyContours()
