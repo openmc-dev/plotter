@@ -349,6 +349,7 @@ class TallyDock(PlotterDock):
         self.tallyColorForm = ColorForm(self.model, self.main_window, 'tally')
         self.scoresGroupBox = Expander(title="Scores:")
         self.scoresListWidget = QListWidget()
+        self.scoresListWidget.itemChanged.connect(self.updateScores)
         self.nuclidesListWidget = QListWidget()
 
         # Main layout
@@ -502,7 +503,6 @@ class TallyDock(PlotterDock):
 
             # scores
             self.score_map = {}
-            self.score_map.clear()
             self.scoresListWidget.clear()
 
             sorted_scores = sorted(tally.scores)
@@ -628,39 +628,37 @@ class TallyDock(PlotterDock):
                 applied_scores.append(score)
         self.model.appliedScores = tuple(applied_scores)
 
-        if not applied_scores:
-            # if no scores are selected, enable all scores again
-            for score, score_box in self.score_map.items():
-                sunits = _SCORE_UNITS.get(score, _REACTION_UNITS)
-                empty_item = QListWidgetItem()
-                score_box.setFlags(empty_item.flags() |
-                                   QtCore.Qt.ItemIsUserCheckable)
-                score_box.setFlags(empty_item.flags() &
-                                   ~QtCore.Qt.ItemIsSelectable)
-        elif 'total' in applied_scores:
-            self.model.appliedScores = ('total',)
-            # if total is selected, disable all other scores
-            for score, score_box in self.score_map.items():
-                if score != 'total':
-                    score_box.setFlags(QtCore.Qt.ItemIsUserCheckable)
-                    score_box.setToolTip(
-                        "De-select 'total' to enable other scores")
-        else:
-            # get units of applied scores
-            selected_units = _SCORE_UNITS.get(
-                applied_scores[0], _REACTION_UNITS)
-            # disable scores with incompatible units
-            for score, score_box in self.score_map.items():
-                sunits = _SCORE_UNITS.get(score, _REACTION_UNITS)
-                if sunits != selected_units:
-                    score_box.setFlags(QtCore.Qt.ItemIsUserCheckable)
-                    score_box.setToolTip(
-                        "Score is incompatible with currently selected scores")
-                else:
-                    score_box.setFlags(score_box.flags() |
-                                       QtCore.Qt.ItemIsUserCheckable)
-                    score_box.setFlags(score_box.flags() &
-                                       ~QtCore.Qt.ItemIsSelectable)
+        with QtCore.QSignalBlocker(self.scoresListWidget):
+            if not applied_scores:
+                # if no scores are selected, enable all scores again
+                for score, score_box in self.score_map.items():
+                    score_box.setFlags(QtCore.Qt.ItemIsUserCheckable |
+                                       QtCore.Qt.ItemIsEnabled |
+                                       QtCore.Qt.ItemIsSelectable)
+            elif 'total' in applied_scores:
+                self.model.appliedScores = ('total',)
+                # if total is selected, disable all other scores
+                for score, score_box in self.score_map.items():
+                    if score != 'total':
+                        score_box.setFlags(QtCore.Qt.ItemIsUserCheckable)
+                        score_box.setToolTip(
+                            "De-select 'total' to enable other scores")
+            else:
+                # get units of applied scores
+                selected_units = _SCORE_UNITS.get(
+                    applied_scores[0], _REACTION_UNITS)
+                # disable scores with incompatible units
+                for score, score_box in self.score_map.items():
+                    sunits = _SCORE_UNITS.get(score, _REACTION_UNITS)
+                    if sunits != selected_units:
+                        score_box.setFlags(QtCore.Qt.ItemIsUserCheckable)
+                        score_box.setToolTip(
+                            "Score is incompatible with currently selected scores")
+                    else:
+                        score_box.setFlags(score_box.flags() |
+                                        QtCore.Qt.ItemIsUserCheckable)
+                        score_box.setFlags(score_box.flags() &
+                                        ~QtCore.Qt.ItemIsSelectable)
 
     def updateNuclides(self):
         applied_nuclides = []
