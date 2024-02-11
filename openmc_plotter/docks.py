@@ -826,6 +826,11 @@ class ColorForm(QWidget):
         zero_connector = partial(main_window.toggleTallyMaskZero)
         self.maskZeroBox.stateChanged.connect(zero_connector)
 
+        # Volume normalization check box
+        self.volumeNormBox = QCheckBox()
+        volume_connector = partial(main_window.toggleTallyVolumeNorm)
+        self.volumeNormBox.stateChanged.connect(volume_connector)
+
         # Clip data to min/max check box
         self.clipDataBox = QCheckBox()
         clip_connector = partial(main_window.toggleTallyDataClip)
@@ -849,6 +854,7 @@ class ColorForm(QWidget):
         self.layout.addRow("Log Scale: ", self.scaleBox)
         self.layout.addRow("Clip Data: ", self.clipDataBox)
         self.layout.addRow("Mask Zeros: ", self.maskZeroBox)
+        self.layout.addRow("Volume normalize: ", self.volumeNormBox)
         self.layout.addRow("Contours: ", self.contoursBox)
         self.layout.addRow("Contour Levels:", self.contourLevelsLine)
         self.setLayout(self.layout)

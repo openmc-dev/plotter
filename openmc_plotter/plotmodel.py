@@ -696,10 +696,6 @@ class PlotModel:
                 selected_scores.append(idx)
         data = _do_op(data[np.array(selected_scores)], tally_value)
 
-        # get dataset's min/max
-        data_min = np.min(data)
-        data_max = np.max(data)
-
         # Account for mesh filter translation
         if mesh_filter.translation is not None:
             t = mesh_filter.translation
@@ -716,10 +712,18 @@ class PlotModel:
             pixels=(view.h_res, view.v_res),
         )
 
+        # Apply volume normalization
+        if view.tallyVolumeNorm:
+            data /= mesh_cpp.volumes
+
         # set image data
         image_data = np.full_like(self.ids, np.nan, dtype=float)
         mask = (mesh_bins >= 0)
         image_data[mask] = data[mesh_bins[mask]]
+
+        # get dataset's min/max
+        data_min = np.min(data)
+        data_max = np.max(data)
 
         return image_data, None, data_min, data_max
 
@@ -911,6 +915,7 @@ class PlotViewIndependent:
         self.tallyDataMax = np.inf
         self.tallyDataLogScale = False
         self.tallyMaskZeroValues = False
+        self.tallyVolumeNorm = False
         self.clipTallyData = False
         self.tallyValue = "Mean"
         self.tallyContours = False

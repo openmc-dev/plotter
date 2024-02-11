@@ -951,6 +951,10 @@ class MainWindow(QMainWindow):
         av = self.model.activeView
         av.tallyMaskZeroValues = bool(state)
 
+    def toggleTallyVolumeNorm(self, state):
+        av = self.model.activeView
+        av.tallyVolumeNorm = bool(state)
+
     def editTallyAlpha(self, value, apply=False):
         av = self.model.activeView
         av.tallyDataAlpha = value
