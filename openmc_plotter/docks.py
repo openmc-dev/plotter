@@ -505,15 +505,9 @@ class TallyDock(PlotterDock):
             self.score_map = {}
             self.scoresListWidget.clear()
 
-            sorted_scores = sorted(tally.scores)
-            # always put total first if present
-            if 'total' in sorted_scores:
-                idx = sorted_scores.index('total')
-                sorted_scores.insert(0, sorted_scores.pop(idx))
-
-            for score in sorted_scores:
+            for score in tally.scores:
                 ql = QListWidgetItem()
-                ql.setText(score.capitalize())
+                ql.setText(score)
                 ql.setCheckState(QtCore.Qt.Unchecked)
                 if not spatial_filters:
                     ql.setFlags(QtCore.Qt.ItemIsUserCheckable)
@@ -635,14 +629,6 @@ class TallyDock(PlotterDock):
                     score_box.setFlags(QtCore.Qt.ItemIsUserCheckable |
                                        QtCore.Qt.ItemIsEnabled |
                                        QtCore.Qt.ItemIsSelectable)
-            elif 'total' in applied_scores:
-                self.model.appliedScores = ('total',)
-                # if total is selected, disable all other scores
-                for score, score_box in self.score_map.items():
-                    if score != 'total':
-                        score_box.setFlags(QtCore.Qt.ItemIsUserCheckable)
-                        score_box.setToolTip(
-                            "De-select 'total' to enable other scores")
             else:
                 # get units of applied scores
                 selected_units = _SCORE_UNITS.get(
