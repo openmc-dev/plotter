@@ -1004,6 +1004,10 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
+    def toggleReverseCmap(self, state):
+        av = self.model.activeView
+        av.tallyDataReverseCmap = bool(state)
+
     def updateTallyMinMax(self):
         self.tallyDock.updateMinMax()
 
