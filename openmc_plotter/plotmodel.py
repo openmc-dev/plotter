@@ -6,7 +6,7 @@ import hashlib
 import itertools
 import pickle
 import threading
-from typing import Literal, Tuple
+from typing import Literal, Tuple, Optional
 
 from PySide6.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
@@ -28,9 +28,14 @@ _OVERLAP = -3
 _MODEL_PROPERTIES = ('temperature', 'density')
 _PROPERTY_INDICES = {'temperature': 0, 'density': 1}
 
-_REACTION_UNITS = 'Reactions per Source Particle'
-_PRODUCTION_UNITS = 'Particles Produced per Source Particle'
-_ENERGY_UNITS = 'eV per Source Particle'
+_REACTION_UNITS = 'reactions/source'
+_PRODUCTION_UNITS = 'particles/source'
+_ENERGY_UNITS = 'eV/source'
+
+_REACTION_UNITS_VOL = 'reactions/cm³/source'
+_PRODUCTION_UNITS_VOL = 'particles/cm³/source'
+_ENERGY_UNITS_VOL = 'eV/cm³/source'
+
 
 _SPATIAL_FILTERS = (openmc.UniverseFilter,
                     openmc.MaterialFilter,
@@ -42,19 +47,26 @@ _SPATIAL_FILTERS = (openmc.UniverseFilter,
 _PRODUCTIONS = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
                'nu-scatter', 'H1-production', 'H2-production',
                'H3-production', 'He3-production', 'He4-production')
+_ENERGY_SCORES = {'heating', 'heating-local', 'kappa-fission',
+                  'fission-q-prompt', 'fission-q-recoverable',
+                  'damage-energy'}
 
 _SCORE_UNITS = {p: _PRODUCTION_UNITS for p in _PRODUCTIONS}
-_SCORE_UNITS['flux'] = 'Particle-cm/Particle'
-_SCORE_UNITS['current'] = 'Particles per source Particle'
-_SCORE_UNITS['events'] = 'Events per Source Particle'
-_SCORE_UNITS['inverse-velocity'] = 'Particle-seconds per Source Particle'
-_SCORE_UNITS['heating'] = _ENERGY_UNITS
-_SCORE_UNITS['heating-local'] = _ENERGY_UNITS
-_SCORE_UNITS['kappa-fission'] = _ENERGY_UNITS
-_SCORE_UNITS['fission-q-prompt'] = _ENERGY_UNITS
-_SCORE_UNITS['fission-q-recoverable'] = _ENERGY_UNITS
-_SCORE_UNITS['decay-rate'] = 'Seconds^-1'
-_SCORE_UNITS['damage-energy'] = _ENERGY_UNITS
+_SCORE_UNITS['flux'] = 'particle-cm/source'
+_SCORE_UNITS['current'] = 'particle/source'
+_SCORE_UNITS['events'] = 'events/source'
+_SCORE_UNITS['inverse-velocity'] = 'particle-s/source'
+_SCORE_UNITS['decay-rate'] = 'particle/s/source'
+_SCORE_UNITS.update({s: _ENERGY_UNITS for s in _ENERGY_SCORES})
+
+_SCORE_UNITS_VOL = {p: _PRODUCTION_UNITS_VOL for p in _PRODUCTIONS}
+_SCORE_UNITS_VOL['flux'] = 'particle/cm²/source'
+_SCORE_UNITS_VOL['current'] = 'particle/cm³/source'
+_SCORE_UNITS_VOL['events'] = 'events/cm³/source'
+_SCORE_UNITS_VOL['inverse-velocity'] = 'particle-s/cm³/source'
+_SCORE_UNITS_VOL['decay-rate'] = 'particle/s/cm³/source'
+_SCORE_UNITS.update({s: _ENERGY_UNITS_VOL for s in _ENERGY_SCORES})
+
 
 _TALLY_VALUES = {'Mean': 'mean',
                  'Std. Dev.': 'std_dev',
@@ -384,7 +396,7 @@ class PlotModel:
         """ Add current view to previousViews list """
         self.previousViews.append(copy.deepcopy(self.currentView))
 
-    def create_tally_image(self, view=None):
+    def create_tally_image(self, view: Optional[PlotView] = None):
         """
         Parameters
         ----------
@@ -438,6 +450,10 @@ class PlotModel:
         contains_cellinstance = tally.contains_filter(openmc.CellInstanceFilter)
 
         if tally.contains_filter(openmc.MeshFilter):
+            # Check for volume normalization in order to change units
+            if view.tallyVolumeNorm:
+                units_out = _SCORE_UNITS_VOL.get(scores[0], _REACTION_UNITS_VOL)
+
             if tally_value == 'rel_err':
                 # get both the std. dev. data and mean data
                 # to create the relative error data
