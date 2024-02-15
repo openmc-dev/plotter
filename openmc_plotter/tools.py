@@ -168,33 +168,36 @@ class ExportDataDialog(QtWidgets.QDialog):
             mesh = mesh_filter.mesh
             assert(mesh.n_dimension == 3)
 
-            llc = mesh.lower_left
+            bbox = mesh.bounding_box
+
+            llc = bbox.lower_left
             self.xminBox.setValue(llc[0])
             self.yminBox.setValue(llc[1])
             self.zminBox.setValue(llc[2])
 
-            urc = mesh.upper_right
+            urc = bbox.upper_right
             self.xmaxBox.setValue(urc[0])
             self.ymaxBox.setValue(urc[1])
             self.zmaxBox.setValue(urc[2])
-
-            dims = mesh.dimension
-            self.xResBox.setValue(dims[0])
-            self.yResBox.setValue(dims[1])
-            self.zResBox.setValue(dims[2])
 
             bounds_msg = "Using MeshFilter to set bounds automatically."
             for box in self.bounds_spin_boxes:
                 box.setEnabled(False)
                 box.setToolTip(bounds_msg)
 
-            resolution_msg = "Using MeshFilter to set resolution automatically."
-            self.xResBox.setEnabled(False)
-            self.xResBox.setToolTip(resolution_msg)
-            self.yResBox.setEnabled(False)
-            self.yResBox.setToolTip(resolution_msg)
-            self.zResBox.setEnabled(False)
-            self.zResBox.setToolTip(resolution_msg)
+            dims = mesh.dimension
+            if len(dims) == 3:
+                self.xResBox.setValue(dims[0])
+                self.yResBox.setValue(dims[1])
+                self.zResBox.setValue(dims[2])
+
+                resolution_msg = "Using MeshFilter to set resolution automatically."
+                self.xResBox.setEnabled(False)
+                self.xResBox.setToolTip(resolution_msg)
+                self.yResBox.setEnabled(False)
+                self.yResBox.setToolTip(resolution_msg)
+                self.zResBox.setEnabled(False)
+                self.zResBox.setToolTip(resolution_msg)
 
         else:
             # initialize using the bounds of the current view
@@ -214,14 +217,12 @@ class ExportDataDialog(QtWidgets.QDialog):
 
     def export_data(self):
         # cache current and active views
-        cv = self.model.currentView
         av = self.model.activeView
         try:
             # export the tally data
             self._export_data()
         finally:
-            #always reset to the original view
-            self.model.currentView = cv
+            # always reset to the original view
             self.model.activeView = av
             self.model.makePlot()
 

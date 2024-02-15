@@ -1,12 +1,12 @@
+from __future__ import annotations
 from ast import literal_eval
 from collections import defaultdict
 import copy
 import hashlib
 import itertools
-import os
-from pathlib import Path
 import pickle
 import threading
+from typing import Literal, Tuple, Optional
 
 from PySide6.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
@@ -28,9 +28,14 @@ _OVERLAP = -3
 _MODEL_PROPERTIES = ('temperature', 'density')
 _PROPERTY_INDICES = {'temperature': 0, 'density': 1}
 
-_REACTION_UNITS = 'Reactions per Source Particle'
-_PRODUCTION_UNITS = 'Particles Produced per Source Particle'
-_ENERGY_UNITS = 'eV per Source Particle'
+_REACTION_UNITS = 'reactions/source'
+_PRODUCTION_UNITS = 'particles/source'
+_ENERGY_UNITS = 'eV/source'
+
+_REACTION_UNITS_VOL = 'reactions/cm³/source'
+_PRODUCTION_UNITS_VOL = 'particles/cm³/source'
+_ENERGY_UNITS_VOL = 'eV/cm³/source'
+
 
 _SPATIAL_FILTERS = (openmc.UniverseFilter,
                     openmc.MaterialFilter,
@@ -42,23 +47,32 @@ _SPATIAL_FILTERS = (openmc.UniverseFilter,
 _PRODUCTIONS = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
                'nu-scatter', 'H1-production', 'H2-production',
                'H3-production', 'He3-production', 'He4-production')
+_ENERGY_SCORES = {'heating', 'heating-local', 'kappa-fission',
+                  'fission-q-prompt', 'fission-q-recoverable',
+                  'damage-energy'}
 
 _SCORE_UNITS = {p: _PRODUCTION_UNITS for p in _PRODUCTIONS}
-_SCORE_UNITS['flux'] = 'Particle-cm/Particle'
-_SCORE_UNITS['current'] = 'Particles per source Particle'
-_SCORE_UNITS['events'] = 'Events per Source Particle'
-_SCORE_UNITS['inverse-velocity'] = 'Particle-seconds per Source Particle'
-_SCORE_UNITS['heating'] = _ENERGY_UNITS
-_SCORE_UNITS['heating-local'] = _ENERGY_UNITS
-_SCORE_UNITS['kappa-fission'] = _ENERGY_UNITS
-_SCORE_UNITS['fission-q-prompt'] = _ENERGY_UNITS
-_SCORE_UNITS['fission-q-recoverable'] = _ENERGY_UNITS
-_SCORE_UNITS['decay-rate'] = 'Seconds^-1'
-_SCORE_UNITS['damage-energy'] = _ENERGY_UNITS
+_SCORE_UNITS['flux'] = 'particle-cm/source'
+_SCORE_UNITS['current'] = 'particle/source'
+_SCORE_UNITS['events'] = 'events/source'
+_SCORE_UNITS['inverse-velocity'] = 'particle-s/source'
+_SCORE_UNITS['decay-rate'] = 'particle/s/source'
+_SCORE_UNITS.update({s: _ENERGY_UNITS for s in _ENERGY_SCORES})
+
+_SCORE_UNITS_VOL = {p: _PRODUCTION_UNITS_VOL for p in _PRODUCTIONS}
+_SCORE_UNITS_VOL['flux'] = 'particle/cm²/source'
+_SCORE_UNITS_VOL['current'] = 'particle/cm³/source'
+_SCORE_UNITS_VOL['events'] = 'events/cm³/source'
+_SCORE_UNITS_VOL['inverse-velocity'] = 'particle-s/cm³/source'
+_SCORE_UNITS_VOL['decay-rate'] = 'particle/s/cm³/source'
+_SCORE_UNITS.update({s: _ENERGY_UNITS_VOL for s in _ENERGY_SCORES})
+
 
 _TALLY_VALUES = {'Mean': 'mean',
                  'Std. Dev.': 'std_dev',
                  'Rel. Error': 'rel_err'}
+
+TallyValueType = Literal['mean', 'std_dev', 'rel_err']
 
 
 def hash_file(path):
@@ -382,11 +396,11 @@ class PlotModel:
         """ Add current view to previousViews list """
         self.previousViews.append(copy.deepcopy(self.currentView))
 
-    def create_tally_image(self, view=None):
+    def create_tally_image(self, view: Optional[PlotView] = None):
         """
         Parameters
         ----------
-        view :
+        view : PlotView
             View used to set bounds of the tally data
 
         Returns
@@ -436,6 +450,10 @@ class PlotModel:
         contains_cellinstance = tally.contains_filter(openmc.CellInstanceFilter)
 
         if tally.contains_filter(openmc.MeshFilter):
+            # Check for volume normalization in order to change units
+            if view.tallyVolumeNorm:
+                units_out = _SCORE_UNITS_VOL.get(scores[0], _REACTION_UNITS_VOL)
+
             if tally_value == 'rel_err':
                 # get both the std. dev. data and mean data
                 # to create the relative error data
@@ -635,7 +653,10 @@ class PlotModel:
 
         return image_data, None, data_min, data_max
 
-    def _create_tally_mesh_image(self, tally, tally_value, scores, nuclides, view=None):
+    def _create_tally_mesh_image(
+            self, tally: openmc.Tally, tally_value: TallyValueType,
+            scores: Tuple[str], nuclides: Tuple[str], view: PlotView = None
+        ):
         # some variables used throughout
         if view is None:
             view = self.currentView
@@ -652,56 +673,9 @@ class PlotModel:
         # start with reshaped data
         data = tally.get_reshaped_data(tally_value)
 
-        # determine basis indices
-        if view.basis == 'xy':
-            h_ind = 0
-            v_ind = 1
-            ax = 2
-        elif view.basis == 'yz':
-            h_ind = 1
-            v_ind = 2
-            ax = 0
-        else:
-            h_ind = 0
-            v_ind = 2
-            ax = 1
-
-        # adjust corners of the mesh for a translation
-        # applied to the mesh filter
-        lower_left = mesh.lower_left
-        upper_right = mesh.upper_right
-        width = mesh.width
-        dimension = mesh.dimension
-        if hasattr(mesh_filter, 'translation') and mesh_filter.translation is not None:
-            lower_left += mesh_filter.translation
-            upper_right += mesh_filter.translation
-
-        # For 2D meshes, add an extra z dimension
-        if len(mesh.dimension) == 2:
-            lower_left = np.hstack((lower_left, -1e50))
-            upper_right = np.hstack((upper_right, 1e50))
-            width = np.hstack((width, 2e50))
-            dimension = np.hstack((dimension, 1))
-
-        # reduce data to the visible slice of the mesh values
-        k = int((view.origin[ax] - lower_left[ax]) // width[ax])
-
-        # setup slice
-        data_slice = [None, None, None]
-        data_slice[h_ind] = slice(dimension[h_ind])
-        data_slice[v_ind] = slice(dimension[v_ind])
-        data_slice[ax] = k
-
-        if k < 0 or k > dimension[ax]:
-            return (None, None, None, None)
-
         # move mesh axes to the end of the filters
         filter_idx = [type(filter) for filter in tally.filters].index(openmc.MeshFilter)
         data = np.moveaxis(data, filter_idx, -1)
-
-        # reshape data (with zyx ordering for mesh data)
-        data = data.reshape(data.shape[:-1] + tuple(dimension[::-1]))
-        data = data[..., data_slice[2], data_slice[1], data_slice[0]]
 
         # sum over the rest of the tally filters
         for tally_filter in tally.filters:
@@ -738,18 +712,36 @@ class PlotModel:
                 selected_scores.append(idx)
         data = _do_op(data[np.array(selected_scores)], tally_value)
 
+        # Account for mesh filter translation
+        if mesh_filter.translation is not None:
+            t = mesh_filter.translation
+            origin = (view.origin[0] - t[0], view.origin[1] - t[1], view.origin[2] - t[2])
+        else:
+            origin = view.origin
+
+        # Get mesh bins from openmc.lib
+        mesh_cpp = openmc.lib.meshes[mesh.id]
+        mesh_bins = mesh_cpp.get_plot_bins(
+            origin=origin,
+            width=(view.width, view.height),
+            basis=view.basis,
+            pixels=(view.h_res, view.v_res),
+        )
+
+        # Apply volume normalization
+        if view.tallyVolumeNorm:
+            data /= mesh_cpp.volumes
+
+        # set image data
+        image_data = np.full_like(self.ids, np.nan, dtype=float)
+        mask = (mesh_bins >= 0)
+        image_data[mask] = data[mesh_bins[mask]]
+
         # get dataset's min/max
         data_min = np.min(data)
         data_max = np.max(data)
 
-        # set image data, reverse y-axis
-        image_data = data[::-1, ...]
-
-        # return data extents (in cm) for the tally
-        extents = [lower_left[h_ind], upper_right[h_ind],
-                   lower_left[v_ind], upper_right[v_ind]]
-
-        return image_data, extents, data_min, data_max
+        return image_data, None, data_min, data_max
 
     @property
     def cell_ids(self):
@@ -939,6 +931,7 @@ class PlotViewIndependent:
         self.tallyDataMax = np.inf
         self.tallyDataLogScale = False
         self.tallyMaskZeroValues = False
+        self.tallyVolumeNorm = False
         self.clipTallyData = False
         self.tallyValue = "Mean"
         self.tallyContours = False

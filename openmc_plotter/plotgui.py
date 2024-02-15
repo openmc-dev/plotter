@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from .plot_colors import rgb_normalize, invert_rgb
-from .plotmodel import DomainDelegate
+from .plotmodel import DomainDelegate, PlotModel
 from .plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
 from .scientific_spin_box import ScientificDoubleSpinBox
 from .custom_widgets import HorizontalLine
@@ -23,7 +23,7 @@ from .custom_widgets import HorizontalLine
 
 class PlotImage(FigureCanvas):
 
-    def __init__(self, model, parent, main_window):
+    def __init__(self, model: PlotModel, parent, main_window):
 
         self.figure = Figure(dpi=main_window.logicalDpiX())
         super().__init__(self.figure)
@@ -339,8 +339,8 @@ class PlotImage(FigureCanvas):
 
     def wheelEvent(self, event):
 
-        if event.delta() and event.modifiers() == QtCore.Qt.ShiftModifier:
-            numDegrees = event.delta() / 8
+        if event.angleDelta() and event.modifiers() == QtCore.Qt.ShiftModifier:
+            numDegrees = event.angleDelta() / 8
 
             if 24 < self.main_window.zoom + numDegrees < 5001:
                 self.main_window.editZoom(self.main_window.zoom + numDegrees)

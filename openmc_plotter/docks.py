@@ -670,7 +670,7 @@ class TallyDock(PlotterDock):
         self.model.appliedNuclides = tuple(applied_nuclides)
 
         if 'total' in applied_nuclides:
-            self.model.appliedNuclides = ['total',]
+            self.model.appliedNuclides = ('total',)
             for nuclide, nuclide_box in self.nuclide_map.items():
                 if nuclide != 'total':
                     nuclide_box.setFlags(QtCore.Qt.ItemIsUserCheckable)
@@ -826,6 +826,11 @@ class ColorForm(QWidget):
         zero_connector = partial(main_window.toggleTallyMaskZero)
         self.maskZeroBox.stateChanged.connect(zero_connector)
 
+        # Volume normalization check box
+        self.volumeNormBox = QCheckBox()
+        volume_connector = partial(main_window.toggleTallyVolumeNorm)
+        self.volumeNormBox.stateChanged.connect(volume_connector)
+
         # Clip data to min/max check box
         self.clipDataBox = QCheckBox()
         clip_connector = partial(main_window.toggleTallyDataClip)
@@ -849,6 +854,7 @@ class ColorForm(QWidget):
         self.layout.addRow("Log Scale: ", self.scaleBox)
         self.layout.addRow("Clip Data: ", self.clipDataBox)
         self.layout.addRow("Mask Zeros: ", self.maskZeroBox)
+        self.layout.addRow("Volume normalize: ", self.volumeNormBox)
         self.layout.addRow("Contours: ", self.contoursBox)
         self.layout.addRow("Contour Levels:", self.contourLevelsLine)
         self.setLayout(self.layout)
@@ -881,6 +887,10 @@ class ColorForm(QWidget):
         cv = self.model.currentView
         self.maskZeroBox.setChecked(cv.tallyMaskZeroValues)
 
+    def updateVolumeNorm(self):
+        cv = self.model.currentView
+        self.volumeNormBox.setChecked(cv.tallyVolumeNorm)
+
     def updateDataClip(self):
         cv = self.model.currentView
         self.clipDataBox.setChecked(cv.clipTallyData)
@@ -900,6 +910,7 @@ class ColorForm(QWidget):
 
         self.updateMinMax()
         self.updateMaskZeros()
+        self.updateVolumeNorm()
         self.updateDataClip()
         self.updateDataIndicator()
         self.updateTallyContours()

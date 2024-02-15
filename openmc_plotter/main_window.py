@@ -550,7 +550,7 @@ class MainWindow(QMainWindow):
             msg_box.exec()
             return
         filename, ext = QFileDialog.getOpenFileName(self, "Open StatePoint",
-                                                    ".", "statepoint*.h5")
+                                                    ".", "*.h5")
         if filename:
             try:
                 self.model.openStatePoint(filename)
@@ -950,6 +950,10 @@ class MainWindow(QMainWindow):
     def toggleTallyMaskZero(self, state):
         av = self.model.activeView
         av.tallyMaskZeroValues = bool(state)
+
+    def toggleTallyVolumeNorm(self, state):
+        av = self.model.activeView
+        av.tallyVolumeNorm = bool(state)
 
     def editTallyAlpha(self, value, apply=False):
         av = self.model.activeView
