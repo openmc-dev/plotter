@@ -453,26 +453,20 @@ class PlotModel:
                 units_out = _SCORE_UNITS_VOL.get(scores[0], _REACTION_UNITS_VOL)
 
             if tally_value == 'rel_err':
-                # get both the std. dev. data and mean data
-                # to create the relative error data
-                mean_data = self._create_tally_mesh_image(tally,
-                                                          'mean',
-                                                          scores,
-                                                          nuclides,
-                                                          view)
-                std_dev_data = self._create_tally_mesh_image(tally,
-                                                             'std_dev',
-                                                             scores,
-                                                             nuclides,
-                                                             view)
-                image_data = 100 * np.divide(std_dev_data[0],
-                                             mean_data[0],
-                                             out=np.zeros_like(mean_data[0]),
-                                             where=mean_data != 0)
-                extents = mean_data[1]
-                data_min = np.min(image_data)
-                data_max = np.max(image_data)
-                return image_data, extents, data_min, data_max, '% error'
+                # Get both the std. dev. data and mean data to create the
+                # relative error data
+                mean_data = self._create_tally_mesh_image(
+                    tally, 'mean', scores, nuclides, view)[0]
+                std_dev_data = self._create_tally_mesh_image(
+                    tally, 'std_dev', scores, nuclides, view)[0]
+                with np.errstate(divide='ignore', invalid='ignore'):
+                    image_data = 100.0 * std_dev_data / mean_data
+                if np.isnan(image_data).all():
+                    data_min, data_max = 0., 1.
+                else:
+                    data_min = np.nanmin(image_data)
+                    data_max = np.nanmax(image_data)
+                return image_data, None, data_min, data_max, '% error'
 
             else:
                 image = self._create_tally_mesh_image(tally,
