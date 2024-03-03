@@ -137,6 +137,8 @@ class PlotModel:
     subsequentViews : list of PlotView instances
         List of undone plot view settings used to redo changes made
         in plot explorer
+    sourceSites :  Source sites to plot
+        Set of source locations to plot
     defaultView : PlotView
         Default settings for given geometry
     currentView : PlotView
@@ -177,6 +179,8 @@ class PlotModel:
         self.subsequentViews = []
 
         self.defaultView = self.getDefaultView()
+
+        self.source_sites = None
 
         if model_path.is_file():
             settings_pkl = model_path.with_name('plot_settings.pkl')
@@ -391,6 +395,12 @@ class PlotModel:
             self.storeCurrent()
             self.activeView = self.subsequentViews.pop()
             self.generatePlot()
+
+    def getExternalSourceSites(self, n=100):
+        """Plot source sites from a source file
+        """
+        sites = openmc.lib.sample_external_source(n)
+        self.source_sites = np.array([s.r for s in sites[:n]], dtype=float)
 
     def storeCurrent(self):
         """ Add current view to previousViews list """
