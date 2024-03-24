@@ -587,6 +587,10 @@ class PlotImage(FigureCanvas):
 
             norm = SymLogNorm(1E-30) if cv.tallyDataLogScale else None
 
+            cmap = cv.tallyDataColormap
+            if cv.tallyDataReverseCmap:
+                cmap += '_r'
+
             if cv.tallyContours:
                 # parse the levels line
                 levels = self.parseContoursLine(cv.tallyContourLevels)
@@ -594,14 +598,14 @@ class PlotImage(FigureCanvas):
                                                    origin='image',
                                                    levels=levels,
                                                    alpha=cv.tallyDataAlpha,
-                                                   cmap=cv.tallyDataColormap,
+                                                   cmap=cmap,
                                                    norm=norm,
                                                    extent=extents)
 
             else:
                 self.tally_image = self.ax.imshow(image_data,
                                                   alpha=cv.tallyDataAlpha,
-                                                  cmap=cv.tallyDataColormap,
+                                                  cmap=cmap,
                                                   norm=norm,
                                                   extent=extents)
             # add colorbar

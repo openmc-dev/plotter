@@ -923,6 +923,7 @@ class PlotViewIndependent:
 
         # Tally Viz Settings
         self.tallyDataColormap = 'Spectral'
+        self.tallyDataReverseCmap = False
         self.tallyDataVisible = True
         self.tallyDataAlpha = 1.0
         self.tallyDataIndicator = False

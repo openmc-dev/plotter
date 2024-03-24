@@ -776,6 +776,11 @@ class ColorForm(QWidget):
         cmap_connector = partial(main_window.editTallyDataColormap)
         self.colormapBox.currentTextChanged[str].connect(cmap_connector)
 
+        # Color map reverse
+        self.reverseCmapBox = QCheckBox()
+        reverse_connector = partial(main_window.toggleReverseCmap)
+        self.reverseCmapBox.stateChanged.connect(reverse_connector)
+
         # Data indicator line check box
         self.dataIndicatorCheckBox = QCheckBox()
         data_indicator_connector = partial(
@@ -831,6 +836,7 @@ class ColorForm(QWidget):
         self.layout.addRow("Visible:", self.visibilityBox)
         self.layout.addRow("Alpha: ", self.alphaBox)
         self.layout.addRow("Colormap: ", self.colormapBox)
+        self.layout.addRow("Reverse colormap: ", self.reverseCmapBox)
         self.layout.addRow("Data Indicator: ", self.dataIndicatorCheckBox)
         self.layout.addRow("Custom Min/Max: ", self.userMinMaxBox)
         self.layout.addRow("Min: ", self.minBox)
