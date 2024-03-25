@@ -333,11 +333,11 @@ class PlotModel:
         # generate colors if not present
         for cell_id, cell in cv.cells.items():
             if cell.color is None:
-                cell.color = random_rgb()
+                cv.cells.set_color(cell_id, random_rgb())
 
         for mat_id, mat in cv.materials.items():
             if mat.color is None:
-                mat.color = random_rgb()
+                cv.material.set_color(mat_id, random_rgb())
 
         # construct image data
         domain[_OVERLAP] = DomainView(_OVERLAP, "Overlap", cv.overlap_color)
@@ -1049,10 +1049,11 @@ class PlotView:
         lib_domain = None
         if domain_type == 'cell':
             lib_domain = openmc.lib.cells
+            domains = DEFAULT_CELL_DOMAIN_VIEW
         elif domain_type == 'material':
             lib_domain = openmc.lib.materials
+            domains = DEFAULT_MATERIAL_DOMAIN_VIEW
 
-        domains = {}
         for domain, domain_obj in lib_domain.items():
             name = domain_obj.name
             domains[domain] = DomainView(domain, name, random_rgb())
@@ -1065,7 +1066,7 @@ class PlotView:
                                           False,
                                           False)
 
-        return domains
+        return DomainViewDict(domain_type)
 
     def adopt_plotbase(self, view):
         """
@@ -1083,6 +1084,51 @@ class PlotView:
         self.h_res = view.h_res
         self.v_res = view.v_res
         self.basis = view.basis
+
+
+# To avoid deepcopying the default domain view for every single cell/material,
+# we keep a global dictionary that gets populated at startup. Further domain
+# view customizations are saved as modifications to the default ones
+DEFAULT_CELL_DOMAIN_VIEW = {}
+DEFAULT_MATERIAL_DOMAIN_VIEW = {}
+
+
+class DomainViewDict(dict):
+    """Dictionary of domain ID to DomainView objects, backed by global dict
+
+    When the active/current view changes in the plotter, this dictionary gets
+    deepcopied. To avoid the dictionary being huge for models with lots of
+    cells/materials, default DomainView objects are stored in global
+    dictionaries and the key/value pairs in this dictionary represent
+    modifications to the default pairs. When an item is looked up, if there is
+    no locally modified version we pull the value from the global dictionary.
+
+    """
+    def __init__(self, domain_type: str):
+        self.domain_type = domain_type
+
+    def __getitem__(self, key) -> DomainView:
+        if key in self:
+            return super().__getitem__(key)
+        else:
+            # If key is not present, default to pulling the value from the
+            # global dictionary
+            if self.domain_type == 'cell':
+                return DEFAULT_CELL_DOMAIN_VIEW[key]
+            else:
+                return DEFAULT_MATERIAL_DOMAIN_VIEW[key]
+
+    def set_color(self, key: int, color):
+        domain = self[key]
+        self[key] = DomainView(domain.id, domain.name, color, domain.masked, domain.highlight)
+
+    def set_masked(self, key: int, masked: bool):
+        domain = self[key]
+        self[key] = DomainView(domain.id, domain.name, domain.color, masked, domain.highlight)
+
+    def set_highlight(self, key: int, highlight: bool):
+        domain = self[key]
+        self[key] = DomainView(domain.id, domain.name, domain.color, domain.masked, highlight)
 
 
 class DomainView:
