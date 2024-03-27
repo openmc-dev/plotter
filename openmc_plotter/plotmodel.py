@@ -17,7 +17,7 @@ import numpy as np
 
 from . import __version__
 from .statepointmodel import StatePointModel
-from .plot_colors import random_rgb, reset_seed
+from .plot_colors import random_rgb
 
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = range(6)
 
@@ -170,9 +170,6 @@ class PlotModel:
         self.appliedScores = ()
         self.appliedNuclides = ()
 
-        # reset random number seed for consistent
-        # coloring when reloading a model
-        reset_seed()
         self.previousViews = []
         self.subsequentViews = []
 
@@ -999,8 +996,9 @@ class PlotView:
             self.materials = restore_view.materials
             self.selectedTally = restore_view.selectedTally
         else:
-            self.cells = self.getDomains('cell')
-            self.materials = self.getDomains('material')
+            rng = np.random.RandomState(10)
+            self.cells = self.getDomains('cell', rng)
+            self.materials = self.getDomains('material', rng)
             self.selectedTally = None
 
     def __getattr__(self, name):
@@ -1025,7 +1023,7 @@ class PlotView:
         return hash(self.__dict__.__str__() + self.__str__())
 
     @staticmethod
-    def getDomains(domain_type):
+    def getDomains(domain_type, rng):
         """ Return dictionary of domain settings.
 
         Retrieve cell or material ID numbers and names from .xml files
@@ -1054,9 +1052,13 @@ class PlotView:
             lib_domain = openmc.lib.materials
             domains = DEFAULT_MATERIAL_DOMAIN_VIEW
 
-        for domain, domain_obj in lib_domain.items():
+        # Sample default colors for each domain
+        num_domain = len(lib_domain)
+        colors = rng.randint(256, size=(num_domain, 3))
+
+        for (domain, domain_obj), color in zip(lib_domain.items(), colors):
             name = domain_obj.name
-            domains[domain] = DomainView(domain, name, random_rgb())
+            domains[domain] = DomainView(domain, name, color)
 
         # always add void to a material domain at the end
         if domain_type == 'material':
