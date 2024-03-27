@@ -1,10 +1,4 @@
-
 import numpy as np
-
-
-# for consistent, but random, colors
-def reset_seed():
-    np.random.seed(10)
 
 
 def random_rgb():

@@ -1042,7 +1042,7 @@ class MainWindow(QMainWindow):
             dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
         if dlg.exec():
             new_color = dlg.currentColor().getRgb()[:3]
-            domain[id].color = new_color
+            domain.set_color(id, new_color)
 
         self.applyChanges()
 
@@ -1052,7 +1052,7 @@ class MainWindow(QMainWindow):
         else:
             domain = self.model.activeView.materials
 
-        domain[id].masked = bool(state)
+        domain.set_masked(id, bool(state))
         self.applyChanges()
 
     def toggleDomainHighlight(self, state, kind, id):
@@ -1061,7 +1061,7 @@ class MainWindow(QMainWindow):
         else:
             domain = self.model.activeView.materials
 
-        domain[id].highlight = bool(state)
+        domain.set_highlight(id, bool(state))
         self.applyChanges()
 
     # Helper methods:
