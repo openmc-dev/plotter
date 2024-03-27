@@ -2,6 +2,7 @@ from __future__ import annotations
 from ast import literal_eval
 from collections import defaultdict
 import copy
+from ctypes import c_int32, c_char_p
 import hashlib
 import itertools
 import pickle
@@ -1044,29 +1045,38 @@ class PlotView:
             raise ValueError("Domain type, {}, requested is neither "
                              "'cell' nor 'material'.".format(domain_type))
 
-        lib_domain = None
+        # Get number of domains, functions for ID/name, and dictionary for defaults
         if domain_type == 'cell':
-            lib_domain = openmc.lib.cells
+            num_domain = len(openmc.lib.cells)
+            get_id = openmc.lib.core._dll.openmc_cell_get_id
+            get_name = openmc.lib.core._dll.openmc_cell_get_name
             domains = DEFAULT_CELL_DOMAIN_VIEW
         elif domain_type == 'material':
-            lib_domain = openmc.lib.materials
+            num_domain = len(openmc.lib.materials)
+            get_id = openmc.lib.core._dll.openmc_material_get_id
+            get_name = openmc.lib.core._dll.openmc_material_get_name
             domains = DEFAULT_MATERIAL_DOMAIN_VIEW
 
         # Sample default colors for each domain
-        num_domain = len(lib_domain)
         colors = rng.randint(256, size=(num_domain, 3))
 
-        for (domain, domain_obj), color in zip(lib_domain.items(), colors):
-            name = domain_obj.name
-            domains[domain] = DomainView(domain, name, color)
+        domain_id_c = c_int32()
+        name_c = c_char_p()
+        for i, color in enumerate(colors):
+            # Get ID and name for each domain
+            get_id(i, domain_id_c)
+            get_name(i, name_c)
+            domain_id = domain_id_c.value
+            name = name_c.value.decode()
+
+            # Create default domain view for this domain
+            domains[domain_id] = DomainView(domain_id, name, color)
 
         # always add void to a material domain at the end
         if domain_type == 'material':
             void_id = _VOID_REGION
-            domains[void_id] = DomainView(void_id, "VOID",
-                                          (255, 255, 255),
-                                          False,
-                                          False)
+            domains[void_id] = DomainView(void_id, "VOID", (255, 255, 255),
+                                          False, False)
 
         return DomainViewDict(domain_type)
 
