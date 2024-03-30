@@ -796,8 +796,8 @@ class ViewParam(openmc.lib.plot._PlotBase):
         self.origin = origin
         self.width = width
         self.height = height
-        self.h_res = 1000
-        self.v_res = 1000
+        self.h_res = 100
+        self.v_res = 100
         self.basis = 'xy'
         self.color_overlaps = False
 
@@ -1050,18 +1050,17 @@ class PlotView:
             num_domain = len(openmc.lib.cells)
             get_id = openmc.lib.core._dll.openmc_cell_get_id
             get_name = openmc.lib.core._dll.openmc_cell_get_name
-            domains = DEFAULT_CELL_DOMAIN_VIEW
         elif domain_type == 'material':
             num_domain = len(openmc.lib.materials)
             get_id = openmc.lib.core._dll.openmc_material_get_id
             get_name = openmc.lib.core._dll.openmc_material_get_name
-            domains = DEFAULT_MATERIAL_DOMAIN_VIEW
 
         # Sample default colors for each domain
         colors = rng.randint(256, size=(num_domain, 3))
 
         domain_id_c = c_int32()
         name_c = c_char_p()
+        defaults = {}
         for i, color in enumerate(colors):
             # Get ID and name for each domain
             get_id(i, domain_id_c)
@@ -1070,15 +1069,15 @@ class PlotView:
             name = name_c.value.decode()
 
             # Create default domain view for this domain
-            domains[domain_id] = DomainView(domain_id, name, color)
+            defaults[domain_id] = DomainView(domain_id, name, color)
 
         # always add void to a material domain at the end
         if domain_type == 'material':
             void_id = _VOID_REGION
-            domains[void_id] = DomainView(void_id, "VOID", (255, 255, 255),
+            defaults[void_id] = DomainView(void_id, "VOID", (255, 255, 255),
                                           False, False)
 
-        return DomainViewDict(domain_type)
+        return DomainViewDict(defaults)
 
     def adopt_plotbase(self, view):
         """
@@ -1098,37 +1097,36 @@ class PlotView:
         self.basis = view.basis
 
 
-# To avoid deepcopying the default domain view for every single cell/material,
-# we keep a global dictionary that gets populated at startup. Further domain
-# view customizations are saved as modifications to the default ones
-DEFAULT_CELL_DOMAIN_VIEW = {}
-DEFAULT_MATERIAL_DOMAIN_VIEW = {}
-
-
 class DomainViewDict(dict):
-    """Dictionary of domain ID to DomainView objects, backed by global dict
+    """Dictionary of domain ID to DomainView objects with shared defaults
 
     When the active/current view changes in the plotter, this dictionary gets
     deepcopied. To avoid the dictionary being huge for models with lots of
-    cells/materials, default DomainView objects are stored in global
-    dictionaries and the key/value pairs in this dictionary represent
-    modifications to the default pairs. When an item is looked up, if there is
-    no locally modified version we pull the value from the global dictionary.
+    cells/materials, defaults are stored separately and the key/value pairs in
+    this dictionary represent modifications to the default pairs. When an item
+    is looked up, if there is no locally modified version we pull the value from
+    the defaults dictionary.
 
     """
-    def __init__(self, domain_type: str):
-        self.domain_type = domain_type
+    def __init__(self, defaults: dict):
+        self.defaults = defaults
 
     def __getitem__(self, key) -> DomainView:
         if key in self:
             return super().__getitem__(key)
         else:
-            # If key is not present, default to pulling the value from the
-            # global dictionary
-            if self.domain_type == 'cell':
-                return DEFAULT_CELL_DOMAIN_VIEW[key]
-            else:
-                return DEFAULT_MATERIAL_DOMAIN_VIEW[key]
+            # If key is not present, pull it from the defaults
+            return self.defaults[key]
+
+    def __deepcopy__(self, memo):
+        cls = self.__class__
+        obj = cls.__new__(cls)
+        memo[id(self)] = obj
+        for key, value in self.items():
+            obj[key] = copy.deepcopy(value)
+        # Shallow copy the defaults dictionary
+        obj.defaults = self.defaults
+        return obj
 
     def set_color(self, key: int, color):
         domain = self[key]
