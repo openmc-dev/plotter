@@ -796,8 +796,8 @@ class ViewParam(openmc.lib.plot._PlotBase):
         self.origin = origin
         self.width = width
         self.height = height
-        self.h_res = 100
-        self.v_res = 100
+        self.h_res = 1000
+        self.v_res = 1000
         self.basis = 'xy'
         self.color_overlaps = False
 
