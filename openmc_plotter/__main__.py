@@ -21,6 +21,8 @@ def main():
                     help='Ignore plot_settings.pkl file if present.')
     ap.add_argument('-s', '--threads', type=int, default=None,
                     help='If present, number of threads used to generate plots.')
+    ap.add_argument('-r', '--resolution', type=int, default=1000,
+                    help='Default number of pixels in each direction')
     ap.add_argument('model_path', nargs='?', default=os.curdir,
                     help='Location of model XML file or a directory containing '
                     'XML files (default is current dir)')
@@ -68,7 +70,8 @@ def run_app(user_args):
 
     font_metric = QtGui.QFontMetrics(app.font())
     screen_size = app.primaryScreen().size()
-    mainWindow = MainWindow(font_metric, screen_size, user_args.model_path, user_args.threads)
+    mainWindow = MainWindow(font_metric, screen_size, user_args.model_path,
+                            user_args.threads, user_args.resolution)
     # connect splashscreen to main window, close when main window opens
     mainWindow.loadGui(use_settings_pkl=user_args.ignore_settings)
 

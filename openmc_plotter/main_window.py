@@ -45,7 +45,9 @@ class MainWindow(QMainWindow):
     def __init__(self,
                  font=QtGui.QFontMetrics(QtGui.QFont()),
                  screen_size=QtCore.QSize(),
-                 model_path='.', threads=None):
+                 model_path='.',
+                 threads=None,
+                 resolution=1000):
         super().__init__()
 
         self.screen = screen_size
@@ -53,6 +55,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('OpenMC Plot Explorer')
         self.model_path = Path(model_path)
         self.threads = threads
+        self.default_res = resolution
 
     def loadGui(self, use_settings_pkl=True):
 
@@ -471,7 +474,7 @@ class MainWindow(QMainWindow):
         if reload:
             self.resetModels()
         else:
-            self.model = PlotModel(use_settings_pkl, self.model_path)
+            self.model = PlotModel(use_settings_pkl, self.model_path, self.default_res)
 
             # update plot and model settings
             self.updateRelativeBases()
