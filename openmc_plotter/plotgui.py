@@ -719,7 +719,7 @@ class PlotImage(FigureCanvas):
     def updateColorMap(self, colormap_name, property_type):
         if self.colorbar and property_type == self.model.activeView.colorby:
             self.image.set_cmap(colormap_name)
-            self.colorbar.draw_all()
+            self.figure.draw_without_rendering()
             self.draw()
 
     def updateColorMinMax(self, property_type):
@@ -729,7 +729,7 @@ class PlotImage(FigureCanvas):
             self.colorbar.mappable.set_clim(*clim)
             self.data_indicator.set_data(clim[:2],
                                          (0.0, 0.0))
-            self.colorbar.draw_all()
+            self.figure.draw_without_rendering()
             self.draw()
 
 
