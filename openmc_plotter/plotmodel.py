@@ -1000,6 +1000,10 @@ class PlotView:
         if restore_view is not None:
             self.view_ind = copy.copy(restore_view.view_ind)
             self.view_params = copy.copy(restore_view.view_params)
+            if default_res is not None:
+                p = self.view_params
+                p.h_res = default_res
+                p.v_res = int(default_res * p.height / p.width)
         else:
             self.view_ind = PlotViewIndependent()
             if default_res is not None:

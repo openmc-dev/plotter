@@ -47,7 +47,7 @@ class MainWindow(QMainWindow):
                  screen_size=QtCore.QSize(),
                  model_path='.',
                  threads=None,
-                 resolution=1000):
+                 resolution=None):
         super().__init__()
 
         self.screen = screen_size

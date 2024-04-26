@@ -21,7 +21,7 @@ def main():
                     help='Ignore plot_settings.pkl file if present.')
     ap.add_argument('-s', '--threads', type=int, default=None,
                     help='If present, number of threads used to generate plots.')
-    ap.add_argument('-r', '--resolution', type=int, default=1000,
+    ap.add_argument('-r', '--resolution', type=int, default=None,
                     help='Default number of pixels in each direction')
     ap.add_argument('model_path', nargs='?', default=os.curdir,
                     help='Location of model XML file or a directory containing '
