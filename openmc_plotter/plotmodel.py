@@ -7,7 +7,7 @@ import hashlib
 import itertools
 import pickle
 import threading
-from typing import Literal, Tuple, Optional
+from typing import Literal, Tuple, Optional, Dict
 
 from PySide6.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
 from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
@@ -1025,7 +1025,7 @@ class PlotView:
         return hash(self.__dict__.__str__() + self.__str__())
 
     @staticmethod
-    def getDomains(domain_type, rng):
+    def getDomains(domain_type, rng) -> DomainViewDict:
         """ Return dictionary of domain settings.
 
         Retrieve cell or material ID numbers and names from .xml files
@@ -1109,7 +1109,7 @@ class DomainViewDict(dict):
     the defaults dictionary.
 
     """
-    def __init__(self, defaults: dict):
+    def __init__(self, defaults: Dict[int, DomainView]):
         self.defaults = defaults
 
     def __getitem__(self, key) -> DomainView:
@@ -1128,6 +1128,10 @@ class DomainViewDict(dict):
         # Shallow copy the defaults dictionary
         obj.defaults = self.defaults
         return obj
+
+    def set_name(self, key: int, name: Optional[str]):
+        domain = self[key]
+        self[key] = DomainView(domain.id, name, domain.color, domain.masked, domain.highlight)
 
     def set_color(self, key: int, color):
         domain = self[key]
@@ -1186,22 +1190,24 @@ class DomainView:
 class DomainTableModel(QAbstractTableModel):
     """ Abstract Table Model of cell/material view attributes """
 
-    def __init__(self, domains):
+    def __init__(self, domains: DomainViewDict):
         super().__init__()
-        self.domains = [dom for dom in domains.values()]
+        self.domains = domains
+        self.keys = dict(enumerate(self.domains.defaults))
 
     def rowCount(self, index=QModelIndex()):
-        return len(self.domains)
+        return len(self.keys)
 
     def columnCount(self, index=QModelIndex()):
         return 6
 
     def data(self, index, role=Qt.DisplayRole):
 
-        if not index.isValid() or not (0 <= index.row() < len(self.domains)):
+        if not index.isValid() or not (0 <= index.row() < self.rowCount()):
             return None
 
-        domain = self.domains[index.row()]
+        key = self.keys[index.row()]
+        domain = self.domains[key]
         column = index.column()
 
         if role == Qt.DisplayRole:
@@ -1212,7 +1218,7 @@ class DomainTableModel(QAbstractTableModel):
             elif column == COLOR:
                 return '' if domain.color is not None else '+'
             elif column == COLORLABEL:
-                return str(domain.color) if domain.color is not None else '--'
+                return str(tuple(domain.color)) if domain.color is not None else '--'
             elif column == MASK:
                 return None
             elif column == HIGHLIGHT:
@@ -1235,10 +1241,10 @@ class DomainTableModel(QAbstractTableModel):
         elif role == Qt.BackgroundRole:
             color = domain.color
             if column == COLOR:
-                if isinstance(color, tuple):
-                        return QColor.fromRgb(*color)
-                elif isinstance(color, str):
+                if isinstance(color, str):
                     return QColor.fromRgb(*openmc.plots._SVG_COLORS[color])
+                else:
+                    return QColor.fromRgb(*color)
 
         elif role == Qt.CheckStateRole:
             if column == MASK:
@@ -1282,24 +1288,24 @@ class DomainTableModel(QAbstractTableModel):
 
     def setData(self, index, value, role=Qt.EditRole):
 
-        if not index.isValid() or not (0 <= index.row() < len(self.domains)):
+        if not index.isValid() or not (0 <= index.row() < self.rowCount()):
             return False
 
-        domain = self.domains[index.row()]
+        key = self.keys[index.row()]
         column = index.column()
 
         if column == NAME:
-            domain.name = value if value else None
+            self.domains.set_name(key, value if value else None)
         elif column == COLOR:
-            domain.color = value
+            self.domains.set_color(key, value)
         elif column == COLORLABEL:
-            domain.color = value
+            self.domains.set_color(key, value)
         elif column == MASK:
             if role == Qt.CheckStateRole:
-                domain.masked = True if value == Qt.Checked else False
+                self.domains.set_masked(key, value == Qt.Checked)
         elif column == HIGHLIGHT:
             if role == Qt.CheckStateRole:
-                domain.highlight = True if value == Qt.Checked else False
+                self.domains.set_highlight(value == Qt.Checked)
 
         self.dataChanged.emit(index, index)
         return True
