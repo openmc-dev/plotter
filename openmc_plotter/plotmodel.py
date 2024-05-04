@@ -1338,7 +1338,7 @@ class DomainDelegate(QItemDelegate):
     def setEditorData(self, editor, index):
 
         if index.column() == COLOR:
-            color = index.data(Qt.BackgroundColorRole)
+            color = index.data(Qt.BackgroundRole)
             color = 'white' if color is None else color
             editor.setCurrentColor(color)
         elif index.column() in (NAME, COLORLABEL):
@@ -1349,7 +1349,7 @@ class DomainDelegate(QItemDelegate):
     def editorEvent(self, event, model, option, index):
 
         if index.column() in (COLOR, COLORLABEL):
-            if not int(index.flags() & Qt.ItemIsEditable) > 0:
+            if not (index.flags() & Qt.ItemIsEditable).value > 0:
                 return False
             if event.type() == QEvent.MouseButtonRelease \
                and event.button() == Qt.RightButton:
@@ -1365,13 +1365,13 @@ class DomainDelegate(QItemDelegate):
         column = index.column()
 
         if column == COLOR and editor is None:
-            model.setData(index, None, Qt.BackgroundColorRole)
+            model.setData(index, None, Qt.BackgroundRole)
             model.setData(model.index(row, column+1), None, Qt.DisplayRole)
         elif column == COLOR:
             color = editor.currentColor()
             if color != QColor():
                 color = color.getRgb()[:3]
-                model.setData(index, color, Qt.BackgroundColorRole)
+                model.setData(index, color, Qt.BackgroundRole)
                 model.setData(model.index(row, column+1),
                               color,
                               Qt.DisplayRole)
@@ -1379,14 +1379,14 @@ class DomainDelegate(QItemDelegate):
             if editor is None:
                 model.setData(model.index(row, column-1),
                               None,
-                              Qt.BackgroundColorRole)
+                              Qt.BackgroundRole)
                 model.setData(index, None, Qt.DisplayRole)
             elif editor.text().lower() in openmc.plots._SVG_COLORS:
                 svg = editor.text().lower()
                 color = openmc.plots._SVG_COLORS[svg]
                 model.setData(model.index(row, column-1),
                               color,
-                              Qt.BackgroundColorRole)
+                              Qt.BackgroundRole)
                 model.setData(index, svg, Qt.DisplayRole)
             else:
                 try:
@@ -1400,7 +1400,7 @@ class DomainDelegate(QItemDelegate):
                         return None
                 model.setData(model.index(row, column-1),
                               input,
-                              Qt.BackgroundColorRole)
+                              Qt.BackgroundRole)
                 model.setData(index, input, Qt.DisplayRole)
         else:
             QItemDelegate.setModelData(self, editor, model, index)
