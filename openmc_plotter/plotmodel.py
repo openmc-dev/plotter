@@ -1317,7 +1317,7 @@ class DomainTableModel(QAbstractTableModel):
                 self.domains.set_masked(key, Qt.CheckState(value) == Qt.Checked)
         elif column == HIGHLIGHT:
             if role == Qt.CheckStateRole:
-                self.domains.set_highlight(Qt.CheckState(value) == Qt.Checked)
+                self.domains.set_highlight(key, Qt.CheckState(value) == Qt.Checked)
 
         self.dataChanged.emit(index, index)
         return True
