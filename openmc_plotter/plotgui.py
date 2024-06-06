@@ -639,6 +639,7 @@ class PlotImage(FigureCanvas):
 
         # annotate outlines
         self.add_outlines()
+        self.plotSourceSites()
 
         # always make sure the data bounds are set correctly
         self.ax.set_xbound(data_bounds[0], data_bounds[1])
@@ -648,7 +649,6 @@ class PlotImage(FigureCanvas):
         self.ax.dataLim.y0 = data_bounds[2]
         self.ax.dataLim.y1 = data_bounds[3]
 
-        self.plotSourceSites()
 
         self.draw()
         return "Done"
