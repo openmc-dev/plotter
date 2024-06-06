@@ -1314,10 +1314,10 @@ class DomainTableModel(QAbstractTableModel):
             self.domains.set_color(key, value)
         elif column == MASK:
             if role == Qt.CheckStateRole:
-                self.domains.set_masked(key, value == Qt.Checked)
+                self.domains.set_masked(key, Qt.CheckState(value) == Qt.Checked)
         elif column == HIGHLIGHT:
             if role == Qt.CheckStateRole:
-                self.domains.set_highlight(value == Qt.Checked)
+                self.domains.set_highlight(Qt.CheckState(value) == Qt.Checked)
 
         self.dataChanged.emit(index, index)
         return True
@@ -1367,7 +1367,7 @@ class DomainDelegate(QItemDelegate):
     def editorEvent(self, event, model, option, index):
 
         if index.column() in (COLOR, COLORLABEL):
-            if not (index.flags() & Qt.ItemIsEditable).value > 0:
+            if not int(index.flags() & Qt.ItemIsEditable) > 0:
                 return False
             if event.type() == QEvent.MouseButtonRelease \
                and event.button() == Qt.RightButton:
