@@ -404,7 +404,8 @@ class TallyDock(PlotterDock):
                     0, "Only tallies with spatial filters are viewable.")
             else:
                 filter_item.setFlags(
-                    filter_item.flags() | QtCore.Qt.ItemIsUserCheckable)
+                    filter_item.flags() | QtCore.Qt.ItemIsUserCheckable |
+                    QtCore.Qt.ItemIsAutoTristate)
             filter_item.setCheckState(0, QtCore.Qt.Unchecked)
 
             # all mesh bins are selected by default and not shown in the dock
