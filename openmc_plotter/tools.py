@@ -19,28 +19,80 @@ class SourceSitesDialog(QtWidgets.QDialog):
         self.layout = QtWidgets.QGridLayout()
         self.setLayout(self.layout)
 
-        # disable interaction with main window while this is open
-        self.setModal(True)
-
     def show(self):
         self.populate()
         super().show()
 
     def populate(self):
-        self.layout.addWidget(QtWidgets.QLabel("# Source Sites:"), 0, 0)
+        row = 0
+        self.layout.addWidget(QtWidgets.QLabel("Source Sites:"), row, 100)
         self.nSitesBox = QtWidgets.QSpinBox()
-        self.nSitesBox.setMaximum(10000)
+        self.nSitesBox.setMaximum(1_000_000)
         self.nSitesBox.setMinimum(0)
-        self.layout.addWidget(self.nSitesBox, 0, 1)
-
-        self.sampleButton = QtWidgets.QPushButton("Sample Sites")
+        self.nSitesBox.setToolTip('Number of source sites to sample from the OpenMC source')
+        self.layout.addWidget(self.nSitesBox, row, 1)
+        self.sampleButton = QtWidgets.QPushButton("Sample New Sites")
+        self.sampleButton.setToolTip('Sample new source sites from the OpenMC source')
         self.sampleButton.clicked.connect(self._sample_sites)
+        self.layout.addWidget(self.sampleButton, row, 2, 1, 2)
 
-        self.layout.addWidget(self.sampleButton, 1, 0, 1, 2)
+        row += 1
+        self.sites_visible = QtWidgets.QCheckBox("Source Sites Visible")
+        self.sites_visible.setChecked(self.model.sourceSitesVisible)
+        self.sites_visible.setToolTip('Toggle visibility of source sites on the slice plane')
+        self.sites_visible.stateChanged.connect(self._toggle_source_sites)
+        self.layout.addWidget(self.sites_visible, row, 0, 1, 2)
+        self.colorButton = QtWidgets.QPushButton("Select Color")
+        self.colorButton.setToolTip('Select color for displaying source sites on the slice plane')
+        self.colorButton.clicked.connect(self._select_source_site_color)
+        self.layout.addWidget(self.colorButton, row, 2, 1, 2)
+
+        row += 1
+        self.toleranceToggle = QtWidgets.QCheckBox()
+        self.toleranceToggle.setChecked(self.model.sourceSitesApplyTolerance)
+        self.toleranceToggle.stateChanged.connect(self._toggle_tolerance)
+        self.layout.addWidget(self.toleranceToggle, row, 0)
+        tolerance_tip = 'Slice axis tolerance for displaying source sites on the slice plane'
+        self.toleranceBox = ScientificDoubleSpinBox()
+        self.toleranceBox.setToolTip(tolerance_tip)
+        self.toleranceBox.setValue(self.model.sourceSitesTolerance)
+        self.toleranceBox.valueChanged.connect(self._set_source_site_tolerance)
+        self.toleranceBox.setEnabled(self.model.sourceSitesApplyTolerance)
+        label = QtWidgets.QLabel("Tolerance:")
+        label.setToolTip(tolerance_tip)
+        self.layout.addWidget(label, row, 1)
+        self.layout.addWidget(self.toleranceBox, row, 2)
+
+        row += 1
+        self.layout.addWidget(HorizontalLine(), row, 0, 1, 4)
+
+        row += 1
+        self.closeButton = QtWidgets.QPushButton("Close")
+        self.closeButton.clicked.connect(self.close)
+        self.layout.addWidget(self.closeButton, row, 3)
 
     def _sample_sites(self):
         self.model.getExternalSourceSites(self.nSitesBox.value())
-        self.close()
+        self.parent.applyChanges()
+
+    def _toggle_source_sites(self):
+        self.model.sourceSitesVisible = self.sites_visible.isChecked()
+        self.parent.applyChanges()
+
+    def _select_source_site_color(self):
+        color = QtWidgets.QColorDialog.getColor()
+        if color.isValid():
+            self.model.sourceSitesColor = color.getRgbF()
+            self.parent.applyChanges()
+
+    def _toggle_tolerance(self):
+        self.model.sourceSitesApplyTolerance = self.toleranceToggle.isChecked()
+        self.toleranceBox.setEnabled(self.toleranceToggle.isChecked())
+        self.parent.applyChanges()
+
+    def _set_source_site_tolerance(self):
+        self.model.sourceSitesTolerance = self.toleranceBox.value()
+        self.parent.applyChanges()
 
 class ExportDataDialog(QtWidgets.QDialog):
     """

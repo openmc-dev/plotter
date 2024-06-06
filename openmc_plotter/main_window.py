@@ -630,7 +630,6 @@ class MainWindow(QMainWindow):
         self.sourceSitesDialog.show()
         self.sourceSitesDialog.raise_()
         self.sourceSitesDialog.activateWindow()
-        self.applyChanges()
 
     def applyChanges(self):
         if self.model.activeView != self.model.currentView:

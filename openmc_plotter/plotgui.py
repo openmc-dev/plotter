@@ -648,29 +648,34 @@ class PlotImage(FigureCanvas):
         self.ax.dataLim.y0 = data_bounds[2]
         self.ax.dataLim.y1 = data_bounds[3]
 
-        self.plotSites()
+        self.plotSourceSites()
 
         self.draw()
         return "Done"
 
-    def plotSites(self):
-        if self.model.source_sites is None:
+    def plotSourceSites(self):
+        if not self.model.sourceSitesVisible or self.model.sourceSites is None:
             return
 
         cv = self.model.currentView
         basis = cv.view_params.basis
 
-        print(self.model.source_sites[:]['xyz'.index(basis[0])],
-              self.model.source_sites[:]['xyz'.index(basis[1])])
-
         h_idx = 'xyz'.index(basis[0])
         v_idx = 'xyz'.index(basis[1])
 
-        self.ax.scatter([s[h_idx] for s in self.model.source_sites],
-                        [s[v_idx] for s in self.model.source_sites],
-                        marker='o',
+        sites = self.model.sourceSites
 
-                        color='blue')
+        slice_ax = cv.view_params.slice_axis
+
+        if self.model.sourceSitesApplyTolerance:
+            sites_to_plot = sites[np.abs(sites[:, slice_ax] - cv.origin[slice_ax]) <= self.model.sourceSitesTolerance]
+        else:
+            sites_to_plot = sites
+
+        self.ax.scatter([s[h_idx] for s in sites_to_plot],
+                        [s[v_idx] for s in sites_to_plot],
+                        marker='o',
+                        color=self.model.sourceSitesColor)
 
     def add_outlines(self):
         cv = self.model.currentView
