@@ -83,7 +83,7 @@ class MainWindow(QMainWindow):
         # Dock
         self.dock = DomainDock(self.model, self.font_metric, self)
         self.dock.setObjectName("Domain Options Dock")
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.dock)
+        self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.dock)
 
         # Tally Dock
         self.tallyDock = TallyDock(self.model, self.font_metric, self)
@@ -97,8 +97,11 @@ class MainWindow(QMainWindow):
 
         # Tools
         self.exportDataDialog = ExportDataDialog(self.model, self.font_metric, self)
-
         self.sourceSitesDialog = SourceSitesDialog(self.model, self.font_metric, self)
+
+        # Keyboard overlay
+        self.shortcutOverlay = ShortcutsOverlay(self)
+        self.shortcutOverlay.hide()
 
         # Restore Window Settings
         self.restoreWindowSettings()
@@ -111,10 +114,6 @@ class MainWindow(QMainWindow):
         self.coord_label = QLabel()
         self.statusBar().addPermanentWidget(self.coord_label)
         self.coord_label.hide()
-
-        # Keyboard overlay
-        self.shortcutOverlay = ShortcutsOverlay(self)
-        self.shortcutOverlay.hide()
 
         # Load Plot
         self.statusBar().showMessage('Generating Plot...')
@@ -535,7 +534,6 @@ class MainWindow(QMainWindow):
             saved = {'version': None,
                      'current': None}
 
-        print(saved['current'])
         if saved['version'] == self.model.version:
             self.model.activeView = saved['current']
             self.dock.updateDock()
@@ -1092,7 +1090,7 @@ class MainWindow(QMainWindow):
         settings = QtCore.QSettings()
 
         self.resize(settings.value("mainWindow/Size",
-                                   QtCore.QSize(800, 600)))
+                                   QtCore.QSize(1200, 800)))
         self.move(settings.value("mainWindow/Position",
                                  QtCore.QPoint(100, 100)))
         self.restoreState(settings.value("mainWindow/State"))
