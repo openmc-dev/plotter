@@ -142,7 +142,7 @@ class PlotModel:
         in plot explorer
     sourceSitesTolerance : float
         Tolerance for source site plotting (default 0.1 cm)
-    sourceSitesColor : tuple of 3 floats
+    sourceSitesColor : tuple of 3 int
         RGB color for source site plotting (default blue)
     sourceSitesVisible : bool
         Whether to plot source sites (default True)
@@ -189,7 +189,7 @@ class PlotModel:
         # Source site defaults
         self.sourceSitesApplyTolerance = False
         self.sourceSitesTolerance = 0.1 # cm
-        self.sourceSitesColor = (0, 0, 1)
+        self.sourceSitesColor = (0, 0, 255)
         self.sourceSitesVisible = True
         self.sourceSites = None
 

@@ -12,64 +12,62 @@ class SourceSitesDialog(QtWidgets.QDialog):
     def __init__(self, model, font_metric, parent=None):
         super().__init__(parent)
 
+        self.setWindowTitle('Sample Source Sites')
         self.model = model
         self.font_metric = font_metric
         self.parent = parent
 
-        self.layout = QtWidgets.QGridLayout()
+        self.layout = QtWidgets.QFormLayout()
         self.setLayout(self.layout)
 
-    def show(self):
         self.populate()
-        super().show()
 
     def populate(self):
-        row = 0
-        self.layout.addWidget(QtWidgets.QLabel("Source Sites:"), row, 100)
-        self.nSitesBox = QtWidgets.QSpinBox()
+        self.nSitesBox = QtWidgets.QSpinBox(self)
         self.nSitesBox.setMaximum(1_000_000)
         self.nSitesBox.setMinimum(0)
+        self.nSitesBox.setValue(1000)
         self.nSitesBox.setToolTip('Number of source sites to sample from the OpenMC source')
-        self.layout.addWidget(self.nSitesBox, row, 1)
-        self.sampleButton = QtWidgets.QPushButton("Sample New Sites")
-        self.sampleButton.setToolTip('Sample new source sites from the OpenMC source')
-        self.sampleButton.clicked.connect(self._sample_sites)
-        self.layout.addWidget(self.sampleButton, row, 2, 1, 2)
 
-        row += 1
-        self.sites_visible = QtWidgets.QCheckBox("Source Sites Visible")
+        self.sites_visible = QtWidgets.QCheckBox(self)
         self.sites_visible.setChecked(self.model.sourceSitesVisible)
         self.sites_visible.setToolTip('Toggle visibility of source sites on the slice plane')
         self.sites_visible.stateChanged.connect(self._toggle_source_sites)
-        self.layout.addWidget(self.sites_visible, row, 0, 1, 2)
-        self.colorButton = QtWidgets.QPushButton("Select Color")
-        self.colorButton.setToolTip('Select color for displaying source sites on the slice plane')
-        self.colorButton.clicked.connect(self._select_source_site_color)
-        self.layout.addWidget(self.colorButton, row, 2, 1, 2)
 
-        row += 1
-        self.toleranceToggle = QtWidgets.QCheckBox()
-        self.toleranceToggle.setChecked(self.model.sourceSitesApplyTolerance)
-        self.toleranceToggle.stateChanged.connect(self._toggle_tolerance)
-        self.layout.addWidget(self.toleranceToggle, row, 0)
-        tolerance_tip = 'Slice axis tolerance for displaying source sites on the slice plane'
+        self.colorButton = QtWidgets.QPushButton(self)
+        self.colorButton.setToolTip('Select color for displaying source sites on the slice plane')
+        self.colorButton.setCursor(QtCore.Qt.PointingHandCursor)
+        self.colorButton.setFixedHeight(self.font_metric.height() * 1.5)
+        self.colorButton.clicked.connect(self._select_source_site_color)
+        rgb = self.model.sourceSitesColor
+        self.colorButton.setStyleSheet(
+            f"border-radius: 8px; background-color: rgb{rgb}")
+
         self.toleranceBox = ScientificDoubleSpinBox()
-        self.toleranceBox.setToolTip(tolerance_tip)
+        self.toleranceBox.setToolTip('Slice axis tolerance for displaying source sites on the slice plane')
         self.toleranceBox.setValue(self.model.sourceSitesTolerance)
         self.toleranceBox.valueChanged.connect(self._set_source_site_tolerance)
         self.toleranceBox.setEnabled(self.model.sourceSitesApplyTolerance)
-        label = QtWidgets.QLabel("Tolerance:")
-        label.setToolTip(tolerance_tip)
-        self.layout.addWidget(label, row, 1)
-        self.layout.addWidget(self.toleranceBox, row, 2)
 
-        row += 1
-        self.layout.addWidget(HorizontalLine(), row, 0, 1, 4)
+        self.toleranceToggle = QtWidgets.QCheckBox(self)
+        self.toleranceToggle.setChecked(self.model.sourceSitesApplyTolerance)
+        self.toleranceToggle.stateChanged.connect(self._toggle_tolerance)
 
-        row += 1
+        self.sampleButton = QtWidgets.QPushButton("Sample New Sites")
+        self.sampleButton.setToolTip('Sample new source sites from the OpenMC source')
+        self.sampleButton.clicked.connect(self._sample_sites)
+
         self.closeButton = QtWidgets.QPushButton("Close")
         self.closeButton.clicked.connect(self.close)
-        self.layout.addWidget(self.closeButton, row, 3)
+
+        self.layout.addRow("Source Sites:", self.nSitesBox)
+        self.layout.addRow("Visible:", self.sites_visible)
+        self.layout.addRow("Color:", self.colorButton)
+        self.layout.addRow('Tolerance:', self.toleranceBox)
+        self.layout.addRow('Apply tolerance:', self.toleranceToggle)
+        self.layout.addRow(HorizontalLine())
+        self.layout.addRow(self.sampleButton)
+        self.layout.addRow(self.closeButton)
 
     def _sample_sites(self):
         self.model.getExternalSourceSites(self.nSitesBox.value())
@@ -82,7 +80,9 @@ class SourceSitesDialog(QtWidgets.QDialog):
     def _select_source_site_color(self):
         color = QtWidgets.QColorDialog.getColor()
         if color.isValid():
-            self.model.sourceSitesColor = color.getRgbF()
+            rgb = self.model.sourceSitesColor = color.getRgb()[:3]
+            self.colorButton.setStyleSheet(
+                f"border-radius: 8px; background-color: rgb{rgb}")
             self.parent.applyChanges()
 
     def _toggle_tolerance(self):
@@ -93,6 +93,7 @@ class SourceSitesDialog(QtWidgets.QDialog):
     def _set_source_site_tolerance(self):
         self.model.sourceSitesTolerance = self.toleranceBox.value()
         self.parent.applyChanges()
+
 
 class ExportDataDialog(QtWidgets.QDialog):
     """

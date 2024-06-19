@@ -207,7 +207,7 @@ class MainWindow(QMainWindow):
         self.openStatePointAction.setToolTip('Open statepoint file')
         self.openStatePointAction.triggered.connect(self.openStatePoint)
 
-        self.sourceSitesAction = QAction('&Sample Source Sites...', self)
+        self.sourceSitesAction = QAction('&Sample source sites...', self)
         self.sourceSitesAction.setToolTip('Add source sites to plot')
         self.setStatusTip('Sample and add source sites to the plot')
         self.sourceSitesAction.triggered.connect(self.plotSourceSites)

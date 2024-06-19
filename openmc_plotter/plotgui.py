@@ -675,7 +675,7 @@ class PlotImage(FigureCanvas):
         self.ax.scatter([s[h_idx] for s in sites_to_plot],
                         [s[v_idx] for s in sites_to_plot],
                         marker='o',
-                        color=self.model.sourceSitesColor)
+                        color=rgb_normalize(self.model.sourceSitesColor))
 
     def add_outlines(self):
         cv = self.model.currentView
