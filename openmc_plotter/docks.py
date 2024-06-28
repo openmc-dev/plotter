@@ -112,11 +112,17 @@ class DomainDock(PlotterDock):
                                  dimension=2)
         self.zOrBox.valueChanged.connect(zbox_connector)
 
+        self.orCrossHairBox = QCheckBox()
+        crosshair_connector = partial(self.main_window.toggleOriginCrosshair, apply=False)
+        self.orCrossHairBox.setCheckState(QtCore.Qt.Checked if self.model.currentView.originCrosshair else QtCore.Qt.Unchecked)
+        self.orCrossHairBox.stateChanged.connect(crosshair_connector)
+
         # Origin Form Layout
         self.orLayout = QFormLayout()
         self.orLayout.addRow('X:', self.xOrBox)
         self.orLayout.addRow('Y:', self.yOrBox)
         self.orLayout.addRow('Z:', self.zOrBox)
+        self.orLayout.addRow('Crosshair:', self.orCrossHairBox)
         self.orLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
         self.orLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
 

@@ -648,6 +648,11 @@ class PlotImage(FigureCanvas):
         self.ax.dataLim.y0 = data_bounds[2]
         self.ax.dataLim.y1 = data_bounds[3]
 
+        if cv.originCrosshair:
+            self.ax.plot(cv.origin[self.main_window.xBasis],
+                        cv.origin[self.main_window.yBasis],
+                        'b+')
+
         self.draw()
         return "Done"
 

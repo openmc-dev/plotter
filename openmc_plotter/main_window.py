@@ -828,6 +828,12 @@ class MainWindow(QMainWindow):
     def editSingleOrigin(self, value, dimension):
         self.model.activeView.origin[dimension] = value
 
+    def toggleOriginCrosshair(self, state, apply=False):
+        self.model.activeView.originCrosshair = bool(state)
+
+        if apply:
+            self.applyChanges()
+
     def editPlotAlpha(self, value):
         self.model.activeView.domainAlpha = value
 
