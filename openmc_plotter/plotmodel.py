@@ -654,6 +654,9 @@ class PlotModel:
 
         return image_data, None, data_min, data_max
 
+    def cpp_mesh_ids(self):
+        return list(openmc.lib.meshes.keys())
+
     def mesh_plot_bins(self, mesh_id, view: PlotView = None):
         mesh = openmc.lib.meshes[mesh_id]
 
@@ -991,13 +994,15 @@ class PlotView:
         Label of the currently selected tally
     """
 
-    attrs = ('view_ind', 'view_params', 'cells', 'materials', 'selectedTally')
+    attrs = ('view_ind', 'view_params', 'cells', 'materials', 'selectedTally', 'mesh_annotations')
     plotbase_attrs = ('level', 'origin', 'width', 'height',
                       'h_res', 'v_res', 'basis', 'llc', 'urc', 'color_overlaps')
 
     def __init__(self, origin=(0, 0, 0), width=10, height=10, restore_view=None,
                  restore_domains=False, default_res=None):
         """Initialize PlotView attributes"""
+
+        self.mesh_annotations = []
 
         if restore_view is not None:
             self.view_ind = copy.copy(restore_view.view_ind)

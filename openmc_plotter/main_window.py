@@ -22,7 +22,7 @@ except ImportError:
 
 from .plotmodel import PlotModel, DomainTableModel, hash_model
 from .plotgui import PlotImage, ColorDialog
-from .docks import DomainDock, TallyDock
+from .docks import DomainDock, TallyDock, MeshAnnotationDock
 from .overlays import ShortcutsOverlay
 from .tools import ExportDataDialog
 
@@ -90,6 +90,12 @@ class MainWindow(QMainWindow):
         self.tallyDock.update()
         self.tallyDock.setObjectName("Tally Options Dock")
         self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.tallyDock)
+
+        # Mesh Annotation Dock
+        self.meshAnnotationDock = MeshAnnotationDock(self.model, self.font_metric, self)
+        self.meshAnnotationDock.update()
+        self.meshAnnotationDock.setObjectName("Mesh Annotation Dock")
+        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.meshAnnotationDock)
 
         # Color DialogtallyDock
         self.colorDialog = ColorDialog(self.model, self.font_metric, self)
@@ -379,6 +385,12 @@ class MainWindow(QMainWindow):
         self.tallyDockAction.setStatusTip('Toggle tally dock visibility')
         self.tallyDockAction.triggered.connect(self.toggleTallyDockView)
 
+        self.meshAnnotationDockAction = QAction('Mesh &Annotation Dock', self)
+        # self.meshAnnotationDockAction.setShortcut("Ctrl+T")
+        self.meshAnnotationDockAction.setToolTip('Toggle mesh annotation dock visibility')
+        self.meshAnnotationDockAction.setStatusTip('Toggle mesh annotation dock visibility')
+        self.meshAnnotationDockAction.triggered.connect(self.toggleMeshAnnotationDockView)
+
         self.zoomAction = QAction('&Zoom...', self)
         self.zoomAction.setShortcut('Alt+Shift+Z')
         self.zoomAction.setToolTip('Edit zoom factor')
@@ -388,6 +400,7 @@ class MainWindow(QMainWindow):
         self.viewMenu = self.mainMenu.addMenu('&View')
         self.viewMenu.addAction(self.dockAction)
         self.viewMenu.addAction(self.tallyDockAction)
+        self.viewMenu.addAction(self.meshAnnotationDockAction)
         self.viewMenu.addSeparator()
         self.viewMenu.addAction(self.zoomAction)
         self.viewMenu.aboutToShow.connect(self.updateViewMenu)
@@ -616,12 +629,16 @@ class MainWindow(QMainWindow):
         elif hasattr(self, "closeStatePointAction"):
             self.dataMenu.removeAction(self.closeStatePointAction)
 
+    def updateMeshAnnotations(self):
+        self.model.activeView.mesh_annotations = self.meshAnnotationDock.get_checked_meshes()
+
     def applyChanges(self):
         if self.model.activeView != self.model.currentView:
             self.statusBar().showMessage('Generating Plot...')
             QApplication.processEvents()
             if self.model.activeView.selectedTally is not None:
                 self.tallyDock.updateModel()
+            self.updateMeshAnnotations()
             self.model.storeCurrent()
             self.model.subsequentViews = []
             self.plotIm.generatePixmap()
@@ -795,6 +812,18 @@ class MainWindow(QMainWindow):
             self.tallyDock.setVisible(True)
             if not self.isMaximized() and not self.tallyDock.isFloating():
                 self.resize(self.width() + self.tallyDock.width(), self.height())
+        self.resizePixmap()
+        self.showMainWindow()
+
+    def toggleMeshAnnotationDockView(self):
+        if self.meshAnnotationDock.isVisible():
+            self.meshAnnotationDock.hide()
+            if not self.isMaximized() and not self.meshAnnotationDock.isFloating():
+                self.resize(self.width() - self.meshAnnotationDock.width(), self.height())
+        else:
+            self.meshAnnotationDock.setVisible(True)
+            if not self.isMaximized() and not self.meshAnnotationDock.isFloating():
+                self.resize(self.width() + self.meshAnnotationDock.width(), self.height())
         self.resizePixmap()
         self.showMainWindow()
 

@@ -641,7 +641,8 @@ class PlotImage(FigureCanvas):
         self.add_outlines()
 
         # annotate mesh boundaries
-        self.annotate_mesh(3)
+        for mid in cv.mesh_annotations:
+            self.annotate_mesh(mid)
 
         # always make sure the data bounds are set correctly
         self.ax.set_xbound(data_bounds[0], data_bounds[1])
