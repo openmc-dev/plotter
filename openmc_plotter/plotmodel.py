@@ -654,6 +654,20 @@ class PlotModel:
 
         return image_data, None, data_min, data_max
 
+    def mesh_plot_bins(self, mesh_id, view: PlotView = None):
+        mesh = openmc.lib.meshes[mesh_id]
+
+        if view is None:
+            view = self.currentView
+
+        mesh_bins = mesh.get_plot_bins(
+            origin=view.origin,
+            width=(view.width, view.height),
+            basis=view.basis,
+            pixels=(view.h_res, view.v_res),
+        )
+        return mesh_bins
+
     def _create_tally_mesh_image(
             self, tally: openmc.Tally, tally_value: TallyValueType,
             scores: Tuple[str], nuclides: Tuple[str], view: PlotView = None
@@ -722,12 +736,7 @@ class PlotModel:
 
         # Get mesh bins from openmc.lib
         mesh_cpp = openmc.lib.meshes[mesh.id]
-        mesh_bins = mesh_cpp.get_plot_bins(
-            origin=origin,
-            width=(view.width, view.height),
-            basis=view.basis,
-            pixels=(view.h_res, view.v_res),
-        )
+        mesh_bins = self.mesh_plot_bins(mesh.id, view)
 
         # Apply volume normalization
         if view.tallyVolumeNorm:
