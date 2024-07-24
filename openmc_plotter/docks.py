@@ -51,9 +51,11 @@ class MeshAnnotationDock(PlotterDock):
         for mesh_id in self.model.cpp_mesh_ids():
             mesh_item = QTreeWidgetItem(self.meshTree, (f'Mesh {mesh_id}',))
             mesh_item.setFlags(mesh_item.flags() | QtCore.Qt.ItemIsUserCheckable)
-            mesh_item.setCheckState(0, QtCore.Qt.Checked)
+            mesh_item.setCheckState(0, QtCore.Qt.Unchecked)
             self.mesh_items.append((mesh_id, mesh_item))
             self.meshTree.addTopLevelItem(mesh_item)
+
+        self.meshTree.setHeaderHidden(True)
 
         # Create submit button
         self.applyButton = QPushButton("Apply Changes")
