@@ -386,7 +386,7 @@ class MainWindow(QMainWindow):
         self.tallyDockAction.triggered.connect(self.toggleTallyDockView)
 
         self.meshAnnotationDockAction = QAction('Mesh &Annotation Dock', self)
-        # self.meshAnnotationDockAction.setShortcut("Ctrl+T")
+        self.meshAnnotationDockAction.setShortcut("Ctrl+E")
         self.meshAnnotationDockAction.setToolTip('Toggle mesh annotation dock visibility')
         self.meshAnnotationDockAction.setStatusTip('Toggle mesh annotation dock visibility')
         self.meshAnnotationDockAction.triggered.connect(self.toggleMeshAnnotationDockView)

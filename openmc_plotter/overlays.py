@@ -40,6 +40,7 @@ class ShortcutsOverlay(QWidget):
                             ("Horizontal Scroll", "Alt+Scroll")],
                   "Menus": [("Hide/Show Geometry Dock", c_key + "+D"),
                             ("Hide/Show Tally Dock", c_key + "+T"),
+                            ("Hide/Show Mesh Annotation Dock", c_key + "+E"),
                             ("Reload Model", "Shift+" + c_key + "+R"),
                             ("Quit", c_key + "+Q"),
                             ("Display Shortcuts", "?")],
