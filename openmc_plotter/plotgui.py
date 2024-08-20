@@ -649,7 +649,6 @@ class PlotImage(FigureCanvas):
         self.ax.dataLim.y0 = data_bounds[2]
         self.ax.dataLim.y1 = data_bounds[3]
 
-
         self.draw()
         return "Done"
 
