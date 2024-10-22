@@ -1176,6 +1176,12 @@ class DomainViewDict(dict):
         obj.defaults = self.defaults
         return obj
 
+    def get_defaults(self, key: int) -> DomainView:
+        return self.defaults[key]
+
+    def get_default_color(self, key: int):
+        return self.get_defaults(key).color
+
     def set_name(self, key: int, name: Optional[str]):
         domain = self[key]
         self[key] = DomainView(domain.id, name, domain.color, domain.masked, domain.highlight)
@@ -1343,10 +1349,11 @@ class DomainTableModel(QAbstractTableModel):
 
         if column == NAME:
             self.domains.set_name(key, value if value else None)
-        elif column == COLOR:
-            self.domains.set_color(key, value)
-        elif column == COLORLABEL:
-            self.domains.set_color(key, value)
+        elif column == COLOR or column == COLORLABEL:
+                # reset the color to the default value if the coloar value is None
+                if value is None:
+                    value = self.domains.get_default_color(key)
+                self.domains.set_color(key, value)
         elif column == MASK:
             if role == Qt.CheckStateRole:
                 self.domains.set_masked(key, Qt.CheckState(value) == Qt.Checked)
@@ -1402,7 +1409,7 @@ class DomainDelegate(QItemDelegate):
     def editorEvent(self, event, model, option, index):
 
         if index.column() in (COLOR, COLORLABEL):
-            if not int(index.flags() & Qt.ItemIsEditable) > 0:
+            if (index.flags() & Qt.ItemFlag.ItemIsEditable) == Qt.ItemFlag.NoItemFlags:
                 return False
             if event.type() == QEvent.MouseButtonRelease \
                and event.button() == Qt.RightButton:
