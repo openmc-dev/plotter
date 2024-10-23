@@ -1271,7 +1271,8 @@ class DomainTableModel(QAbstractTableModel):
             elif column == COLOR:
                 return '' if domain.color is not None else '+'
             elif column == COLORLABEL:
-                return str(tuple(domain.color)) if domain.color is not None else '--'
+                return (str(tuple(int(x) for x in domain.color))
+                        if domain.color is not None else '--')
             elif column == MASK:
                 return None
             elif column == HIGHLIGHT:
