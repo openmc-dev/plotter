@@ -639,6 +639,7 @@ class PlotImage(FigureCanvas):
 
         # annotate outlines
         self.add_outlines()
+        self.plotSourceSites()
 
         # annotate mesh boundaries
         for mid in cv.mesh_annotations:
@@ -673,6 +674,30 @@ class PlotImage(FigureCanvas):
                                             linestyles='solid',
                                             levels=np.unique(mesh_bins),
                                             extent=data_bounds)
+
+    def plotSourceSites(self):
+        if not self.model.sourceSitesVisible or self.model.sourceSites is None:
+            return
+
+        cv = self.model.currentView
+        basis = cv.view_params.basis
+
+        h_idx = 'xyz'.index(basis[0])
+        v_idx = 'xyz'.index(basis[1])
+
+        sites = self.model.sourceSites
+
+        slice_ax = cv.view_params.slice_axis
+
+        if self.model.sourceSitesApplyTolerance:
+            sites_to_plot = sites[np.abs(sites[:, slice_ax] - cv.origin[slice_ax]) <= self.model.sourceSitesTolerance]
+        else:
+            sites_to_plot = sites
+
+        self.ax.scatter([s[h_idx] for s in sites_to_plot],
+                        [s[v_idx] for s in sites_to_plot],
+                        marker='o',
+                        color=rgb_normalize(self.model.sourceSitesColor))
 
     def add_outlines(self):
         cv = self.model.currentView

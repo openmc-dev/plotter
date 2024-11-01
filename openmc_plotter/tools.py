@@ -8,6 +8,93 @@ from .custom_widgets import HorizontalLine
 from .scientific_spin_box import ScientificDoubleSpinBox
 
 
+class SourceSitesDialog(QtWidgets.QDialog):
+    def __init__(self, model, font_metric, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle('Sample Source Sites')
+        self.model = model
+        self.font_metric = font_metric
+        self.parent = parent
+
+        self.layout = QtWidgets.QFormLayout()
+        self.setLayout(self.layout)
+
+        self.populate()
+
+    def populate(self):
+        self.nSitesBox = QtWidgets.QSpinBox(self)
+        self.nSitesBox.setMaximum(1_000_000)
+        self.nSitesBox.setMinimum(0)
+        self.nSitesBox.setValue(1000)
+        self.nSitesBox.setToolTip('Number of source sites to sample from the OpenMC source')
+
+        self.sites_visible = QtWidgets.QCheckBox(self)
+        self.sites_visible.setChecked(self.model.sourceSitesVisible)
+        self.sites_visible.setToolTip('Toggle visibility of source sites on the slice plane')
+        self.sites_visible.stateChanged.connect(self._toggle_source_sites)
+
+        self.colorButton = QtWidgets.QPushButton(self)
+        self.colorButton.setToolTip('Select color for displaying source sites on the slice plane')
+        self.colorButton.setCursor(QtCore.Qt.PointingHandCursor)
+        self.colorButton.setFixedHeight(self.font_metric.height() * 1.5)
+        self.colorButton.clicked.connect(self._select_source_site_color)
+        rgb = self.model.sourceSitesColor
+        self.colorButton.setStyleSheet(
+            f"border-radius: 8px; background-color: rgb{rgb}")
+
+        self.toleranceBox = ScientificDoubleSpinBox()
+        self.toleranceBox.setToolTip('Slice axis tolerance for displaying source sites on the slice plane')
+        self.toleranceBox.setValue(self.model.sourceSitesTolerance)
+        self.toleranceBox.valueChanged.connect(self._set_source_site_tolerance)
+        self.toleranceBox.setEnabled(self.model.sourceSitesApplyTolerance)
+
+        self.toleranceToggle = QtWidgets.QCheckBox(self)
+        self.toleranceToggle.setChecked(self.model.sourceSitesApplyTolerance)
+        self.toleranceToggle.stateChanged.connect(self._toggle_tolerance)
+
+        self.sampleButton = QtWidgets.QPushButton("Sample New Sites")
+        self.sampleButton.setToolTip('Sample new source sites from the OpenMC source')
+        self.sampleButton.clicked.connect(self._sample_sites)
+
+        self.closeButton = QtWidgets.QPushButton("Close")
+        self.closeButton.clicked.connect(self.close)
+
+        self.layout.addRow("Source Sites:", self.nSitesBox)
+        self.layout.addRow("Visible:", self.sites_visible)
+        self.layout.addRow("Color:", self.colorButton)
+        self.layout.addRow('Tolerance:', self.toleranceBox)
+        self.layout.addRow('Apply tolerance:', self.toleranceToggle)
+        self.layout.addRow(HorizontalLine())
+        self.layout.addRow(self.sampleButton)
+        self.layout.addRow(self.closeButton)
+
+    def _sample_sites(self):
+        self.model.getExternalSourceSites(self.nSitesBox.value())
+        self.parent.applyChanges()
+
+    def _toggle_source_sites(self):
+        self.model.sourceSitesVisible = self.sites_visible.isChecked()
+        self.parent.applyChanges()
+
+    def _select_source_site_color(self):
+        color = QtWidgets.QColorDialog.getColor()
+        if color.isValid():
+            rgb = self.model.sourceSitesColor = color.getRgb()[:3]
+            self.colorButton.setStyleSheet(
+                f"border-radius: 8px; background-color: rgb{rgb}")
+            self.parent.applyChanges()
+
+    def _toggle_tolerance(self):
+        self.model.sourceSitesApplyTolerance = self.toleranceToggle.isChecked()
+        self.toleranceBox.setEnabled(self.toleranceToggle.isChecked())
+        self.parent.applyChanges()
+
+    def _set_source_site_tolerance(self):
+        self.model.sourceSitesTolerance = self.toleranceBox.value()
+        self.parent.applyChanges()
+
+
 class ExportDataDialog(QtWidgets.QDialog):
     """
     A dialog to facilitate generation of VTK files for

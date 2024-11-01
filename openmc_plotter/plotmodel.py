@@ -140,6 +140,14 @@ class PlotModel:
     subsequentViews : list of PlotView instances
         List of undone plot view settings used to redo changes made
         in plot explorer
+    sourceSitesTolerance : float
+        Tolerance for source site plotting (default 0.1 cm)
+    sourceSitesColor : tuple of 3 int
+        RGB color for source site plotting (default blue)
+    sourceSitesVisible : bool
+        Whether to plot source sites (default True)
+    sourceSites :  Source sites to plot
+        Set of source locations to plot
     defaultView : PlotView
         Default settings for given geometry
     currentView : PlotView
@@ -177,6 +185,13 @@ class PlotModel:
         self.subsequentViews = []
 
         self.defaultView = self.getDefaultView(default_res)
+
+        # Source site defaults
+        self.sourceSitesApplyTolerance = False
+        self.sourceSitesTolerance = 0.1 # cm
+        self.sourceSitesColor = (0, 0, 255)
+        self.sourceSitesVisible = True
+        self.sourceSites = None
 
         if model_path.is_file():
             settings_pkl = model_path.with_name('plot_settings.pkl')
@@ -398,6 +413,15 @@ class PlotModel:
             self.storeCurrent()
             self.activeView = self.subsequentViews.pop()
             self.generatePlot()
+
+    def getExternalSourceSites(self, n=100):
+        """Plot source sites from a source file
+        """
+        if n == 0:
+            self.source_sites = None
+            return
+        sites = openmc.lib.sample_external_source(n)
+        self.sourceSites = np.array([s.r for s in sites[:n]], dtype=float)
 
     def storeCurrent(self):
         """ Add current view to previousViews list """
@@ -798,6 +822,8 @@ class ViewParam(openmc.lib.plot._PlotBase):
         Vertical resolution of plot image
     basis : {'xy', 'xz', 'yz'}
         The basis directions for the plot
+    slice_axis : int
+        The axis along which the plot is sliced
     color_overlaps : bool
         Indicator of whether or not overlaps will be shown
     level : int
@@ -817,6 +843,15 @@ class ViewParam(openmc.lib.plot._PlotBase):
         self.v_res = default_res
         self.basis = 'xy'
         self.color_overlaps = False
+
+    @property
+    def slice_axis(self):
+        if self.basis == 'xy':
+            return 2
+        elif self.basis == 'yz':
+            return 0
+        else:
+            return 1
 
     @property
     def llc(self):
@@ -1155,6 +1190,12 @@ class DomainViewDict(dict):
         obj.defaults = self.defaults
         return obj
 
+    def get_defaults(self, key: int) -> DomainView:
+        return self.defaults[key]
+
+    def get_default_color(self, key: int):
+        return self.get_defaults(key).color
+
     def set_name(self, key: int, name: Optional[str]):
         domain = self[key]
         self[key] = DomainView(domain.id, name, domain.color, domain.masked, domain.highlight)
@@ -1244,7 +1285,8 @@ class DomainTableModel(QAbstractTableModel):
             elif column == COLOR:
                 return '' if domain.color is not None else '+'
             elif column == COLORLABEL:
-                return str(tuple(domain.color)) if domain.color is not None else '--'
+                return (str(tuple(int(x) for x in domain.color))
+                        if domain.color is not None else '--')
             elif column == MASK:
                 return None
             elif column == HIGHLIGHT:
@@ -1322,10 +1364,11 @@ class DomainTableModel(QAbstractTableModel):
 
         if column == NAME:
             self.domains.set_name(key, value if value else None)
-        elif column == COLOR:
-            self.domains.set_color(key, value)
-        elif column == COLORLABEL:
-            self.domains.set_color(key, value)
+        elif column == COLOR or column == COLORLABEL:
+                # reset the color to the default value if the coloar value is None
+                if value is None:
+                    value = self.domains.get_default_color(key)
+                self.domains.set_color(key, value)
         elif column == MASK:
             if role == Qt.CheckStateRole:
                 self.domains.set_masked(key, Qt.CheckState(value) == Qt.Checked)
@@ -1381,7 +1424,7 @@ class DomainDelegate(QItemDelegate):
     def editorEvent(self, event, model, option, index):
 
         if index.column() in (COLOR, COLORLABEL):
-            if not int(index.flags() & Qt.ItemIsEditable) > 0:
+            if (index.flags() & Qt.ItemFlag.ItemIsEditable) == Qt.ItemFlag.NoItemFlags:
                 return False
             if event.type() == QEvent.MouseButtonRelease \
                and event.button() == Qt.RightButton:
