@@ -59,6 +59,19 @@ can be used to generate images from the command line without opening the plotter
 ```console
 $ openmc-plotter -b view1.pltvw view1.pltvw view1.pltvw
 ```
+## Troubleshooting
+
+Updates to the plotter can result in stale references to deprecated features. For example, it's possible that something like the following may appear after an update:
+
+```
+AttributeError: 'MainWindow' object has no attribute 'shortcutOverlay'
+```
+
+To address this, the application settings can be cleared, the plotter can be started with the `--clear-config` (or `-c`) to reset the application's settings cache on startup.
+
+```bash
+$ openmc-plotter --clear-cache
+```
 
 ## Features
 

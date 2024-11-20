@@ -28,6 +28,8 @@ def main():
                     'XML files (default is current dir)')
     ap.add_argument('-b', '--batch-mode', nargs='+', default=False,
                     help='View files used to generate plots in batch mode')
+    ap.add_argument('-c', '--clear-config', action='store_true', default=False,
+                    help='Clear the Qt application configuration settings')
 
     args = ap.parse_args()
 
@@ -44,6 +46,10 @@ def run_app(user_args):
     app.setApplicationName("OpenMC Plot Explorer")
     app.setWindowIcon(QtGui.QIcon(path_icon))
     app.setAttribute(QtCore.Qt.AA_DontShowIconsInMenus, True)
+
+    if user_args.clear_config:
+        settings = QtCore.QSettings()
+        settings.clear()
 
     splash_pix = QtGui.QPixmap(path_splash)
     splash = QSplashScreen(splash_pix, QtCore.Qt.WindowStaysOnTopHint)
