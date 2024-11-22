@@ -642,8 +642,8 @@ class PlotImage(FigureCanvas):
         self.plotSourceSites()
 
         # annotate mesh boundaries
-        for mid in cv.mesh_annotations:
-            self.annotate_mesh(mid)
+        for mesh_id in cv.mesh_annotations:
+            self.annotate_mesh(mesh_id)
 
         # always make sure the data bounds are set correctly
         self.ax.set_xbound(data_bounds[0], data_bounds[1])
@@ -658,22 +658,23 @@ class PlotImage(FigureCanvas):
 
     def current_view_data_bounds(self):
         cv = self.model.currentView
-        data_bounds = [cv.origin[self.main_window.xBasis] - cv.width/2.,
-                       cv.origin[self.main_window.xBasis] + cv.width/2.,
-                       cv.origin[self.main_window.yBasis] - cv.height/2.,
-                       cv.origin[self.main_window.yBasis] + cv.height/2.]
-        return data_bounds
+        return [cv.origin[self.main_window.xBasis] - cv.width/2.,
+                cv.origin[self.main_window.xBasis] + cv.width/2.,
+                cv.origin[self.main_window.yBasis] - cv.height/2.,
+                cv.origin[self.main_window.yBasis] + cv.height/2.]
 
     def annotate_mesh(self, mesh_id):
         mesh_bins = self.model.mesh_plot_bins(mesh_id)
 
         data_bounds = self.current_view_data_bounds()
-        self.mesh_contours = self.ax.contour(mesh_bins,
-                                            origin='upper',
-                                            colors='k',
-                                            linestyles='solid',
-                                            levels=np.unique(mesh_bins),
-                                            extent=data_bounds)
+        self.mesh_contours = self.ax.contour(
+            mesh_bins,
+            origin='upper',
+            colors='k',
+            linestyles='solid',
+            levels=np.unique(mesh_bins),
+            extent=data_bounds
+        )
 
     def plotSourceSites(self):
         if not self.model.sourceSitesVisible or self.model.sourceSites is None:

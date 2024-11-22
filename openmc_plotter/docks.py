@@ -32,10 +32,9 @@ class PlotterDock(QDockWidget):
 
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
+
 class MeshAnnotationDock(PlotterDock):
-    """
-    Dock for mesh annotation options
-    """
+    """Dock for mesh annotation options"""
 
     def __init__(self, model, font_metric, parent=None):
         super().__init__(model, font_metric, parent)
@@ -83,6 +82,7 @@ class MeshAnnotationDock(PlotterDock):
         self.main_window.resizeEvent(event)
 
     hideEvent = showEvent = moveEvent = resizeEvent
+
 
 class DomainDock(PlotterDock):
     """
