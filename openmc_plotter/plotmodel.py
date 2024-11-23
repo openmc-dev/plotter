@@ -681,14 +681,21 @@ class PlotModel:
     def cpp_mesh_ids(self):
         return list(openmc.lib.meshes.keys())
 
-    def mesh_plot_bins(self, mesh_id, view: PlotView = None):
+    def mesh_plot_bins(self, mesh_id, view: PlotView = None, translation: tuple[float, float, float] = None):
         mesh = openmc.lib.meshes[mesh_id]
 
         if view is None:
             view = self.currentView
 
+        if translation is None:
+            origin = view.origin
+        else:
+            origin = (view.origin[0] - translation[0],
+                      view.origin[1] - translation[1],
+                      view.origin[2] - translation[2])
+
         mesh_bins = mesh.get_plot_bins(
-            origin=view.origin,
+            origin=origin,
             width=(view.width, view.height),
             basis=view.basis,
             pixels=(view.h_res, view.v_res),
@@ -754,16 +761,9 @@ class PlotModel:
                 selected_scores.append(idx)
         data = _do_op(data[np.array(selected_scores)], tally_value)
 
-        # Account for mesh filter translation
-        if mesh_filter.translation is not None:
-            t = mesh_filter.translation
-            origin = (view.origin[0] - t[0], view.origin[1] - t[1], view.origin[2] - t[2])
-        else:
-            origin = view.origin
-
         # Get mesh bins from openmc.lib
         mesh_cpp = openmc.lib.meshes[mesh.id]
-        mesh_bins = self.mesh_plot_bins(mesh.id, view)
+        mesh_bins = self.mesh_plot_bins(mesh.id, view, mesh_filter.translation)
 
         # Apply volume normalization
         if view.tallyVolumeNorm:
