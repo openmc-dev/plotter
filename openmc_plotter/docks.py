@@ -33,6 +33,57 @@ class PlotterDock(QDockWidget):
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
 
+class MeshAnnotationDock(PlotterDock):
+    """Dock for mesh annotation options"""
+
+    def __init__(self, model, font_metric, parent=None):
+        super().__init__(model, font_metric, parent)
+
+        self.treeLayout = QVBoxLayout()
+        self.meshTree = QTreeWidget()
+        self.treeExpander = Expander("Meshes:", layout=self.treeLayout)
+        self.treeExpander.expand()  # start with meshes expanded
+
+        self.meshTree.setColumnCount(1)
+
+        self.mesh_items = []
+        for mesh_id in self.model.cpp_mesh_ids():
+            mesh_item = QTreeWidgetItem(self.meshTree, (f'Mesh {mesh_id}',))
+            mesh_item.setFlags(mesh_item.flags() | QtCore.Qt.ItemIsUserCheckable)
+            mesh_item.setCheckState(0, QtCore.Qt.Unchecked)
+            self.mesh_items.append((mesh_id, mesh_item))
+            self.meshTree.addTopLevelItem(mesh_item)
+
+        self.meshTree.setHeaderHidden(True)
+
+        # Create submit button
+        self.applyButton = QPushButton("Apply Changes")
+        # Mac bug fix
+        self.applyButton.setMinimumHeight(self.font_metric.height() * 1.6)
+        self.applyButton.clicked.connect(self.main_window.applyChanges)
+
+        label = QLabel("Mesh Annotations")
+        self.treeLayout.addWidget(label)
+        self.treeLayout.addWidget(self.meshTree)
+        self.treeLayout.addWidget(HorizontalLine())
+        self.treeLayout.addWidget(self.applyButton)
+
+        self.optionsWidget = QWidget()
+        self.optionsWidget.setLayout(self.treeLayout)
+        self.setWidget(self.optionsWidget)
+
+    def get_checked_meshes(self):
+        return [id for id, item in self.mesh_items if item.checkState(0) == QtCore.Qt.Checked]
+
+    def update(self):
+        pass
+
+    def resizeEvent(self, event):
+        self.main_window.resizeEvent(event)
+
+    hideEvent = showEvent = moveEvent = resizeEvent
+
+
 class DomainDock(PlotterDock):
     """
     Domain options dock

@@ -641,6 +641,10 @@ class PlotImage(FigureCanvas):
         self.add_outlines()
         self.plotSourceSites()
 
+        # annotate mesh boundaries
+        for mesh_id in cv.mesh_annotations:
+            self.annotate_mesh(mesh_id)
+
         # always make sure the data bounds are set correctly
         self.ax.set_xbound(data_bounds[0], data_bounds[1])
         self.ax.set_ybound(data_bounds[2], data_bounds[3])
@@ -651,6 +655,26 @@ class PlotImage(FigureCanvas):
 
         self.draw()
         return "Done"
+
+    def current_view_data_bounds(self):
+        cv = self.model.currentView
+        return [cv.origin[self.main_window.xBasis] - cv.width/2.,
+                cv.origin[self.main_window.xBasis] + cv.width/2.,
+                cv.origin[self.main_window.yBasis] - cv.height/2.,
+                cv.origin[self.main_window.yBasis] + cv.height/2.]
+
+    def annotate_mesh(self, mesh_id):
+        mesh_bins = self.model.mesh_plot_bins(mesh_id)
+
+        data_bounds = self.current_view_data_bounds()
+        self.mesh_contours = self.ax.contour(
+            mesh_bins,
+            origin='upper',
+            colors='k',
+            linestyles='solid',
+            levels=np.unique(mesh_bins),
+            extent=data_bounds
+        )
 
     def plotSourceSites(self):
         if not self.model.sourceSitesVisible or self.model.sourceSites is None:
@@ -681,10 +705,7 @@ class PlotImage(FigureCanvas):
         # draw outlines as isocontours
         if cv.outlines:
             # set data extents for automatic reporting of pointer location
-            data_bounds = [cv.origin[self.main_window.xBasis] - cv.width/2.,
-                           cv.origin[self.main_window.xBasis] + cv.width/2.,
-                           cv.origin[self.main_window.yBasis] - cv.height/2.,
-                           cv.origin[self.main_window.yBasis] + cv.height/2.]
+            data_bounds = self.current_view_data_bounds()
             levels = np.unique(self.model.ids)
             self.contours = self.ax.contour(self.model.ids,
                                             origin='upper',

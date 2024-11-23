@@ -678,6 +678,30 @@ class PlotModel:
 
         return image_data, None, data_min, data_max
 
+    def cpp_mesh_ids(self):
+        return list(openmc.lib.meshes.keys())
+
+    def mesh_plot_bins(self, mesh_id, view: PlotView = None, translation: tuple[float, float, float] = None):
+        mesh = openmc.lib.meshes[mesh_id]
+
+        if view is None:
+            view = self.currentView
+
+        if translation is None:
+            origin = view.origin
+        else:
+            origin = (view.origin[0] - translation[0],
+                      view.origin[1] - translation[1],
+                      view.origin[2] - translation[2])
+
+        mesh_bins = mesh.get_plot_bins(
+            origin=origin,
+            width=(view.width, view.height),
+            basis=view.basis,
+            pixels=(view.h_res, view.v_res),
+        )
+        return mesh_bins
+
     def _create_tally_mesh_image(
             self, tally: openmc.Tally, tally_value: TallyValueType,
             scores: Tuple[str], nuclides: Tuple[str], view: PlotView = None
@@ -737,21 +761,9 @@ class PlotModel:
                 selected_scores.append(idx)
         data = _do_op(data[np.array(selected_scores)], tally_value)
 
-        # Account for mesh filter translation
-        if mesh_filter.translation is not None:
-            t = mesh_filter.translation
-            origin = (view.origin[0] - t[0], view.origin[1] - t[1], view.origin[2] - t[2])
-        else:
-            origin = view.origin
-
         # Get mesh bins from openmc.lib
         mesh_cpp = openmc.lib.meshes[mesh.id]
-        mesh_bins = mesh_cpp.get_plot_bins(
-            origin=origin,
-            width=(view.width, view.height),
-            basis=view.basis,
-            pixels=(view.h_res, view.v_res),
-        )
+        mesh_bins = self.mesh_plot_bins(mesh.id, view, mesh_filter.translation)
 
         # Apply volume normalization
         if view.tallyVolumeNorm:
@@ -1017,13 +1029,15 @@ class PlotView:
         Label of the currently selected tally
     """
 
-    attrs = ('view_ind', 'view_params', 'cells', 'materials', 'selectedTally')
+    attrs = ('view_ind', 'view_params', 'cells', 'materials', 'selectedTally', 'mesh_annotations')
     plotbase_attrs = ('level', 'origin', 'width', 'height',
                       'h_res', 'v_res', 'basis', 'llc', 'urc', 'color_overlaps')
 
     def __init__(self, origin=(0, 0, 0), width=10, height=10, restore_view=None,
                  restore_domains=False, default_res=None):
         """Initialize PlotView attributes"""
+
+        self.mesh_annotations = []
 
         if restore_view is not None:
             self.view_ind = copy.copy(restore_view.view_ind)
