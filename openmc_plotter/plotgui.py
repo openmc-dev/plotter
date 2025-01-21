@@ -600,7 +600,8 @@ class PlotImage(FigureCanvas):
                                                    alpha=cv.tallyDataAlpha,
                                                    cmap=cmap,
                                                    norm=norm,
-                                                   extent=extents)
+                                                   extent=extents,
+                                                   algorithm='serial')
 
             else:
                 self.tally_image = self.ax.imshow(image_data,
@@ -673,7 +674,8 @@ class PlotImage(FigureCanvas):
             colors='k',
             linestyles='solid',
             levels=np.unique(mesh_bins),
-            extent=data_bounds
+            extent=data_bounds,
+            algorithm='serial'
         )
 
     def plotSourceSites(self):
@@ -712,7 +714,8 @@ class PlotImage(FigureCanvas):
                                             colors='k',
                                             linestyles='solid',
                                             levels=levels,
-                                            extent=data_bounds)
+                                            extent=data_bounds,
+                                            algorithm='serial')
 
     @staticmethod
     def parseContoursLine(line):
