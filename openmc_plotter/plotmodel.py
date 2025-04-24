@@ -44,7 +44,8 @@ _SPATIAL_FILTERS = (openmc.UniverseFilter,
                     openmc.CellFilter,
                     openmc.DistribcellFilter,
                     openmc.CellInstanceFilter,
-                    openmc.MeshFilter)
+                    openmc.MeshFilter,
+                    openmc.MeshMaterialFilter)
 
 _PRODUCTIONS = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
                'nu-scatter', 'H1-production', 'H2-production',
@@ -672,6 +673,13 @@ class PlotModel:
                                                       nuclides,
                                                       view)
                 return image + (units_out,)
+
+        elif tally.contains_filter(openmc.MeshMaterialFilter):
+            image = self._create_tally_filter_image(
+                tally, tally_value, openmc.MeshMaterialFilter, scores, nuclides, view)
+            return image + (units_out,)
+
+
         elif contains_distribcell or contains_cellinstance:
             if tally_value == 'rel_err':
                 mean_data = self._create_distribcell_image(
@@ -937,6 +945,87 @@ class PlotModel:
         image_data = np.full_like(self.ids, np.nan, dtype=float)
         mask = (mesh_bins >= 0)
         image_data[mask] = data[mesh_bins[mask]]
+
+        # get dataset's min/max
+        data_min = np.min(data)
+        data_max = np.max(data)
+
+        return image_data, None, data_min, data_max
+
+    def _create_tally_filter_image(
+            self, tally: openmc.Tally, tally_value: TallyValueType, filter_class,
+            scores: Tuple[str], nuclides: Tuple[str], view: PlotView = None
+        ):
+        # some variables used throughout
+        if view is None:
+            view = self.currentView
+
+        def _do_op(array, tally_value, ax=0):
+            if tally_value == 'mean':
+                return np.sum(array, axis=ax)
+            elif tally_value == 'std_dev':
+                return np.sqrt(np.sum(array**2, axis=ax))
+
+        # start with reshaped data
+        data = tally.get_reshaped_data(tally_value)
+
+        # move mesh axes to the end of the filters
+        filter_idx = [type(filter) for filter in tally.filters].index(filter_class)
+        data = np.moveaxis(data, filter_idx, -1)
+
+        # sum over the rest of the tally filters
+        for tally_filter in tally.filters:
+            if type(tally_filter) is filter_class:
+                continue
+
+            selected_bins = self.appliedFilters[tally_filter]
+            if selected_bins:
+                # sum filter data for the selected bins
+                data = data[np.array(selected_bins)].sum(axis=0)
+            else:
+                # if the filter is completely unselected,
+                # set all of its data to zero and remove the axis
+                data[:] = 0.0
+                data = _do_op(data, tally_value)
+
+        # filter by selected nuclides
+        if not nuclides:
+            data = 0.0
+
+        selected_nuclides = []
+        for idx, nuclide in enumerate(tally.nuclides):
+            if nuclide in nuclides:
+                selected_nuclides.append(idx)
+        data = _do_op(data[np.array(selected_nuclides)], tally_value)
+
+        # filter by selected scores
+        if not scores:
+            data = 0.0
+
+        selected_scores = []
+        for idx, score in enumerate(tally.scores):
+            if score in scores:
+                selected_scores.append(idx)
+        data = _do_op(data[np.array(selected_scores)], tally_value)
+
+        # Get mesh bins from openmc.lib
+        filter = tally.find_filter(filter_class)
+        filter_cpp = openmc.lib.filters[filter.id]
+
+        if view is None:
+            view = self.currentView
+
+        bins = filter_cpp.get_plot_bins(
+            origin=view.origin,
+            width=(view.width, view.height),
+            basis=view.basis,
+            pixels=(view.h_res, view.v_res),
+        )
+
+        # set image data
+        image_data = np.full_like(self.ids, np.nan, dtype=float)
+        mask = (bins >= 0)
+        image_data[mask] = data[bins[mask]]
 
         # get dataset's min/max
         data_min = np.min(data)
