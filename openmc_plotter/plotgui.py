@@ -280,7 +280,7 @@ class PlotImage(FigureCanvas):
 
             if self.model.tally_data is not None:
                 tid, value = self.getTallyInfo(event)
-                if value is not None and value != np.nan:
+                if value is not None and not np.isnan(value):
                     self.updateTallyDataIndicatorValue(value)
                     tallyInfo = "Tally {} {}: {:.5E}".format(
                         tid, cv.tallyValue, value)
