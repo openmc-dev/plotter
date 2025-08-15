@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61", "wheel"]
+requires = ["setuptools>=80", "setuptools_scm>=8", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -54,5 +54,4 @@ include = ["openmc_plotter*"]
 [tool.setuptools.package-data]
 openmc_plotter = ["assets/*.png"]
 
-[tool.setuptools.dynamic]
-version = { attr = "openmc_plotter.__version__" }
+[tool.setuptools_scm]
