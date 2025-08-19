@@ -1,2 +1,57 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=80", "setuptools_scm>=8", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openmc-plotter"
+dynamic = ["version"]
+authors = [
+  { name = "OpenMC Development Team", email = "openmc@anl.gov" },
+]
+license = "MIT"
+description = "Plotting tool for OpenMC models and tally data"
+readme = "README.md"
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Intended Audience :: Developers",
+  "Intended Audience :: End Users/Desktop",
+  "Intended Audience :: Science/Research",
+  "Natural Language :: English",
+  "Topic :: Scientific/Engineering",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+]
+requires-python = ">=3.10"
+dependencies = [
+  "openmc>=0.15.0",
+  "numpy",
+  "matplotlib",
+  "PySide6",
+]
+
+[project.optional-dependencies]
+test = ["pytest", "pytest-qt"]
+vtk = ["vtk"]
+
+[project.urls]
+"Homepage" = "https://github.com/openmc-dev/plotter"
+"Download" = "https://github.com/openmc-dev/plotter"
+"Issue Tracker" = "https://github.com/openmc-dev/plotter/issues"
+"Source Code" = "https://github.com/openmc-dev/plotter"
+
+[project.scripts]
+openmc-plotter = "openmc_plotter.__main__:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+include = ["openmc_plotter*"]
+
+[tool.setuptools.package-data]
+openmc_plotter = ["assets/*.png"]
+
+[tool.setuptools_scm]
