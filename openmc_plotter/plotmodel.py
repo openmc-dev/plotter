@@ -919,6 +919,8 @@ class PlotViewIndependent:
         Alpha value of the geometry plot
     plotVisibile : bool
         Controls visibility of geometry
+    originCrosshair: bool
+        Controls visibility of origin crosshair
     outlines: bool
         Controls visibility of geometry outlines
     tallyDataColormap : str
@@ -962,6 +964,7 @@ class PlotViewIndependent:
         self.overlap_color = (255, 0, 0)
         self.domainAlpha = 1.0
         self.domainVisible = True
+        self.originCrosshair = False
         self.outlines = False
         self.colormaps = {'temperature': 'Oranges', 'density': 'Greys'}
         # set defaults for color dialog
