@@ -549,6 +549,11 @@ class MainWindow(QMainWindow):
 
         if saved['version'] == self.model.version:
             self.model.activeView = saved['current']
+            # Handle backward compatibility for outline attributes
+            if not hasattr(self.model.activeView, 'outlinesCell'):
+                self.model.activeView.outlinesCell = False
+            if not hasattr(self.model.activeView, 'outlinesMat'):
+                self.model.activeView.outlinesMat = False
             self.dock.updateDock()
             self.colorDialog.updateDialogValues()
             self.applyChanges()

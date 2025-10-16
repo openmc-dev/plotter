@@ -991,6 +991,15 @@ class PlotViewIndependent:
         self.tallyContours = False
         self.tallyContourLevels = ""
 
+    def __setstate__(self, state):
+        """Handle backward compatibility when unpickling old views"""
+        self.__dict__.update(state)
+        # Add missing attributes from older versions
+        if not hasattr(self, 'outlinesCell'):
+            self.outlinesCell = False
+        if not hasattr(self, 'outlinesMat'):
+            self.outlinesMat = False
+
     def getDataLimits(self):
         return self.data_minmax
 
