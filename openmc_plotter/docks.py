@@ -221,8 +221,10 @@ class DomainDock(PlotterDock):
             self.main_window.editPlotVisibility)
 
         # Outlines
-        self.outlinesBox = QCheckBox(self)
-        self.outlinesBox.stateChanged.connect(self.main_window.toggleOutlines)
+        self.outlinesCellBox = QCheckBox(self)
+        self.outlinesCellBox.stateChanged.connect(self.main_window.toggleOutlinesCell)
+        self.outlinesMatBox = QCheckBox(self)
+        self.outlinesMatBox.stateChanged.connect(self.main_window.toggleOutlinesMat)
 
         # Basis
         self.basisBox = QComboBox(self)
@@ -247,7 +249,8 @@ class DomainDock(PlotterDock):
         self.opLayout.addRow('Universe Level:', self.universeLevelBox)
         self.opLayout.addRow('Plot alpha:', self.domainAlphaBox)
         self.opLayout.addRow('Visible:', self.visibilityBox)
-        self.opLayout.addRow('Outlines:', self.outlinesBox)
+        self.opLayout.addRow('Cell Outlines:', self.outlinesCellBox)
+        self.opLayout.addRow('Material Outlines:', self.outlinesMatBox)
         self.opLayout.addRow(self.colorOptionsButton)
         self.opLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
         self.opLayout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
@@ -331,7 +334,8 @@ class DomainDock(PlotterDock):
         self.visibilityBox.setChecked(self.model.activeView.domainVisible)
 
     def updateOutlines(self):
-        self.outlinesBox.setChecked(self.model.activeView.outlines)
+        self.outlinesCellBox.setChecked(self.model.activeView.outlinesCell)
+        self.outlinesMatBox.setChecked(self.model.activeView.outlinesMat)
 
     def updateBasis(self):
         self.basisBox.setCurrentText(self.model.activeView.basis)
