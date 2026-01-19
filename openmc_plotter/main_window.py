@@ -1037,10 +1037,23 @@ class MainWindow(QMainWindow):
         av = self.model.activeView
         av.clipTallyData = bool(state)
 
+    def toggleTallyAutoRescale(self, state, apply=False):
+        av = self.model.activeView
+        if av.tallyDataUserMinMax:
+            av.tallyDataAutoRescale = False
+            self.tallyDock.tallyColorForm.updateAutoRescale()
+            return
+        av.tallyDataAutoRescale = bool(state)
+        if apply:
+            self.applyChanges()
+
     def toggleTallyDataUserMinMax(self, state, apply=False):
         av = self.model.activeView
         av.tallyDataUserMinMax = bool(state)
+        if av.tallyDataUserMinMax:
+            av.tallyDataAutoRescale = False
         self.tallyDock.tallyColorForm.setMinMaxEnabled(bool(state))
+        self.tallyDock.tallyColorForm.updateAutoRescale()
         if apply:
             self.applyChanges()
 

@@ -861,6 +861,11 @@ class ColorForm(QWidget):
         max_connector = partial(main_window.editTallyDataMax)
         self.maxBox.valueChanged.connect(max_connector)
 
+        # Auto rescale check box
+        self.autoRescaleBox = QCheckBox()
+        auto_rescale_connector = partial(main_window.toggleTallyAutoRescale)
+        self.autoRescaleBox.stateChanged.connect(auto_rescale_connector)
+
         # Linear/Log scaling check box
         self.scaleBox = QCheckBox()
         scale_connector = partial(main_window.toggleTallyLogScale)
@@ -897,6 +902,7 @@ class ColorForm(QWidget):
         self.layout.addRow("Custom Min/Max: ", self.userMinMaxBox)
         self.layout.addRow("Min: ", self.minBox)
         self.layout.addRow("Max: ", self.maxBox)
+        self.layout.addRow("Auto rescale: ", self.autoRescaleBox)
         self.layout.addRow("Log Scale: ", self.scaleBox)
         self.layout.addRow("Clip Data: ", self.clipDataBox)
         self.layout.addRow("Mask Zeros: ", self.maskZeroBox)
@@ -914,10 +920,16 @@ class ColorForm(QWidget):
         cv = self.model.currentView
         self.dataIndicatorCheckBox.setChecked(cv.tallyDataIndicator)
 
+    def updateAutoRescale(self):
+        cv = self.model.currentView
+        self.autoRescaleBox.setChecked(cv.tallyDataAutoRescale)
+        self.autoRescaleBox.setEnabled(not cv.tallyDataUserMinMax)
+
     def setMinMaxEnabled(self, enable):
         enable = bool(enable)
         self.minBox.setEnabled(enable)
         self.maxBox.setEnabled(enable)
+        self.autoRescaleBox.setEnabled(not enable)
 
     def updateMinMax(self):
         cv = self.model.currentView
@@ -958,5 +970,6 @@ class ColorForm(QWidget):
         self.updateMaskZeros()
         self.updateVolumeNorm()
         self.updateDataClip()
+        self.updateAutoRescale()
         self.updateDataIndicator()
         self.updateTallyContours()

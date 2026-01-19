@@ -569,6 +569,9 @@ class PlotImage(FigureCanvas):
             # always mask out negative values
             image_mask = image_data < 0.0
 
+            # mask out invalid values (NaN/Inf)
+            image_mask |= ~np.isfinite(image_data)
+
             if cv.clipTallyData:
                 image_mask |= image_data < data_min
                 image_mask |= image_data > data_max
@@ -578,6 +581,18 @@ class PlotImage(FigureCanvas):
 
             # mask out invalid values
             image_data = np.ma.masked_where(image_mask, image_data)
+
+            # auto-rescale based on displayed (imshow) data
+            if cv.tallyDataAutoRescale and not cv.tallyContours and not cv.tallyDataUserMinMax:
+                displayed = image_data.compressed()
+                if displayed.size:
+                    data_min = float(displayed.min())
+                    data_max = float(displayed.max())
+                    cv.tallyDataMin = data_min
+                    cv.tallyDataMax = data_max
+                else:
+                    data_min = cv.tallyDataMin
+                    data_max = cv.tallyDataMax
 
             if extents is None:
                 extents = data_bounds

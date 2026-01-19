@@ -937,6 +937,8 @@ class PlotViewIndependent:
         Minimum scale value for tally data
     tallyDataLogScale : bool
         Indicator of logarithmic scale for tally data
+    tallyDataAutoRescale : bool
+        Indicator of whether tally colorbar range auto-rescales
     tallyMaskZeroValues : bool
         Indicates whether or not zero values in tally data should be masked
     clipTallyData: bool
@@ -984,6 +986,7 @@ class PlotViewIndependent:
         self.tallyDataMin = 0.0
         self.tallyDataMax = np.inf
         self.tallyDataLogScale = False
+        self.tallyDataAutoRescale = False
         self.tallyMaskZeroValues = False
         self.tallyVolumeNorm = False
         self.clipTallyData = False
@@ -999,6 +1002,8 @@ class PlotViewIndependent:
             self.outlinesCell = False
         if not hasattr(self, 'outlinesMat'):
             self.outlinesMat = False
+        if not hasattr(self, 'tallyDataAutoRescale'):
+            self.tallyDataAutoRescale = False
 
     def getDataLimits(self):
         return self.data_minmax
