@@ -91,10 +91,23 @@ class TabbedDock(QDockWidget):
         self.tallyPanel = TallyPanel(model, font_metric, parent, self)
         self.meshAnnotationPanel = MeshPanel(model, font_metric, parent, self)
 
+        # Wrap panels in scroll areas
+        geometryScroll = QScrollArea()
+        geometryScroll.setWidget(self.geometryPanel)
+        geometryScroll.setWidgetResizable(True)
+
+        tallyScroll = QScrollArea()
+        tallyScroll.setWidget(self.tallyPanel)
+        tallyScroll.setWidgetResizable(True)
+
+        meshScroll = QScrollArea()
+        meshScroll.setWidget(self.meshAnnotationPanel)
+        meshScroll.setWidgetResizable(True)
+
         # Add panels as tabs
-        self.tabWidget.addTab(self.geometryPanel, "Geometry")
-        self.tabWidget.addTab(self.tallyPanel, "Tallies")
-        self.tabWidget.addTab(self.meshAnnotationPanel, "Meshes")
+        self.tabWidget.addTab(geometryScroll, "Geometry")
+        self.tabWidget.addTab(tallyScroll, "Tallies")
+        self.tabWidget.addTab(meshScroll, "Meshes")
 
         # Create Apply Changes button
         self.applyButton = QPushButton("Apply Changes")
@@ -421,18 +434,7 @@ class TallyPanel(PlotterPanel):
         self.panelLayout.addWidget(HorizontalLine())
         self.panelLayout.addWidget(self.tallyColorForm)
 
-        # Create widget for scroll area and apply main layout
-        self.scroll = QScrollArea()
-        self.scroll.setWidgetResizable(True)
-        self.widget = QWidget()
-        self.widget.setLayout(self.panelLayout)
-        self.scroll.setWidget(self.widget)
-
-        # Set scroll area as main layout
-        mainLayout = QVBoxLayout()
-        mainLayout.setContentsMargins(0, 0, 0, 0)
-        mainLayout.addWidget(self.scroll)
-        self.setLayout(mainLayout)
+        self.setLayout(self.panelLayout)
 
     def _createFilterTree(self, spatial_filters):
         av = self.model.activeView
