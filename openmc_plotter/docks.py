@@ -99,6 +99,7 @@ class TabbedDock(QDockWidget):
         # Create Apply Changes button
         self.applyButton = QPushButton("Apply Changes")
         self.applyButton.setMinimumHeight(self.font_metric.height() * 1.6)
+        self.applyButton.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; }")
         self.applyButton.clicked.connect(self.main_window.applyChanges)
 
         # Main layout with tabs and apply button
