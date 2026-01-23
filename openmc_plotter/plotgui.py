@@ -44,7 +44,7 @@ class PlotImage(FigureCanvas):
         self.x_plot_origin = None
         self.y_plot_origin = None
 
-        self.colorbar = None
+        self.property_colorbar = None
         self.data_indicator = None
         self.tally_data_indicator = None
         self.tally_colorbar = None
@@ -533,21 +533,21 @@ class PlotImage(FigureCanvas):
                                                        alpha=cv.domainAlpha)
 
             # add colorbar
-            self.colorbar = self.figure.colorbar(self.image,
-                                                 anchor=(1.0, 0.0))
-            self.colorbar.set_label(cmap_label,
-                                    rotation=-90,
-                                    labelpad=15)
+            self.property_colorbar = self.figure.colorbar(self.image,
+                                                          anchor=(1.0, 0.0))
+            self.property_colorbar.set_label(cmap_label,
+                                             rotation=-90,
+                                             labelpad=15)
             # draw line on colorbar
-            dl = self.colorbar.ax.dataLim.get_points()
+            dl = self.property_colorbar.ax.dataLim.get_points()
             self.data_indicator = mlines.Line2D(dl[:][0],
                                                 [0.0, 0.0],
                                                 linewidth=3.,
                                                 color='blue',
                                                 clip_on=True)
             self.data_indicator.set_animated(True)
-            self.colorbar.ax.add_line(self.data_indicator)
-            self.colorbar.ax.margins(0.0, 0.0)
+            self.property_colorbar.ax.add_line(self.data_indicator)
+            self.property_colorbar.ax.margins(0.0, 0.0)
             self.updateDataIndicatorVisibility()
             self.updateColorMinMax(cv.colorby)
 
@@ -665,7 +665,7 @@ class PlotImage(FigureCanvas):
 
         self.draw()
         self._cache_colorbar_backgrounds()
-        self._blit_indicator(self.data_indicator, self.colorbar)
+        self._blit_indicator(self.data_indicator, self.property_colorbar)
         self._blit_indicator(self.tally_data_indicator, self.tally_colorbar)
         return "Done"
 
@@ -757,9 +757,9 @@ class PlotImage(FigureCanvas):
         self._data_colorbar_bg = None
         self._tally_colorbar_bg = None
 
-        if self.colorbar and self.data_indicator:
+        if self.property_colorbar and self.data_indicator:
             self._data_colorbar_bg = self.copy_from_bbox(
-                self.colorbar.ax.bbox)
+                self.property_colorbar.ax.bbox)
 
         if self.tally_colorbar and self.tally_data_indicator:
             self._tally_colorbar_bg = self.copy_from_bbox(
@@ -773,7 +773,7 @@ class PlotImage(FigureCanvas):
         if not indicator.get_visible():
             return False
 
-        if colorbar is self.colorbar:
+        if colorbar is self.property_colorbar:
             background = self._data_colorbar_bg
         else:
             background = self._tally_colorbar_bg
@@ -832,7 +832,7 @@ class PlotImage(FigureCanvas):
             dl_color = invert_rgb(self.image.get_cmap()(y_val), True)
             self.data_indicator.set_c(dl_color)
 
-            if not self._blit_indicator(self.data_indicator, self.colorbar):
+            if not self._blit_indicator(self.data_indicator, self.property_colorbar):
                 self.draw_idle()
 
     def updateDataIndicatorVisibility(self):
@@ -840,28 +840,28 @@ class PlotImage(FigureCanvas):
         if self.data_indicator and cv.colorby in _MODEL_PROPERTIES:
             val = cv.data_indicator_enabled[cv.colorby]
             self.data_indicator.set_visible(val)
-            if not self._blit_indicator(self.data_indicator, self.colorbar):
+            if not self._blit_indicator(self.data_indicator, self.property_colorbar):
                 self.draw_idle()
 
     def updateColorMap(self, colormap_name, property_type):
-        if self.colorbar and property_type == self.model.activeView.colorby:
+        if self.property_colorbar and property_type == self.model.activeView.colorby:
             self.image.set_cmap(colormap_name)
             self.figure.draw_without_rendering()
             self.draw()
             self._cache_colorbar_backgrounds()
-            self._blit_indicator(self.data_indicator, self.colorbar)
+            self._blit_indicator(self.data_indicator, self.property_colorbar)
 
     def updateColorMinMax(self, property_type):
         av = self.model.activeView
-        if self.colorbar and property_type == av.colorby:
+        if self.property_colorbar and property_type == av.colorby:
             clim = av.getColorLimits(property_type)
-            self.colorbar.mappable.set_clim(*clim)
+            self.property_colorbar.mappable.set_clim(*clim)
             self.data_indicator.set_data(clim[:2],
                                          (0.0, 0.0))
             self.figure.draw_without_rendering()
             self.draw()
             self._cache_colorbar_backgrounds()
-            self._blit_indicator(self.data_indicator, self.colorbar)
+            self._blit_indicator(self.data_indicator, self.property_colorbar)
 
 
 class ColorDialog(QDialog):
