@@ -12,6 +12,7 @@ from matplotlib.colors import SymLogNorm
 from matplotlib.backends.backend_qt5agg import FigureCanvas
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.ma as ma
 
 from .plot_colors import rgb_normalize, invert_rgb
 from .plotmodel import DomainDelegate, PlotModel
@@ -287,7 +288,7 @@ class PlotImage(FigureCanvas):
 
             if self.model.tally_data is not None:
                 tid, value = self.getTallyInfo(event)
-                if value is not None and not np.isnan(value):
+                if value is not None and value is not ma.masked:
                     self.updateTallyDataIndicatorValue(value)
                     tallyInfo = "Tally {} {}: {:.5E}".format(
                         tid, cv.tallyValue, float(value))
