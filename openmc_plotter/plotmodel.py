@@ -937,6 +937,8 @@ class PlotViewIndependent:
         Minimum scale value for tally data
     tallyDataLogScale : bool
         Indicator of logarithmic scale for tally data
+    tallyDataMinMaxType : str
+        Type of min/max scaling for tally data: 'full', 'visible', or 'custom'
     tallyMaskZeroValues : bool
         Indicates whether or not zero values in tally data should be masked
     clipTallyData: bool
@@ -980,7 +982,7 @@ class PlotViewIndependent:
         self.tallyDataVisible = True
         self.tallyDataAlpha = 1.0
         self.tallyDataIndicator = False
-        self.tallyDataUserMinMax = False
+        self.tallyDataMinMaxType = 'full'  # 'full', 'visible', or 'custom'
         self.tallyDataMin = 0.0
         self.tallyDataMax = np.inf
         self.tallyDataLogScale = False
@@ -999,6 +1001,14 @@ class PlotViewIndependent:
             self.outlinesCell = False
         if not hasattr(self, 'outlinesMat'):
             self.outlinesMat = False
+        # Migrate old boolean attributes to new tallyDataMinMaxType
+        if not hasattr(self, 'tallyDataMinMaxType'):
+            if getattr(self, 'tallyDataUserMinMax', False):
+                self.tallyDataMinMaxType = 'custom'
+            else:
+                self.tallyDataMinMaxType = 'full'
+        # Remove old attributes if present
+        self.__dict__.pop('tallyDataUserMinMax', None)
 
     def getDataLimits(self):
         return self.data_minmax

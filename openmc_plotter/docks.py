@@ -773,17 +773,12 @@ class ColorForm(QWidget):
         Selector for colormap
     dataIndicatorCheckBox : QCheckBox
         Inidcates whether or not the data indicator will appear on the colorbar
-    userMinMaxBox : QCheckBox
-        Indicates whether or not the user defined values in the min and max
-        will be used to set the bounds of the colorbar.
+    minMaxTypeBox : QComboBox
+        Dropdown to select min/max type: "Full data", "Visible data", or "Custom"
     maxBox : ScientificDoubleSpinBox
-        Max value of the colorbar. If the userMinMaxBox is checked, this will be
-        the user's input. If the userMinMaxBox is not checked, this box will
-        hold the max value of the visible data.
+        Max value of the colorbar. Only visible when minMaxTypeBox is set to "Custom".
     minBox : ScientificDoubleSpinBox
-        Min value of the colorbar. If the userMinMaxBox is checked, this will be
-        the user's input. If the userMinMaxBox is not checked, this box will
-        hold the max value of the visible data.
+        Min value of the colorbar. Only visible when minMaxTypeBox is set to "Custom".
     scaleBox : QCheckBox
         Indicates whether or not the data is displayed on a log or linear
         scale
@@ -844,10 +839,13 @@ class ColorForm(QWidget):
         self.dataIndicatorCheckBox.stateChanged.connect(
             data_indicator_connector)
 
-        # User specified min/max check box
-        self.userMinMaxBox = QCheckBox()
-        minmax_connector = partial(main_window.toggleTallyDataUserMinMax)
-        self.userMinMaxBox.stateChanged.connect(minmax_connector)
+        # Min/max type dropdown
+        self.minMaxTypeBox = QComboBox()
+        self.minMaxTypeBox.addItem("Full data")
+        self.minMaxTypeBox.addItem("Visible data")
+        self.minMaxTypeBox.addItem("Custom")
+        minmax_type_connector = partial(main_window.setTallyMinMaxType)
+        self.minMaxTypeBox.currentIndexChanged.connect(minmax_type_connector)
 
         # Data min spin box
         self.minBox = ScientificDoubleSpinBox()
@@ -860,6 +858,10 @@ class ColorForm(QWidget):
         self.maxBox.setMinimum(0.0)
         max_connector = partial(main_window.editTallyDataMax)
         self.maxBox.valueChanged.connect(max_connector)
+
+        # Labels for min/max (so we can show/hide them)
+        self.minLabel = QLabel("Min: ")
+        self.maxLabel = QLabel("Max: ")
 
         # Linear/Log scaling check box
         self.scaleBox = QCheckBox()
@@ -894,9 +896,9 @@ class ColorForm(QWidget):
         self.layout.addRow("Colormap: ", self.colormapBox)
         self.layout.addRow("Reverse colormap: ", self.reverseCmapBox)
         self.layout.addRow("Data Indicator: ", self.dataIndicatorCheckBox)
-        self.layout.addRow("Custom Min/Max: ", self.userMinMaxBox)
-        self.layout.addRow("Min: ", self.minBox)
-        self.layout.addRow("Max: ", self.maxBox)
+        self.layout.addRow("Min/max: ", self.minMaxTypeBox)
+        self.layout.addRow(self.minLabel, self.minBox)
+        self.layout.addRow(self.maxLabel, self.maxBox)
         self.layout.addRow("Log Scale: ", self.scaleBox)
         self.layout.addRow("Clip Data: ", self.clipDataBox)
         self.layout.addRow("Mask Zeros: ", self.maskZeroBox)
@@ -914,16 +916,26 @@ class ColorForm(QWidget):
         cv = self.model.currentView
         self.dataIndicatorCheckBox.setChecked(cv.tallyDataIndicator)
 
-    def setMinMaxEnabled(self, enable):
-        enable = bool(enable)
-        self.minBox.setEnabled(enable)
-        self.maxBox.setEnabled(enable)
+    def updateMinMaxType(self):
+        """Update the min/max type dropdown and show/hide min/max inputs."""
+        cv = self.model.currentView
+        type_map = {'full': 0, 'visible': 1, 'custom': 2}
+        idx = type_map.get(cv.tallyDataMinMaxType, 0)
+        self.minMaxTypeBox.blockSignals(True)
+        self.minMaxTypeBox.setCurrentIndex(idx)
+        self.minMaxTypeBox.blockSignals(False)
+        # Show/hide min/max inputs based on whether custom is selected
+        show_custom = (cv.tallyDataMinMaxType == 'custom')
+        self.minLabel.setVisible(show_custom)
+        self.minBox.setVisible(show_custom)
+        self.maxLabel.setVisible(show_custom)
+        self.maxBox.setVisible(show_custom)
 
     def updateMinMax(self):
         cv = self.model.currentView
         self.minBox.setValue(cv.tallyDataMin)
         self.maxBox.setValue(cv.tallyDataMax)
-        self.setMinMaxEnabled(cv.tallyDataUserMinMax)
+        self.updateMinMaxType()
 
     def updateTallyVisibility(self):
         cv = self.model.currentView
@@ -951,7 +963,6 @@ class ColorForm(QWidget):
 
         self.alphaBox.setValue(cv.tallyDataAlpha)
         self.visibilityBox.setChecked(cv.tallyDataVisible)
-        self.userMinMaxBox.setChecked(cv.tallyDataUserMinMax)
         self.scaleBox.setChecked(cv.tallyDataLogScale)
 
         self.updateMinMax()

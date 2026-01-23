@@ -567,7 +567,7 @@ class PlotImage(FigureCanvas):
         # draw tally image
         if image_data is not None:
 
-            if not cv.tallyDataUserMinMax:
+            if cv.tallyDataMinMaxType != 'custom':
                 cv.tallyDataMin = data_min
                 cv.tallyDataMax = data_max
             else:
@@ -576,6 +576,9 @@ class PlotImage(FigureCanvas):
 
             # always mask out negative values
             image_mask = image_data < 0.0
+
+            # mask out invalid values (NaN/Inf)
+            image_mask |= ~np.isfinite(image_data)
 
             if cv.clipTallyData:
                 image_mask |= image_data < data_min
@@ -586,6 +589,21 @@ class PlotImage(FigureCanvas):
 
             # mask out invalid values
             image_data = np.ma.masked_where(image_mask, image_data)
+
+            # auto-rescale based on displayed (imshow) data
+            if cv.tallyDataMinMaxType == 'visible' and not cv.tallyContours:
+                displayed = image_data.compressed()
+                if displayed.size:
+                    visible_min = float(displayed.min())
+                    visible_max = float(displayed.max())
+                    # Fall back to full data range if visible range is invalid for log scale
+                    if cv.tallyDataLogScale and visible_min <= 0:
+                        pass  # keep the full data range
+                    else:
+                        data_min = visible_min
+                        data_max = visible_max
+                        cv.tallyDataMin = data_min
+                        cv.tallyDataMax = data_max
 
             if extents is None:
                 extents = data_bounds

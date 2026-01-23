@@ -1037,10 +1037,29 @@ class MainWindow(QMainWindow):
         av = self.model.activeView
         av.clipTallyData = bool(state)
 
-    def toggleTallyDataUserMinMax(self, state, apply=False):
+    def setTallyMinMaxType(self, index, apply=False):
+        """Set the min/max type for tally data.
+
+        Parameters
+        ----------
+        index : int
+            Index of the selected option: 0='full', 1='visible', 2='custom'
+        apply : bool
+            Whether to apply changes immediately
+        """
         av = self.model.activeView
-        av.tallyDataUserMinMax = bool(state)
-        self.tallyDock.tallyColorForm.setMinMaxEnabled(bool(state))
+        type_map = {0: 'full', 1: 'visible', 2: 'custom'}
+        new_type = type_map.get(index, 'full')
+        av.tallyDataMinMaxType = new_type
+
+        # Immediately update visibility of min/max fields based on selection
+        show_custom = (new_type == 'custom')
+        form = self.tallyDock.tallyColorForm
+        form.minLabel.setVisible(show_custom)
+        form.minBox.setVisible(show_custom)
+        form.maxLabel.setVisible(show_custom)
+        form.maxBox.setVisible(show_custom)
+
         if apply:
             self.applyChanges()
 
