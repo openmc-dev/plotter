@@ -51,7 +51,7 @@ class PlotImage(FigureCanvas):
         self.tally_image = None
         self.image = None
 
-        self._data_colorbar_bg = None
+        self._property_colorbar_bg = None
         self._tally_colorbar_bg = None
         self._last_tally_indicator_value = None
         self._last_data_indicator_value = None
@@ -754,11 +754,11 @@ class PlotImage(FigureCanvas):
 
     def _cache_colorbar_backgrounds(self):
         """Cache colorbar backgrounds for fast indicator blitting."""
-        self._data_colorbar_bg = None
+        self._property_colorbar_bg = None
         self._tally_colorbar_bg = None
 
         if self.property_colorbar and self.data_indicator:
-            self._data_colorbar_bg = self.copy_from_bbox(
+            self._property_colorbar_bg = self.copy_from_bbox(
                 self.property_colorbar.ax.bbox)
 
         if self.tally_colorbar and self.tally_data_indicator:
@@ -774,7 +774,7 @@ class PlotImage(FigureCanvas):
             return False
 
         if colorbar is self.property_colorbar:
-            background = self._data_colorbar_bg
+            background = self._property_colorbar_bg
         else:
             background = self._tally_colorbar_bg
 
