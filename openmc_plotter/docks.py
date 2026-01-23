@@ -113,14 +113,6 @@ class TabbedDock(QDockWidget):
         self.containerWidget.setLayout(self.mainLayout)
         self.setWidget(self.containerWidget)
 
-    def updateGeometryPanel(self):
-        """Update geometry panel controls from current model state"""
-        self.geometryPanel.update()
-
-    def updateTallyPanel(self):
-        """Update tally panel controls (called when statepoint changes)"""
-        self.tallyPanel.update()
-
     def resizeEvent(self, event):
         self.main_window.resizeEvent(event)
 
