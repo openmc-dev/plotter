@@ -113,12 +113,12 @@ class TabbedDock(QDockWidget):
         self.containerWidget.setLayout(self.mainLayout)
         self.setWidget(self.containerWidget)
 
-    def updateDock(self):
-        """Update geometry panel"""
-        self.geometryPanel.updateDock()
+    def updateGeometryPanel(self):
+        """Update geometry panel controls from current model state"""
+        self.geometryPanel.update()
 
-    def update(self):
-        """Update tally panel"""
+    def updateTallyPanel(self):
+        """Update tally panel controls (called when statepoint changes)"""
         self.tallyPanel.update()
 
     def resizeEvent(self, event):
@@ -320,7 +320,7 @@ class GeometryPanel(PlotterPanel):
         self.resGroupBox = QGroupBox("Resolution")
         self.resGroupBox.setLayout(self.resLayout)
 
-    def updateDock(self):
+    def update(self):
         self.updateOrigin()
         self.updateWidth()
         self.updateHeight()

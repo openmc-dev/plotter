@@ -116,8 +116,8 @@ class MainWindow(QMainWindow):
 
         # Load Plot
         self.statusBar().showMessage('Generating Plot...')
-        self.dock.updateDock()
-        self.dock.update()
+        self.dock.updateGeometryPanel()
+        self.dock.updateTallyPanel()
         self.colorDialog.updateDialogValues()
         self.statusBar().showMessage('')
 
@@ -533,7 +533,7 @@ class MainWindow(QMainWindow):
                 self.model.activeView.outlinesCell = False
             if not hasattr(self.model.activeView, 'outlinesMat'):
                 self.model.activeView.outlinesMat = False
-            self.dock.updateDock()
+            self.dock.updateGeometryPanel()
             self.colorDialog.updateDialogValues()
             self.applyChanges()
             message = '{} loaded'.format(filename)
@@ -653,7 +653,7 @@ class MainWindow(QMainWindow):
         self.model.undo()
         self.resetModels()
         self.showCurrentView()
-        self.dock.updateDock()
+        self.dock.updateGeometryPanel()
         self.colorDialog.updateDialogValues()
 
         if not self.model.previousViews:
@@ -668,7 +668,7 @@ class MainWindow(QMainWindow):
         self.model.redo()
         self.resetModels()
         self.showCurrentView()
-        self.dock.updateDock()
+        self.dock.updateGeometryPanel()
         self.colorDialog.updateDialogValues()
 
         if not self.model.subsequentViews:
@@ -687,7 +687,7 @@ class MainWindow(QMainWindow):
             self.plotIm.generatePixmap()
             self.resetModels()
             self.showCurrentView()
-            self.dock.updateDock()
+            self.dock.updateGeometryPanel()
             self.colorDialog.updateDialogValues()
 
             self.model.subsequentViews = []
