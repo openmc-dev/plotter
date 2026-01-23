@@ -80,7 +80,7 @@ class MainWindow(QMainWindow):
         self.plotIm.frozen = True
         self.frame.setWidget(self.plotIm)
 
-        # Tabbed Dock (contains Geometry, Tallies, and Mesh Annotations)
+        # Tabbed Dock (contains Geometry, Tallies, and Meshes)
         self.dock = TabbedDock(self.model, self.font_metric, self)
         self.dock.setObjectName("Options Dock")
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.dock)

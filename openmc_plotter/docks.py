@@ -34,8 +34,8 @@ class PlotterPanel(QWidget):
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
 
-class MeshAnnotationPanel(PlotterPanel):
-    """Panel for mesh annotation options"""
+class MeshPanel(PlotterPanel):
+    """Panel for mesh options"""
 
     def __init__(self, model, font_metric, main_window, parent=None):
         super().__init__(model, font_metric, main_window, parent)
@@ -70,7 +70,7 @@ class MeshAnnotationPanel(PlotterPanel):
 
 class TabbedDock(QDockWidget):
     """
-    Dock widget containing tabbed panels for Geometry, Tallies, and Mesh Annotations
+    Dock widget containing tabbed panels for Geometry, Tallies, and Meshes
     """
 
     def __init__(self, model, font_metric, parent=None):
@@ -89,12 +89,12 @@ class TabbedDock(QDockWidget):
         # Create the three panels
         self.geometryPanel = GeometryPanel(model, font_metric, parent, self)
         self.tallyPanel = TallyPanel(model, font_metric, parent, self)
-        self.meshAnnotationPanel = MeshAnnotationPanel(model, font_metric, parent, self)
+        self.meshAnnotationPanel = MeshPanel(model, font_metric, parent, self)
 
         # Add panels as tabs
         self.tabWidget.addTab(self.geometryPanel, "Geometry")
         self.tabWidget.addTab(self.tallyPanel, "Tallies")
-        self.tabWidget.addTab(self.meshAnnotationPanel, "Mesh Annotations")
+        self.tabWidget.addTab(self.meshAnnotationPanel, "Meshes")
 
         # Create Apply Changes button
         self.applyButton = QPushButton("Apply Changes")
