@@ -22,7 +22,7 @@ except ImportError:
 
 from .plotmodel import PlotModel, DomainTableModel, hash_model
 from .plotgui import PlotImage, ColorDialog
-from .docks import DomainDock, TallyDock, MeshAnnotationDock
+from .docks import TabbedDock
 from .overlays import ShortcutsOverlay
 from .tools import ExportDataDialog, SourceSitesDialog
 
@@ -80,24 +80,17 @@ class MainWindow(QMainWindow):
         self.plotIm.frozen = True
         self.frame.setWidget(self.plotIm)
 
-        # Dock
-        self.dock = DomainDock(self.model, self.font_metric, self)
-        self.dock.setObjectName("Domain Options Dock")
+        # Tabbed Dock (contains Geometry, Tallies, and Meshes)
+        self.dock = TabbedDock(self.model, self.font_metric, self)
+        self.dock.setObjectName("Options Dock")
         self.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.dock)
 
-        # Tally Dock
-        self.tallyDock = TallyDock(self.model, self.font_metric, self)
-        self.tallyDock.update()
-        self.tallyDock.setObjectName("Tally Options Dock")
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.tallyDock)
+        # Create shortcuts for accessing panels
+        self.geometryPanel = self.dock.geometryPanel
+        self.tallyPanel = self.dock.tallyPanel
+        self.meshAnnotationPanel = self.dock.meshAnnotationPanel
 
-        # Mesh Annotation Dock
-        self.meshAnnotationDock = MeshAnnotationDock(self.model, self.font_metric, self)
-        self.meshAnnotationDock.update()
-        self.meshAnnotationDock.setObjectName("Mesh Annotation Dock")
-        self.addDockWidget(QtCore.Qt.RightDockWidgetArea, self.meshAnnotationDock)
-
-        # Color DialogtallyDock
+        # Color Dialog
         self.colorDialog = ColorDialog(self.model, self.font_metric, self)
         self.colorDialog.hide()
 
@@ -123,8 +116,8 @@ class MainWindow(QMainWindow):
 
         # Load Plot
         self.statusBar().showMessage('Generating Plot...')
-        self.dock.updateDock()
-        self.tallyDock.update()
+        self.geometryPanel.update()
+        self.tallyPanel.update()
         self.colorDialog.updateDialogValues()
         self.statusBar().showMessage('')
 
@@ -386,18 +379,6 @@ class MainWindow(QMainWindow):
         self.dockAction.setStatusTip('Toggle dock visibility')
         self.dockAction.triggered.connect(self.toggleDockView)
 
-        self.tallyDockAction = QAction('Tally &Dock', self)
-        self.tallyDockAction.setShortcut("Ctrl+T")
-        self.tallyDockAction.setToolTip('Toggle tally dock visibility')
-        self.tallyDockAction.setStatusTip('Toggle tally dock visibility')
-        self.tallyDockAction.triggered.connect(self.toggleTallyDockView)
-
-        self.meshAnnotationDockAction = QAction('Mesh &Annotation Dock', self)
-        self.meshAnnotationDockAction.setShortcut("Ctrl+E")
-        self.meshAnnotationDockAction.setToolTip('Toggle mesh annotation dock visibility')
-        self.meshAnnotationDockAction.setStatusTip('Toggle mesh annotation dock visibility')
-        self.meshAnnotationDockAction.triggered.connect(self.toggleMeshAnnotationDockView)
-
         self.zoomAction = QAction('&Zoom...', self)
         self.zoomAction.setShortcut('Alt+Shift+Z')
         self.zoomAction.setToolTip('Edit zoom factor')
@@ -406,8 +387,6 @@ class MainWindow(QMainWindow):
 
         self.viewMenu = self.mainMenu.addMenu('&View')
         self.viewMenu.addAction(self.dockAction)
-        self.viewMenu.addAction(self.tallyDockAction)
-        self.viewMenu.addAction(self.meshAnnotationDockAction)
         self.viewMenu.addSeparator()
         self.viewMenu.addAction(self.zoomAction)
         self.viewMenu.aboutToShow.connect(self.updateViewMenu)
@@ -554,7 +533,7 @@ class MainWindow(QMainWindow):
                 self.model.activeView.outlinesCell = False
             if not hasattr(self.model.activeView, 'outlinesMat'):
                 self.model.activeView.outlinesMat = False
-            self.dock.updateDock()
+            self.geometryPanel.update()
             self.colorDialog.updateDialogValues()
             self.applyChanges()
             message = '{} loaded'.format(filename)
@@ -595,7 +574,7 @@ class MainWindow(QMainWindow):
             finally:
                 self.statusBar().showMessage(message.format(filename), 5000)
             self.updateDataMenu()
-            self.tallyDock.update()
+            self.tallyPanel.update()
 
     def importProperties(self):
         filename, ext = QFileDialog.getOpenFileName(self, "Import properties",
@@ -629,8 +608,8 @@ class MainWindow(QMainWindow):
         msg = "Closed statepoint file {}".format(filename)
         self.statusBar().showMessage(msg)
         self.updateDataMenu()
-        self.tallyDock.selectTally()
-        self.tallyDock.update()
+        self.tallyPanel.selectTally()
+        self.tallyPanel.update()
         self.plotIm.updatePixmap()
 
     def updateDataMenu(self):
@@ -644,7 +623,7 @@ class MainWindow(QMainWindow):
 
 
     def updateMeshAnnotations(self):
-        self.model.activeView.mesh_annotations = self.meshAnnotationDock.get_checked_meshes()
+        self.model.activeView.mesh_annotations = self.meshAnnotationPanel.get_checked_meshes()
 
     def plotSourceSites(self):
         self.sourceSitesDialog.show()
@@ -656,7 +635,7 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage('Generating Plot...')
             QApplication.processEvents()
             if self.model.activeView.selectedTally is not None:
-                self.tallyDock.updateModel()
+                self.tallyPanel.updateModel()
             self.updateMeshAnnotations()
             self.model.storeCurrent()
             self.model.subsequentViews = []
@@ -674,7 +653,7 @@ class MainWindow(QMainWindow):
         self.model.undo()
         self.resetModels()
         self.showCurrentView()
-        self.dock.updateDock()
+        self.geometryPanel.update()
         self.colorDialog.updateDialogValues()
 
         if not self.model.previousViews:
@@ -689,7 +668,7 @@ class MainWindow(QMainWindow):
         self.model.redo()
         self.resetModels()
         self.showCurrentView()
-        self.dock.updateDock()
+        self.geometryPanel.update()
         self.colorDialog.updateDialogValues()
 
         if not self.model.subsequentViews:
@@ -708,7 +687,7 @@ class MainWindow(QMainWindow):
             self.plotIm.generatePixmap()
             self.resetModels()
             self.showCurrentView()
-            self.dock.updateDock()
+            self.geometryPanel.update()
             self.colorDialog.updateDialogValues()
 
             self.model.subsequentViews = []
@@ -716,13 +695,13 @@ class MainWindow(QMainWindow):
 
     def editBasis(self, basis, apply=False):
         self.model.activeView.basis = basis
-        self.dock.updateBasis()
+        self.geometryPanel.updateBasis()
         if apply:
             self.applyChanges()
 
     def editColorBy(self, domain_kind, apply=False):
         self.model.activeView.colorby = domain_kind
-        self.dock.updateColorBy()
+        self.geometryPanel.updateColorBy()
         self.colorDialog.updateColorBy()
         if apply:
             self.applyChanges()
@@ -732,7 +711,7 @@ class MainWindow(QMainWindow):
             self.model.activeView.level = -1
         else:
             self.model.activeView.level = int(level)
-        self.dock.updateUniverseLevel()
+        self.geometryPanel.updateUniverseLevel()
         self.colorDialog.updateUniverseLevel()
         if apply:
             self.applyChanges()
@@ -822,40 +801,16 @@ class MainWindow(QMainWindow):
         self.resizePixmap()
         self.showMainWindow()
 
-    def toggleTallyDockView(self):
-        if self.tallyDock.isVisible():
-            self.tallyDock.hide()
-            if not self.isMaximized() and not self.tallyDock.isFloating():
-                self.resize(self.width() - self.tallyDock.width(), self.height())
-        else:
-            self.tallyDock.setVisible(True)
-            if not self.isMaximized() and not self.tallyDock.isFloating():
-                self.resize(self.width() + self.tallyDock.width(), self.height())
-        self.resizePixmap()
-        self.showMainWindow()
-
-    def toggleMeshAnnotationDockView(self):
-        if self.meshAnnotationDock.isVisible():
-            self.meshAnnotationDock.hide()
-            if not self.isMaximized() and not self.meshAnnotationDock.isFloating():
-                self.resize(self.width() - self.meshAnnotationDock.width(), self.height())
-        else:
-            self.meshAnnotationDock.setVisible(True)
-            if not self.isMaximized() and not self.meshAnnotationDock.isFloating():
-                self.resize(self.width() + self.meshAnnotationDock.width(), self.height())
-        self.resizePixmap()
-        self.showMainWindow()
-
     def editZoomAct(self):
         percent, ok = QInputDialog.getInt(self, "Edit Zoom", "Zoom Percent:",
-                                          self.dock.zoomBox.value(), 25, 2000)
+                                          self.geometryPanel.zoomBox.value(), 25, 2000)
         if ok:
-            self.dock.zoomBox.setValue(percent)
+            self.geometryPanel.zoomBox.setValue(percent)
 
     def editZoom(self, value):
         self.zoom = value
         self.resizePixmap()
-        self.dock.zoomBox.setValue(value)
+        self.geometryPanel.zoomBox.setValue(value)
 
     def showMainWindow(self):
         self.raise_()
@@ -884,14 +839,14 @@ class MainWindow(QMainWindow):
 
     def toggleOutlinesCell(self, value, apply=False):
         self.model.activeView.outlinesCell = bool(value)
-        self.dock.updateOutlines()
+        self.geometryPanel.updateOutlines()
 
         if apply:
             self.applyChanges()
 
     def toggleOutlinesMat(self, value, apply=False):
         self.model.activeView.outlinesMat = bool(value)
-        self.dock.updateOutlines()
+        self.geometryPanel.updateOutlines()
 
         if apply:
             self.applyChanges()
@@ -899,26 +854,26 @@ class MainWindow(QMainWindow):
     def editWidth(self, value):
         self.model.activeView.width = value
         self.onRatioChange()
-        self.dock.updateWidth()
+        self.geometryPanel.updateWidth()
 
     def editHeight(self, value):
         self.model.activeView.height = value
         self.onRatioChange()
-        self.dock.updateHeight()
+        self.geometryPanel.updateHeight()
 
     def toggleAspectLock(self, state):
         self.model.activeView.aspectLock = bool(state)
         self.onRatioChange()
-        self.dock.updateAspectLock()
+        self.geometryPanel.updateAspectLock()
 
     def editVRes(self, value):
         self.model.activeView.v_res = value
-        self.dock.updateVRes()
+        self.geometryPanel.updateVRes()
 
     def editHRes(self, value):
         self.model.activeView.h_res = value
         self.onRatioChange()
-        self.dock.updateHRes()
+        self.geometryPanel.updateHRes()
 
     # Color dialog methods:
 
@@ -987,7 +942,7 @@ class MainWindow(QMainWindow):
             av.selectedTally = None
         else:
             av.selectedTally = int(event.split()[1])
-        self.tallyDock.selectTally(event)
+        self.tallyPanel.selectTally(event)
 
     def editTallyValue(self, event):
         av = self.model.activeView
@@ -1054,7 +1009,7 @@ class MainWindow(QMainWindow):
 
         # Immediately update visibility of min/max fields based on selection
         show_custom = (new_type == 'custom')
-        form = self.tallyDock.tallyColorForm
+        form = self.tallyPanel.tallyColorForm
         form.minLabel.setVisible(show_custom)
         form.minBox.setVisible(show_custom)
         form.maxLabel.setVisible(show_custom)
@@ -1086,7 +1041,7 @@ class MainWindow(QMainWindow):
         av.tallyDataReverseCmap = bool(state)
 
     def updateTallyMinMax(self):
-        self.tallyDock.updateMinMax()
+        self.tallyPanel.updateMinMax()
 
     # Plot image methods
     def editPlotOrigin(self, xOr, yOr, zOr=None, apply=False):
@@ -1099,13 +1054,13 @@ class MainWindow(QMainWindow):
             origin[self.zBasis] = self.model.activeView.origin[self.zBasis]
             self.model.activeView.origin = origin
 
-        self.dock.updateOrigin()
+        self.geometryPanel.updateOrigin()
 
         if apply:
             self.applyChanges()
 
     def revertDockControls(self):
-        self.dock.revertToCurrent()
+        self.geometryPanel.revertToCurrent()
 
     def editDomainColor(self, kind, id):
         if kind == 'Cell':
@@ -1211,7 +1166,7 @@ class MainWindow(QMainWindow):
         if av.aspectLock:
             ratio = av.width / max(av.height, .001)
             av.v_res = int(av.h_res / ratio)
-            self.dock.updateVRes()
+            self.geometryPanel.updateVRes()
 
     def showCoords(self, xPlotPos, yPlotPos):
         cv = self.model.currentView

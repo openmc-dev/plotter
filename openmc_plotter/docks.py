@@ -7,7 +7,8 @@ from PySide6.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QGroupBox, QFormLayout, QLabel, QLineEdit,
                                QComboBox, QSpinBox, QDoubleSpinBox, QSizePolicy,
                                QCheckBox, QDockWidget, QScrollArea, QListWidget,
-                               QListWidgetItem, QTreeWidget, QTreeWidgetItem)
+                               QListWidgetItem, QTreeWidget, QTreeWidgetItem,
+                               QTabWidget, QSplitter)
 import matplotlib.pyplot as plt
 import numpy as np
 import openmc
@@ -18,31 +19,34 @@ from .plotmodel import (_SCORE_UNITS, _TALLY_VALUES,
                         _REACTION_UNITS, _SPATIAL_FILTERS)
 
 
-class PlotterDock(QDockWidget):
+class PlotterPanel(QWidget):
     """
-    Dock widget with common settings for the plotting application
+    Base panel widget with common settings for the plotting application
     """
 
-    def __init__(self, model, font_metric, parent=None):
+    def __init__(self, model, font_metric, main_window, parent=None):
         super().__init__(parent)
 
         self.model = model
         self.font_metric = font_metric
-        self.main_window = parent
+        self.main_window = main_window
 
         self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
 
 
-class MeshAnnotationDock(PlotterDock):
-    """Dock for mesh annotation options"""
+class MeshPanel(PlotterPanel):
+    """Panel for mesh options"""
 
-    def __init__(self, model, font_metric, parent=None):
-        super().__init__(model, font_metric, parent)
+    def __init__(self, model, font_metric, main_window, parent=None):
+        super().__init__(model, font_metric, main_window, parent)
 
         self.treeLayout = QVBoxLayout()
         self.meshTree = QTreeWidget()
+        self.meshTree.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.meshTree.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.treeExpander = Expander("Meshes:", layout=self.treeLayout)
         self.treeExpander.expand()  # start with meshes expanded
+        self.headerLabel = QLabel("Mesh Annotations")
 
         self.meshTree.setColumnCount(1)
 
@@ -56,21 +60,19 @@ class MeshAnnotationDock(PlotterDock):
 
         self.meshTree.setHeaderHidden(True)
 
-        # Create submit button
-        self.applyButton = QPushButton("Apply Changes")
-        # Mac bug fix
-        self.applyButton.setMinimumHeight(self.font_metric.height() * 1.6)
-        self.applyButton.clicked.connect(self.main_window.applyChanges)
-
-        label = QLabel("Mesh Annotations")
-        self.treeLayout.addWidget(label)
         self.treeLayout.addWidget(self.meshTree)
-        self.treeLayout.addWidget(HorizontalLine())
-        self.treeLayout.addWidget(self.applyButton)
 
-        self.optionsWidget = QWidget()
-        self.optionsWidget.setLayout(self.treeLayout)
-        self.setWidget(self.optionsWidget)
+        self.panelLayout = QVBoxLayout()
+        self.panelLayout.addWidget(self.headerLabel)
+
+        self.treeSplitter = QSplitter(QtCore.Qt.Vertical)
+        self.treeSplitter.setChildrenCollapsible(False)
+        self.treeSplitter.addWidget(self.meshTree)
+        self.treeSplitter.addWidget(QWidget())
+        self.treeSplitter.setStretchFactor(0, 1)
+        self.treeSplitter.setStretchFactor(1, 2)
+        self.panelLayout.addWidget(self.treeSplitter)
+        self.setLayout(self.panelLayout)
 
     def get_checked_meshes(self):
         return [id for id, item in self.mesh_items if item.checkState(0) == QtCore.Qt.Checked]
@@ -78,32 +80,83 @@ class MeshAnnotationDock(PlotterDock):
     def update(self):
         pass
 
+
+class TabbedDock(QDockWidget):
+    """
+    Dock widget containing tabbed panels for Geometry, Tallies, and Meshes
+    """
+
+    def __init__(self, model, font_metric, parent=None):
+        super().__init__(parent)
+
+        self.model = model
+        self.font_metric = font_metric
+        self.main_window = parent
+
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+        self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea)
+
+        # Create the tab widget
+        self.tabWidget = QTabWidget()
+
+        # Create the three panels
+        self.geometryPanel = GeometryPanel(model, font_metric, parent, self)
+        self.tallyPanel = TallyPanel(model, font_metric, parent, self)
+        self.meshAnnotationPanel = MeshPanel(model, font_metric, parent, self)
+
+        # Wrap panels in scroll areas
+        geometryScroll = QScrollArea()
+        geometryScroll.setWidget(self.geometryPanel)
+        geometryScroll.setWidgetResizable(True)
+
+        tallyScroll = QScrollArea()
+        tallyScroll.setWidget(self.tallyPanel)
+        tallyScroll.setWidgetResizable(True)
+
+        meshScroll = QScrollArea()
+        meshScroll.setWidget(self.meshAnnotationPanel)
+        meshScroll.setWidgetResizable(True)
+
+        # Add panels as tabs
+        self.tabWidget.addTab(geometryScroll, "Geometry")
+        self.tabWidget.addTab(tallyScroll, "Tallies")
+        self.tabWidget.addTab(meshScroll, "Meshes")
+
+        # Create Apply Changes button
+        self.applyButton = QPushButton("Apply Changes")
+        self.applyButton.setMinimumHeight(self.font_metric.height() * 1.6)
+        self.applyButton.setStyleSheet("QPushButton { background-color: #4CAF50; color: white; }")
+        self.applyButton.clicked.connect(self.main_window.applyChanges)
+
+        # Main layout with tabs and apply button
+        self.mainLayout = QVBoxLayout()
+        self.mainLayout.addWidget(self.tabWidget)
+        self.mainLayout.addWidget(HorizontalLine())
+        self.mainLayout.addWidget(self.applyButton)
+
+        # Create container widget
+        self.containerWidget = QWidget()
+        self.containerWidget.setLayout(self.mainLayout)
+        self.setWidget(self.containerWidget)
+
     def resizeEvent(self, event):
         self.main_window.resizeEvent(event)
 
     hideEvent = showEvent = moveEvent = resizeEvent
 
 
-class DomainDock(PlotterDock):
+class GeometryPanel(PlotterPanel):
     """
-    Domain options dock
+    Geometry options panel
     """
 
-    def __init__(self, model, font_metric, parent=None):
-        super().__init__(model, font_metric, parent)
-
-        self.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea)
+    def __init__(self, model, font_metric, main_window, parent=None):
+        super().__init__(model, font_metric, main_window, parent)
 
         # Create Controls
         self._createOriginBox()
         self._createOptionsBox()
         self._createResolutionBox()
-
-        # Create submit button
-        self.applyButton = QPushButton("Apply Changes")
-        # Mac bug fix
-        self.applyButton.setMinimumHeight(self.font_metric.height() * 1.6)
-        self.applyButton.clicked.connect(self.main_window.applyChanges)
 
         # Create Zoom box
         self.zoomBox = QSpinBox()
@@ -120,22 +173,15 @@ class DomainDock(PlotterDock):
         self.zoomWidget.setLayout(self.zoomLayout)
 
         # Create Layout
-        self.dockLayout = QVBoxLayout()
-        self.dockLayout.addWidget(QLabel("Geometry/Properties"))
-        self.dockLayout.addWidget(HorizontalLine())
-        self.dockLayout.addWidget(self.originGroupBox)
-        self.dockLayout.addWidget(self.optionsGroupBox)
-        self.dockLayout.addWidget(self.resGroupBox)
-        self.dockLayout.addWidget(HorizontalLine())
-        self.dockLayout.addWidget(self.zoomWidget)
-        self.dockLayout.addWidget(HorizontalLine())
-        self.dockLayout.addStretch()
-        self.dockLayout.addWidget(self.applyButton)
-        self.dockLayout.addWidget(HorizontalLine())
+        self.panelLayout = QVBoxLayout()
+        self.panelLayout.addWidget(self.originGroupBox)
+        self.panelLayout.addWidget(self.optionsGroupBox)
+        self.panelLayout.addWidget(self.resGroupBox)
+        self.panelLayout.addWidget(HorizontalLine())
+        self.panelLayout.addWidget(self.zoomWidget)
+        self.panelLayout.addStretch()
 
-        self.optionsWidget = QWidget()
-        self.optionsWidget.setLayout(self.dockLayout)
-        self.setWidget(self.optionsWidget)
+        self.setLayout(self.panelLayout)
 
     def _createOriginBox(self):
 
@@ -292,7 +338,7 @@ class DomainDock(PlotterDock):
         self.resGroupBox = QGroupBox("Resolution")
         self.resGroupBox.setLayout(self.resLayout)
 
-    def updateDock(self):
+    def update(self):
         self.updateOrigin()
         self.updateWidth()
         self.updateHeight()
@@ -362,20 +408,12 @@ class DomainDock(PlotterDock):
         self.widthBox.setValue(cv.width)
         self.heightBox.setValue(cv.height)
 
-    def resizeEvent(self, event):
-        self.main_window.resizeEvent(event)
+class TallyPanel(PlotterPanel):
 
-    hideEvent = showEvent = moveEvent = resizeEvent
+    def __init__(self, model, font_metric, main_window, parent=None):
+        super().__init__(model, font_metric, main_window, parent)
 
-
-class TallyDock(PlotterDock):
-
-    def __init__(self, model, font_metric, parent=None):
-        super().__init__(model, font_metric, parent)
-
-        self.setAllowedAreas(QtCore.Qt.RightDockWidgetArea)
-
-        # Dock maps for tally information
+        # Panel maps for tally information
         self.tally_map = {}
         self.filter_map = {}
         self.score_map = {}
@@ -395,11 +433,6 @@ class TallyDock(PlotterDock):
         self.tallyGroupBox = QGroupBox('Selected Tally')
         self.tallyGroupBox.setLayout(self.tallySelectorLayout)
 
-        # Create submit button
-        self.applyButton = QPushButton("Apply Changes")
-        self.applyButton.setMinimumHeight(self.font_metric.height() * 1.6)
-        self.applyButton.clicked.connect(self.main_window.applyChanges)
-
         # Color options section
         self.tallyColorForm = ColorForm(self.model, self.main_window, 'tally')
         self.scoresGroupBox = Expander(title="Scores:")
@@ -408,23 +441,13 @@ class TallyDock(PlotterDock):
         self.nuclidesListWidget = QListWidget()
 
         # Main layout
-        self.dockLayout = QVBoxLayout()
-        self.dockLayout.addWidget(QLabel("Tallies"))
-        self.dockLayout.addWidget(HorizontalLine())
-        self.dockLayout.addWidget(self.tallyGroupBox)
-        self.dockLayout.addStretch()
-        self.dockLayout.addWidget(HorizontalLine())
-        self.dockLayout.addWidget(self.tallyColorForm)
-        self.dockLayout.addWidget(HorizontalLine())
-        self.dockLayout.addWidget(self.applyButton)
+        self.panelLayout = QVBoxLayout()
+        self.panelLayout.addWidget(self.tallyGroupBox)
+        self.panelLayout.addStretch()
+        self.panelLayout.addWidget(HorizontalLine())
+        self.panelLayout.addWidget(self.tallyColorForm)
 
-        # Create widget for dock and apply main layout
-        self.scroll = QScrollArea()
-        self.scroll.setWidgetResizable(True)
-        self.widget = QWidget()
-        self.widget.setLayout(self.dockLayout)
-        self.scroll.setWidget(self.widget)
-        self.setWidget(self.scroll)
+        self.setLayout(self.panelLayout)
 
     def _createFilterTree(self, spatial_filters):
         av = self.model.activeView
