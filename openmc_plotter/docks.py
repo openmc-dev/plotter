@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QComboBox, QSpinBox, QDoubleSpinBox, QSizePolicy,
                                QCheckBox, QDockWidget, QScrollArea, QListWidget,
                                QListWidgetItem, QTreeWidget, QTreeWidgetItem,
-                               QTabWidget)
+                               QTabWidget, QSplitter)
 import matplotlib.pyplot as plt
 import numpy as np
 import openmc
@@ -42,8 +42,14 @@ class MeshPanel(PlotterPanel):
 
         self.treeLayout = QVBoxLayout()
         self.meshTree = QTreeWidget()
+        self.meshTree.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.meshTree.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.treeExpander = Expander("Meshes:", layout=self.treeLayout)
         self.treeExpander.expand()  # start with meshes expanded
+        self.headerLabel = QLabel("Mesh Annotations")
+        header_font = self.headerLabel.font()
+        header_font.setBold(True)
+        self.headerLabel.setFont(header_font)
 
         self.meshTree.setColumnCount(1)
 
@@ -59,7 +65,17 @@ class MeshPanel(PlotterPanel):
 
         self.treeLayout.addWidget(self.meshTree)
 
-        self.setLayout(self.treeLayout)
+        self.panelLayout = QVBoxLayout()
+        self.panelLayout.addWidget(self.headerLabel)
+
+        self.treeSplitter = QSplitter(QtCore.Qt.Vertical)
+        self.treeSplitter.setChildrenCollapsible(False)
+        self.treeSplitter.addWidget(self.meshTree)
+        self.treeSplitter.addWidget(QWidget())
+        self.treeSplitter.setStretchFactor(0, 1)
+        self.treeSplitter.setStretchFactor(1, 2)
+        self.panelLayout.addWidget(self.treeSplitter)
+        self.setLayout(self.panelLayout)
 
     def get_checked_meshes(self):
         return [id for id, item in self.mesh_items if item.checkState(0) == QtCore.Qt.Checked]
