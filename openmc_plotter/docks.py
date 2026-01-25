@@ -47,9 +47,6 @@ class MeshPanel(PlotterPanel):
         self.treeExpander = Expander("Meshes:", layout=self.treeLayout)
         self.treeExpander.expand()  # start with meshes expanded
         self.headerLabel = QLabel("Mesh Annotations")
-        header_font = self.headerLabel.font()
-        header_font.setBold(True)
-        self.headerLabel.setFont(header_font)
 
         self.meshTree.setColumnCount(1)
 
