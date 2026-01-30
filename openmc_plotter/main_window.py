@@ -9,7 +9,7 @@ from PySide6.QtGui import QKeyEvent, QAction
 from PySide6.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMessageBox, QFileDialog,
                                QColorDialog, QInputDialog, QWidget,
-                               QGestureEvent)
+                               QGestureEvent, QProgressBar)
 
 import openmc
 import openmc.lib
@@ -56,6 +56,8 @@ class MainWindow(QMainWindow):
         self.model_path = Path(model_path)
         self.threads = threads
         self.default_res = resolution
+        self.plot_manager = None
+        self.busyIndicator = None
 
     def loadGui(self, use_settings_pkl=True):
 
@@ -113,16 +115,27 @@ class MainWindow(QMainWindow):
         self.coord_label = QLabel()
         self.statusBar().addPermanentWidget(self.coord_label)
         self.coord_label.hide()
+        self.busyIndicator = QProgressBar()
+        self.busyIndicator.setRange(0, 0)
+        self.busyIndicator.setMaximumWidth(self.font_metric.averageCharWidth() * 12)
+        self.busyIndicator.setMaximumHeight(self.font_metric.height())
+        self.busyIndicator.hide()
+        self.statusBar().addPermanentWidget(self.busyIndicator)
+
+        self.plot_manager = self.model.plot_manager
+        self.plot_manager.plot_started.connect(self._on_plot_started)
+        self.plot_manager.plot_queued.connect(self._on_plot_queued)
+        self.plot_manager.plot_finished.connect(self._on_plot_finished)
+        self.plot_manager.plot_error.connect(self._on_plot_error)
+        self.plot_manager.plot_idle.connect(self._on_plot_idle)
 
         # Load Plot
         self.statusBar().showMessage('Generating Plot...')
         self.geometryPanel.update()
         self.tallyPanel.update()
         self.colorDialog.updateDialogValues()
-        self.statusBar().showMessage('')
 
-        # Timer allows GUI to render before plot finishes loading
-        QtCore.QTimer.singleShot(0, self.showCurrentView)
+        QtCore.QTimer.singleShot(0, self.requestInitialPlot)
 
         self.plotIm.frozen = False
 
@@ -466,11 +479,14 @@ class MainWindow(QMainWindow):
         cv = self.model.currentView
         # load the view from file
         self.loadViewFile(view_file)
+        self.waitForPlotIdle()
         self.plotIm.saveImage(view_file.replace('.pltvw', ''))
 
     # Menu and shared methods
     def loadModel(self, reload=False, use_settings_pkl=True):
         if reload:
+            if hasattr(self, "plot_manager"):
+                self.plot_manager.wait_for_idle()
             self.resetModels()
         else:
             self.model = PlotModel(use_settings_pkl, self.model_path, self.default_res)
@@ -632,66 +648,48 @@ class MainWindow(QMainWindow):
 
     def applyChanges(self):
         if self.model.activeView != self.model.currentView:
-            self.statusBar().showMessage('Generating Plot...')
-            QApplication.processEvents()
             if self.model.activeView.selectedTally is not None:
                 self.tallyPanel.updateModel()
             self.updateMeshAnnotations()
             self.model.storeCurrent()
             self.model.subsequentViews = []
-            self.plotIm.generatePixmap()
-            self.resetModels()
-            self.showCurrentView()
-            self.statusBar().showMessage('')
+            self.requestPlotUpdate()
         else:
             self.statusBar().showMessage('No changes to apply.', 3000)
 
     def undo(self):
-        self.statusBar().showMessage('Generating Plot...')
-        QApplication.processEvents()
-
+        if not self.model.previousViews:
+            return
         self.model.undo()
-        self.resetModels()
-        self.showCurrentView()
         self.geometryPanel.update()
         self.colorDialog.updateDialogValues()
+        self.requestPlotUpdate()
 
         if not self.model.previousViews:
             self.undoAction.setDisabled(True)
         self.redoAction.setDisabled(False)
-        self.statusBar().showMessage('')
 
     def redo(self):
-        self.statusBar().showMessage('Generating Plot...')
-        QApplication.processEvents()
-
+        if not self.model.subsequentViews:
+            return
         self.model.redo()
-        self.resetModels()
-        self.showCurrentView()
         self.geometryPanel.update()
         self.colorDialog.updateDialogValues()
+        self.requestPlotUpdate()
 
         if not self.model.subsequentViews:
             self.redoAction.setDisabled(True)
         self.undoAction.setDisabled(False)
-        self.statusBar().showMessage('')
 
     def restoreDefault(self):
         if self.model.currentView != self.model.defaultView:
-
-            self.statusBar().showMessage('Generating Plot...')
-            QApplication.processEvents()
-
             self.model.storeCurrent()
             self.model.activeView.adopt_plotbase(self.model.defaultView)
-            self.plotIm.generatePixmap()
-            self.resetModels()
-            self.showCurrentView()
             self.geometryPanel.update()
             self.colorDialog.updateDialogValues()
+            self.requestPlotUpdate()
 
             self.model.subsequentViews = []
-            self.statusBar().showMessage('')
 
     def editBasis(self, basis, apply=False):
         self.model.activeView.basis = basis
@@ -1199,6 +1197,9 @@ class MainWindow(QMainWindow):
             self.shortcutOverlay.resize(self.width(), self.height())
 
     def closeEvent(self, event):
+        if hasattr(self, "plot_manager"):
+            self.plot_manager.wait_for_idle()
+            self.plot_manager.shutdown()
         settings = QtCore.QSettings()
         settings.setValue("mainWindow/Size", self.size())
         settings.setValue("mainWindow/Position", self.pos())
@@ -1212,6 +1213,65 @@ class MainWindow(QMainWindow):
         openmc.lib.finalize()
 
         self.saveSettings()
+
+    def requestInitialPlot(self):
+        self.requestPlotUpdate()
+
+    def requestPlotUpdate(self, view=None):
+        if self.plot_manager is None:
+            if hasattr(self, "model"):
+                self.plot_manager = self.model.plot_manager
+                self.plot_manager.plot_started.connect(self._on_plot_started)
+                self.plot_manager.plot_queued.connect(self._on_plot_queued)
+                self.plot_manager.plot_finished.connect(self._on_plot_finished)
+                self.plot_manager.plot_error.connect(self._on_plot_error)
+                self.plot_manager.plot_idle.connect(self._on_plot_idle)
+            else:
+                return None
+        if view is None:
+            view = self.model.activeView
+        view_snapshot = copy.deepcopy(view)
+        view_params = self.model.view_params_payload(view_snapshot)
+        request_id, started = self.plot_manager.enqueue(view_snapshot, view_params)
+        if started:
+            self.statusBar().showMessage('Generating Plot...')
+        else:
+            self.statusBar().showMessage('Generating Plot... (update queued)')
+        return request_id
+
+    def waitForPlotIdle(self, timeout_ms=None):
+        if hasattr(self, "plot_manager"):
+            return self.plot_manager.wait_for_idle(timeout_ms)
+        return True
+
+    def _on_plot_started(self, request_id):
+        if self.busyIndicator is not None:
+            self.busyIndicator.show()
+        self.statusBar().showMessage('Generating Plot...')
+
+    def _on_plot_queued(self, request_id):
+        self.statusBar().showMessage('Generating Plot... (update queued)')
+
+    def _on_plot_finished(self, request_id, view_snapshot, ids_map, properties):
+        if request_id != self.plot_manager.latest_request_id:
+            return
+        self.model.makePlot(view_snapshot, ids_map, properties)
+        self.resetModels()
+        self.showCurrentView()
+
+    def _on_plot_error(self, request_id, error_msg):
+        if request_id != self.plot_manager.latest_request_id:
+            return
+        msg_box = QMessageBox()
+        msg_box.setText(f"Failed to generate plot:\n\n{error_msg}")
+        msg_box.setIcon(QMessageBox.Warning)
+        msg_box.setStandardButtons(QMessageBox.Ok)
+        msg_box.exec()
+
+    def _on_plot_idle(self):
+        if self.busyIndicator is not None:
+            self.busyIndicator.hide()
+        self.statusBar().showMessage('')
 
     def saveSettings(self):
         if self.model.statepoint:

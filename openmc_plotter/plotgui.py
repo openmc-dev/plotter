@@ -79,6 +79,8 @@ class PlotImage(FigureCanvas):
                                                   QtCore.QSize()))
 
     def getPlotCoords(self, pos):
+        if not hasattr(self, "ax"):
+            return (0.0, 0.0)
         x, y = self.mouseEventCoords(pos)
 
         # get the normalized axis coordinates from the event display units
@@ -238,6 +240,8 @@ class PlotImage(FigureCanvas):
 
     def mouseMoveEvent(self, event):
         cv = self.model.currentView
+        if not hasattr(self, "ax") or self.model.image is None:
+            return
         # Show Cursor position relative to plot in status bar
         xPlotPos, yPlotPos = self.getPlotCoords(event.pos())
 
@@ -479,9 +483,7 @@ class PlotImage(FigureCanvas):
         if self.frozen:
             return
 
-        self.model.generatePlot()
-        if update:
-            self.updatePixmap()
+        self.main_window.requestPlotUpdate()
 
     def updatePixmap(self):
 
@@ -500,9 +502,8 @@ class PlotImage(FigureCanvas):
                        cv.origin[self.main_window.yBasis] - cv.height/2.,
                        cv.origin[self.main_window.yBasis] + cv.height/2.]
 
-        # make sure we have a domain image to load
-        if not hasattr(self.model, 'image'):
-            self.model.generatePlot()
+        if not hasattr(self.model, 'image') or self.model.image is None:
+            return
 
         ### DRAW DOMAIN IMAGE ###
 

@@ -3,14 +3,15 @@ from ast import literal_eval
 from collections import defaultdict
 import copy
 from ctypes import c_int32, c_char_p
+from dataclasses import dataclass
 import hashlib
 import itertools
 import pickle
-import threading
 from typing import Literal, Tuple, Optional, Dict
 
 from PySide6.QtWidgets import QItemDelegate, QColorDialog, QLineEdit, QMessageBox
-from PySide6.QtCore import QAbstractTableModel, QModelIndex, Qt, QSize, QEvent
+from PySide6.QtCore import (QAbstractTableModel, QModelIndex, Qt, QSize, QEvent,
+                            QObject, Signal, Slot, QThread, QEventLoop, QTimer)
 from PySide6.QtGui import QColor
 import openmc
 import openmc.lib
@@ -101,6 +102,147 @@ def hash_model(model_path):
         geom_xml_hash = hash_file(model_path / 'geometry.xml')
     return mat_xml_hash, geom_xml_hash
 
+
+@dataclass(frozen=True)
+class PlotRequest:
+    request_id: int
+    view_snapshot: "PlotView"
+    view_params: Dict[str, object]
+
+
+@dataclass(frozen=True)
+class PlotWorkItem:
+    request_id: int
+    view_params: Dict[str, object]
+
+
+class PlotWorker(QObject):
+    finished = Signal(int, object, object)
+    error = Signal(int, str)
+
+    @Slot(object)
+    def generate_maps(self, work_item: PlotWorkItem):
+        try:
+            params = work_item.view_params
+            view_param = ViewParam(params["origin"], params["width"],
+                                   params["height"], params["h_res"])
+            view_param.h_res = params["h_res"]
+            view_param.v_res = params["v_res"]
+            view_param.basis = params["basis"]
+            view_param.level = params["level"]
+            view_param.color_overlaps = params["color_overlaps"]
+            ids_map = openmc.lib.id_map(view_param)
+            properties = openmc.lib.property_map(view_param)
+            self.finished.emit(work_item.request_id, ids_map, properties)
+        except Exception as exc:
+            self.error.emit(work_item.request_id, str(exc))
+
+
+class PlotManager(QObject):
+    plot_started = Signal(int)
+    plot_queued = Signal(int)
+    plot_finished = Signal(int, object, object, object)
+    plot_error = Signal(int, str)
+    plot_idle = Signal()
+    work_requested = Signal(object)
+
+    def __init__(self):
+        super().__init__()
+        self._thread = QThread()
+        self._worker = PlotWorker()
+        self._worker.moveToThread(self._thread)
+        self._thread.finished.connect(self._worker.deleteLater)
+        self.work_requested.connect(self._worker.generate_maps)
+        self._worker.finished.connect(self._on_worker_finished)
+        self._worker.error.connect(self._on_worker_error)
+        self._thread.start()
+
+        self._pending_request = None
+        self._in_flight_request = None
+        self._latest_request_id = 0
+        self._next_request_id = 1
+
+    @property
+    def latest_request_id(self):
+        return self._latest_request_id
+
+    @property
+    def is_busy(self):
+        return self._in_flight_request is not None
+
+    @property
+    def has_pending(self):
+        return self._pending_request is not None
+
+    def enqueue(self, view_snapshot, view_params):
+        request = PlotRequest(self._next_request_id, view_snapshot, view_params)
+        self._next_request_id += 1
+        self._latest_request_id = request.request_id
+        if self._in_flight_request is None:
+            self._pending_request = request
+            self._start_next()
+            return request.request_id, True
+        self._pending_request = request
+        self.plot_queued.emit(request.request_id)
+        return request.request_id, False
+
+    def wait_for_idle(self, timeout_ms: Optional[int] = None):
+        if not self.is_busy and not self.has_pending:
+            return True
+        loop = QEventLoop()
+        timer = None
+        if timeout_ms is not None:
+            timer = QTimer()
+            timer.setSingleShot(True)
+            timer.timeout.connect(loop.quit)
+        def on_idle():
+            loop.quit()
+        self.plot_idle.connect(on_idle)
+        if timer is not None:
+            timer.start(timeout_ms)
+        loop.exec()
+        self.plot_idle.disconnect(on_idle)
+        if timer is not None:
+            timer.stop()
+        return not self.is_busy and not self.has_pending
+
+    def shutdown(self):
+        self._pending_request = None
+        self._in_flight_request = None
+        if self._thread.isRunning():
+            self._thread.quit()
+            self._thread.wait()
+
+    def _start_next(self):
+        if self._pending_request is None:
+            return
+        self._in_flight_request = self._pending_request
+        self._pending_request = None
+        self.plot_started.emit(self._in_flight_request.request_id)
+        work_item = PlotWorkItem(self._in_flight_request.request_id,
+                                 self._in_flight_request.view_params)
+        self.work_requested.emit(work_item)
+
+    @Slot(int, object, object)
+    def _on_worker_finished(self, request_id, ids_map, properties):
+        request = self._in_flight_request
+        self._in_flight_request = None
+        if request is not None:
+            self.plot_finished.emit(request_id, request.view_snapshot,
+                                    ids_map, properties)
+        if self._pending_request is not None:
+            self._start_next()
+        else:
+            self.plot_idle.emit()
+
+    @Slot(int, str)
+    def _on_worker_error(self, request_id, message):
+        self._in_flight_request = None
+        self.plot_error.emit(request_id, message)
+        if self._pending_request is not None:
+            self._start_next()
+        else:
+            self.plot_idle.emit()
 
 class PlotModel:
     """Geometry and plot settings for OpenMC Plot Explorer model
@@ -252,6 +394,7 @@ class PlotModel:
             self.currentView = copy.deepcopy(self.defaultView)
 
         self.activeView = copy.deepcopy(self.currentView)
+        self.plot_manager = PlotManager()
 
     def openStatePoint(self, filename):
         self.statepoint = StatePointModel(filename, open_file=True)
@@ -318,29 +461,45 @@ class PlotModel:
         self.activeView.cells = self.defaultView.cells
         self.activeView.materials = self.defaultView.materials
 
-    def generatePlot(self):
-        """ Spawn thread from which to generate new plot image """
-        t = threading.Thread(target=self.makePlot)
-        t.start()
-        t.join()
+    def view_params_payload(self, view: "PlotView"):
+        vp = view.view_params
+        return {
+            "origin": tuple(vp.origin),
+            "width": float(vp.width),
+            "height": float(vp.height),
+            "h_res": int(vp.h_res),
+            "v_res": int(vp.v_res),
+            "basis": str(vp.basis),
+            "level": int(vp.level),
+            "color_overlaps": bool(vp.color_overlaps),
+        }
 
-    def makePlot(self):
+    def generatePlot(self):
+        self.makePlot()
+
+    def makePlot(self, view: Optional["PlotView"] = None,
+                 ids_map=None, properties=None):
         """ Generate new plot image from active view settings
 
         Creates corresponding .xml files from user-chosen settings.
         Runs OpenMC in plot mode to generate new plot image.
         """
+        if view is None:
+            view = self.activeView
         # update/call maps under 2 circumstances
         #   1. this is the intial plot (ids_map/properties are None)
         #   2. The active (desired) view differs from the current view parameters
-        if (self.currentView.view_params != self.activeView.view_params) or \
-            (self.ids_map is None) or (self.properties is None):
-            # get ids from the active (desired) view
-            self.ids_map = openmc.lib.id_map(self.activeView.view_params)
-            self.properties = openmc.lib.property_map(self.activeView.view_params)
+        if ids_map is None or properties is None:
+            if (self.currentView.view_params != view.view_params) or \
+                (self.ids_map is None) or (self.properties is None):
+                self.ids_map = openmc.lib.id_map(view.view_params)
+                self.properties = openmc.lib.property_map(view.view_params)
+        else:
+            self.ids_map = ids_map
+            self.properties = properties
 
         # update current view
-        cv = self.currentView = copy.deepcopy(self.activeView)
+        cv = self.currentView = copy.deepcopy(view)
 
         # set model ids based on domain
         if cv.colorby == 'cell':
@@ -396,7 +555,9 @@ class PlotModel:
             minmax[prop] = (np.min(np.nan_to_num(prop_data)),
                             np.max(np.nan_to_num(prop_data)))
 
-        self.activeView.data_minmax = minmax
+        cv.data_minmax = minmax
+        if self.activeView.view_params == cv.view_params:
+            self.activeView.data_minmax = minmax
 
     def undo(self):
         """ Revert to previous PlotView instance. Re-generate plot image """
@@ -404,7 +565,6 @@ class PlotModel:
         if self.previousViews:
             self.subsequentViews.append(copy.deepcopy(self.currentView))
             self.activeView = self.previousViews.pop()
-            self.generatePlot()
 
     def redo(self):
         """ Revert to subsequent PlotView instance. Re-generate plot image """
@@ -412,7 +572,6 @@ class PlotModel:
         if self.subsequentViews:
             self.storeCurrent()
             self.activeView = self.subsequentViews.pop()
-            self.generatePlot()
 
     def getExternalSourceSites(self, n=100):
         """Plot source sites from a source file

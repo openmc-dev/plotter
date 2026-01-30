@@ -20,6 +20,7 @@ def test_window(tmpdir, qtbot):
     mw.loadGui()
 
     try:
+        assert mw.waitForPlotIdle(60000)
         mw.saveImage(tmpdir / 'test.png')
 
         qtbot.addWidget(mw)
