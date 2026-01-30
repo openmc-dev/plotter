@@ -105,20 +105,18 @@ def hash_model(model_path):
 
 @dataclass(frozen=True)
 class PlotRequest:
-    request_id: int
     view_snapshot: "PlotView"
     view_params: Dict[str, object]
 
 
 @dataclass(frozen=True)
 class PlotWorkItem:
-    request_id: int
     view_params: Dict[str, object]
 
 
 class PlotWorker(QObject):
-    finished = Signal(int, object, object)
-    error = Signal(int, str)
+    finished = Signal(object, object, object)
+    error = Signal(str)
 
     @Slot(object)
     def generate_maps(self, work_item: PlotWorkItem):
@@ -133,16 +131,16 @@ class PlotWorker(QObject):
             view_param.color_overlaps = params["color_overlaps"]
             ids_map = openmc.lib.id_map(view_param)
             properties = openmc.lib.property_map(view_param)
-            self.finished.emit(work_item.request_id, ids_map, properties)
+            self.finished.emit(work_item.view_params, ids_map, properties)
         except Exception as exc:
-            self.error.emit(work_item.request_id, str(exc))
+            self.error.emit(str(exc))
 
 
 class PlotManager(QObject):
-    plot_started = Signal(int)
-    plot_queued = Signal(int)
-    plot_finished = Signal(int, object, object, object)
-    plot_error = Signal(int, str)
+    plot_started = Signal()
+    plot_queued = Signal()
+    plot_finished = Signal(object, object, object, object)
+    plot_error = Signal(str)
     plot_idle = Signal()
     work_requested = Signal(object)
 
@@ -159,12 +157,11 @@ class PlotManager(QObject):
 
         self._pending_request = None
         self._in_flight_request = None
-        self._latest_request_id = 0
-        self._next_request_id = 1
+        self._latest_view_params = None
 
     @property
-    def latest_request_id(self):
-        return self._latest_request_id
+    def latest_view_params(self):
+        return self._latest_view_params
 
     @property
     def is_busy(self):
@@ -175,22 +172,18 @@ class PlotManager(QObject):
         return self._pending_request is not None
 
     def enqueue(self, view_snapshot, view_params):
-        request = PlotRequest(self._next_request_id, view_snapshot, view_params)
-        self._next_request_id += 1
-        self._latest_request_id = request.request_id
+        request = PlotRequest(view_snapshot, view_params)
+        self._latest_view_params = view_params
         if self._in_flight_request is None:
             self._pending_request = request
             self._start_next()
-            return request.request_id, True
+            return True
         self._pending_request = request
-        self.plot_queued.emit(request.request_id)
-        return request.request_id, False
+        self.plot_queued.emit()
+        return False
 
-    def new_request_id(self):
-        request_id = self._next_request_id
-        self._next_request_id += 1
-        self._latest_request_id = request_id
-        return request_id
+    def set_latest_view_params(self, view_params):
+        self._latest_view_params = view_params
 
     def clear_pending(self):
         self._pending_request = None
@@ -227,27 +220,26 @@ class PlotManager(QObject):
             return
         self._in_flight_request = self._pending_request
         self._pending_request = None
-        self.plot_started.emit(self._in_flight_request.request_id)
-        work_item = PlotWorkItem(self._in_flight_request.request_id,
-                                 self._in_flight_request.view_params)
+        self.plot_started.emit()
+        work_item = PlotWorkItem(self._in_flight_request.view_params)
         self.work_requested.emit(work_item)
 
-    @Slot(int, object, object)
-    def _on_worker_finished(self, request_id, ids_map, properties):
+    @Slot(object, object, object)
+    def _on_worker_finished(self, view_params, ids_map, properties):
         request = self._in_flight_request
         self._in_flight_request = None
         if request is not None:
-            self.plot_finished.emit(request_id, request.view_snapshot,
-                                    ids_map, properties)
+            self.plot_finished.emit(request.view_snapshot,
+                                    view_params, ids_map, properties)
         if self._pending_request is not None:
             self._start_next()
         else:
             self.plot_idle.emit()
 
-    @Slot(int, str)
-    def _on_worker_error(self, request_id, message):
+    @Slot(str)
+    def _on_worker_error(self, message):
         self._in_flight_request = None
-        self.plot_error.emit(request_id, message)
+        self.plot_error.emit(message)
         if self._pending_request is not None:
             self._start_next()
         else:

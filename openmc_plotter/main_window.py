@@ -1226,7 +1226,7 @@ class MainWindow(QMainWindow):
 
     def requestPlotUpdate(self, view=None):
         if self.model is None:
-            return None
+            return
         if self.plot_manager is None:
             self.plot_manager = self.model.plot_manager
             self.plot_manager.plot_started.connect(self._on_plot_started)
@@ -1238,44 +1238,42 @@ class MainWindow(QMainWindow):
             view = self.model.activeView
         view_snapshot = copy.deepcopy(view)
         if self.model.can_reuse_maps(view_snapshot):
-            request_id = self.plot_manager.new_request_id()
+            view_params = self.model.view_params_payload(view_snapshot)
+            self.plot_manager.set_latest_view_params(view_params)
             self.plot_manager.clear_pending()
             self.model.makePlot(view_snapshot, self.model.ids_map, self.model.properties)
             self.resetModels()
             self.showCurrentView()
             if not self.plot_manager.is_busy:
                 self._on_plot_idle()
-            return request_id
+            return
         view_params = self.model.view_params_payload(view_snapshot)
-        request_id, started = self.plot_manager.enqueue(view_snapshot, view_params)
+        started = self.plot_manager.enqueue(view_snapshot, view_params)
         if started:
             self.statusBar().showMessage('Generating Plot...')
         else:
             self.statusBar().showMessage('Generating Plot... (update queued)')
-        return request_id
 
     def waitForPlotIdle(self, timeout_ms=None):
         if self.plot_manager is not None:
             return self.plot_manager.wait_for_idle(timeout_ms)
         return True
 
-    def _on_plot_started(self, request_id):
+    def _on_plot_started(self):
         self.busyIndicator.show()
         self.statusBar().showMessage('Generating Plot...')
 
-    def _on_plot_queued(self, request_id):
+    def _on_plot_queued(self):
         self.statusBar().showMessage('Generating Plot... (update queued)')
 
-    def _on_plot_finished(self, request_id, view_snapshot, ids_map, properties):
-        if request_id != self.plot_manager.latest_request_id:
+    def _on_plot_finished(self, view_snapshot, view_params, ids_map, properties):
+        if view_params != self.plot_manager.latest_view_params:
             return
         self.model.makePlot(view_snapshot, ids_map, properties)
         self.resetModels()
         self.showCurrentView()
 
-    def _on_plot_error(self, request_id, error_msg):
-        if request_id != self.plot_manager.latest_request_id:
-            return
+    def _on_plot_error(self, error_msg):
         msg_box = QMessageBox()
         msg_box.setText(f"Failed to generate plot:\n\n{error_msg}")
         msg_box.setIcon(QMessageBox.Warning)
