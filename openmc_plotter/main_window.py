@@ -434,10 +434,17 @@ class MainWindow(QMainWindow):
         changed = self.model.currentView != self.model.defaultView
         self.restoreAction.setDisabled(not changed)
 
+        toggle_actions = (self.maskingAction, self.highlightingAct,
+                          self.outlineAct, self.overlapAct)
+        # Temporarily block signals to avoid triggering plot update
+        for action in toggle_actions:
+            action.blockSignals(True)
         self.maskingAction.setChecked(self.model.currentView.masking)
         self.highlightingAct.setChecked(self.model.currentView.highlighting)
         self.outlineAct.setChecked(self.model.currentView.outlinesCell)
         self.overlapAct.setChecked(self.model.currentView.color_overlaps)
+        for action in toggle_actions:
+            action.blockSignals(False)
 
         num_previous_views = len(self.model.previousViews)
         self.undoAction.setText('&Undo ({})'.format(num_previous_views))
