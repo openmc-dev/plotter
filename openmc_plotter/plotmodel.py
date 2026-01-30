@@ -186,6 +186,15 @@ class PlotManager(QObject):
         self.plot_queued.emit(request.request_id)
         return request.request_id, False
 
+    def new_request_id(self):
+        request_id = self._next_request_id
+        self._next_request_id += 1
+        self._latest_request_id = request_id
+        return request_id
+
+    def clear_pending(self):
+        self._pending_request = None
+
     def wait_for_idle(self, timeout_ms: Optional[int] = None):
         if not self.is_busy and not self.has_pending:
             return True
@@ -313,6 +322,7 @@ class PlotModel:
         # Return values from id_map and property_map
         self.ids_map = None
         self.properties = None
+        self.map_view_params = None
 
         self.version = __version__
 
@@ -474,6 +484,11 @@ class PlotModel:
             "color_overlaps": bool(vp.color_overlaps),
         }
 
+    def can_reuse_maps(self, view: "PlotView"):
+        if self.ids_map is None or self.properties is None:
+            return False
+        return self.map_view_params == self.view_params_payload(view)
+
     def generatePlot(self):
         self.makePlot()
 
@@ -494,9 +509,11 @@ class PlotModel:
                 (self.ids_map is None) or (self.properties is None):
                 self.ids_map = openmc.lib.id_map(view.view_params)
                 self.properties = openmc.lib.property_map(view.view_params)
+            self.map_view_params = self.view_params_payload(view)
         else:
             self.ids_map = ids_map
             self.properties = properties
+            self.map_view_params = self.view_params_payload(view)
 
         # update current view
         cv = self.currentView = copy.deepcopy(view)

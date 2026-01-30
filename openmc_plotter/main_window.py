@@ -1230,6 +1230,15 @@ class MainWindow(QMainWindow):
         if view is None:
             view = self.model.activeView
         view_snapshot = copy.deepcopy(view)
+        if self.model.can_reuse_maps(view_snapshot):
+            request_id = self.plot_manager.new_request_id()
+            self.plot_manager.clear_pending()
+            self.model.makePlot(view_snapshot, self.model.ids_map, self.model.properties)
+            self.resetModels()
+            self.showCurrentView()
+            if not self.plot_manager.is_busy:
+                self._on_plot_idle()
+            return request_id
         view_params = self.model.view_params_payload(view_snapshot)
         request_id, started = self.plot_manager.enqueue(view_snapshot, view_params)
         if started:
