@@ -51,6 +51,7 @@ class PlotImage(FigureCanvas):
         self.tally_colorbar = None
         self.tally_image = None
         self.image = None
+        self.ax = None
 
         self._property_colorbar_bg = None
         self._tally_colorbar_bg = None
@@ -79,7 +80,7 @@ class PlotImage(FigureCanvas):
                                                   QtCore.QSize()))
 
     def getPlotCoords(self, pos):
-        if not hasattr(self, "ax"):
+        if self.ax is None:
             return (0.0, 0.0)
         x, y = self.mouseEventCoords(pos)
 
@@ -240,7 +241,7 @@ class PlotImage(FigureCanvas):
 
     def mouseMoveEvent(self, event):
         cv = self.model.currentView
-        if not hasattr(self, "ax") or self.model.image is None:
+        if self.ax is None or self.model.image is None:
             return
         # Show Cursor position relative to plot in status bar
         xPlotPos, yPlotPos = self.getPlotCoords(event.pos())

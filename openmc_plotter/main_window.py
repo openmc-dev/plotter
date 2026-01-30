@@ -56,8 +56,13 @@ class MainWindow(QMainWindow):
         self.model_path = Path(model_path)
         self.threads = threads
         self.default_res = resolution
+        self.model = None
         self.plot_manager = None
-        self.busyIndicator = None
+        self.busyIndicator = QProgressBar()
+        self.busyIndicator.setRange(0, 0)
+        self.busyIndicator.setMaximumWidth(self.font_metric.averageCharWidth() * 12)
+        self.busyIndicator.setMaximumHeight(self.font_metric.height())
+        self.busyIndicator.hide()
 
     def loadGui(self, use_settings_pkl=True):
 
@@ -115,11 +120,6 @@ class MainWindow(QMainWindow):
         self.coord_label = QLabel()
         self.statusBar().addPermanentWidget(self.coord_label)
         self.coord_label.hide()
-        self.busyIndicator = QProgressBar()
-        self.busyIndicator.setRange(0, 0)
-        self.busyIndicator.setMaximumWidth(self.font_metric.averageCharWidth() * 12)
-        self.busyIndicator.setMaximumHeight(self.font_metric.height())
-        self.busyIndicator.hide()
         self.statusBar().addPermanentWidget(self.busyIndicator)
 
         self.plot_manager = self.model.plot_manager
@@ -485,7 +485,7 @@ class MainWindow(QMainWindow):
     # Menu and shared methods
     def loadModel(self, reload=False, use_settings_pkl=True):
         if reload:
-            if hasattr(self, "plot_manager"):
+            if self.plot_manager is not None:
                 self.plot_manager.wait_for_idle()
             self.resetModels()
         else:
@@ -1197,7 +1197,7 @@ class MainWindow(QMainWindow):
             self.shortcutOverlay.resize(self.width(), self.height())
 
     def closeEvent(self, event):
-        if hasattr(self, "plot_manager"):
+        if self.plot_manager is not None:
             self.plot_manager.wait_for_idle()
             self.plot_manager.shutdown()
         settings = QtCore.QSettings()
@@ -1218,16 +1218,15 @@ class MainWindow(QMainWindow):
         self.requestPlotUpdate()
 
     def requestPlotUpdate(self, view=None):
+        if self.model is None:
+            return None
         if self.plot_manager is None:
-            if hasattr(self, "model"):
-                self.plot_manager = self.model.plot_manager
-                self.plot_manager.plot_started.connect(self._on_plot_started)
-                self.plot_manager.plot_queued.connect(self._on_plot_queued)
-                self.plot_manager.plot_finished.connect(self._on_plot_finished)
-                self.plot_manager.plot_error.connect(self._on_plot_error)
-                self.plot_manager.plot_idle.connect(self._on_plot_idle)
-            else:
-                return None
+            self.plot_manager = self.model.plot_manager
+            self.plot_manager.plot_started.connect(self._on_plot_started)
+            self.plot_manager.plot_queued.connect(self._on_plot_queued)
+            self.plot_manager.plot_finished.connect(self._on_plot_finished)
+            self.plot_manager.plot_error.connect(self._on_plot_error)
+            self.plot_manager.plot_idle.connect(self._on_plot_idle)
         if view is None:
             view = self.model.activeView
         view_snapshot = copy.deepcopy(view)
@@ -1240,13 +1239,12 @@ class MainWindow(QMainWindow):
         return request_id
 
     def waitForPlotIdle(self, timeout_ms=None):
-        if hasattr(self, "plot_manager"):
+        if self.plot_manager is not None:
             return self.plot_manager.wait_for_idle(timeout_ms)
         return True
 
     def _on_plot_started(self, request_id):
-        if self.busyIndicator is not None:
-            self.busyIndicator.show()
+        self.busyIndicator.show()
         self.statusBar().showMessage('Generating Plot...')
 
     def _on_plot_queued(self, request_id):
@@ -1269,8 +1267,7 @@ class MainWindow(QMainWindow):
         msg_box.exec()
 
     def _on_plot_idle(self):
-        if self.busyIndicator is not None:
-            self.busyIndicator.hide()
+        self.busyIndicator.hide()
         self.statusBar().showMessage('')
 
     def saveSettings(self):
