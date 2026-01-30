@@ -348,6 +348,11 @@ class PlotImage(FigureCanvas):
             self.rubber_band.hide()
             self.main_window.applyChanges()
         else:
+            plot_manager = self.main_window.plot_manager
+            if plot_manager.is_busy or plot_manager.has_pending:
+                return
+            if self.main_window.model.activeView != self.main_window.model.currentView:
+                return
             self.main_window.revertDockControls()
 
     def wheelEvent(self, event):
