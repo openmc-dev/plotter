@@ -1204,7 +1204,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         if self.plot_manager is not None:
-            self.plot_manager.wait_for_idle()
+            self.plot_manager.wait_for_idle(timeout_ms=250)
             self.plot_manager.shutdown()
         settings = QtCore.QSettings()
         settings.setValue("mainWindow/Size", self.size())
