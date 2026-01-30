@@ -130,7 +130,6 @@ class MainWindow(QMainWindow):
         self.plot_manager.plot_idle.connect(self._on_plot_idle)
 
         # Load Plot
-        self.statusBar().showMessage('Generating Plot...')
         self.geometryPanel.update()
         self.tallyPanel.update()
         self.colorDialog.updateDialogValues()
@@ -1248,11 +1247,7 @@ class MainWindow(QMainWindow):
                 self._on_plot_idle()
             return
         view_params = self.model.view_params_payload(view_snapshot)
-        started = self.plot_manager.enqueue(view_snapshot, view_params)
-        if started:
-            self.statusBar().showMessage('Generating Plot...')
-        else:
-            self.statusBar().showMessage('Generating Plot... (update queued)')
+        self.plot_manager.enqueue(view_snapshot, view_params)
 
     def waitForPlotIdle(self, timeout_ms=None):
         if self.plot_manager is not None:

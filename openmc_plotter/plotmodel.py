@@ -177,10 +177,9 @@ class PlotManager(QObject):
         if self._in_flight_request is None:
             self._pending_request = request
             self._start_next()
-            return True
+            return
         self._pending_request = request
         self.plot_queued.emit()
-        return False
 
     def set_latest_view_params(self, view_params):
         self._latest_view_params = view_params
@@ -480,9 +479,6 @@ class PlotModel:
         if self.ids_map is None or self.properties is None:
             return False
         return self.map_view_params == self.view_params_payload(view)
-
-    def generatePlot(self):
-        self.makePlot()
 
     def makePlot(self, view: Optional["PlotView"] = None,
                  ids_map=None, properties=None):
