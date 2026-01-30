@@ -134,7 +134,7 @@ class MainWindow(QMainWindow):
         self.tallyPanel.update()
         self.colorDialog.updateDialogValues()
 
-        QtCore.QTimer.singleShot(0, self.requestInitialPlot)
+        QtCore.QTimer.singleShot(0, self.requestPlotUpdate)
 
         self.plotIm.frozen = False
 
@@ -1219,9 +1219,6 @@ class MainWindow(QMainWindow):
         openmc.lib.finalize()
 
         self.saveSettings()
-
-    def requestInitialPlot(self):
-        self.requestPlotUpdate()
 
     def requestPlotUpdate(self, view=None):
         if self.model is None:
