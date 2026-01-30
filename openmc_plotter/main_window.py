@@ -58,11 +58,6 @@ class MainWindow(QMainWindow):
         self.default_res = resolution
         self.model = None
         self.plot_manager = None
-        self.busyIndicator = QProgressBar()
-        self.busyIndicator.setRange(0, 0)
-        self.busyIndicator.setMaximumWidth(self.font_metric.averageCharWidth() * 12)
-        self.busyIndicator.setMaximumHeight(self.font_metric.height())
-        self.busyIndicator.hide()
 
     def loadGui(self, use_settings_pkl=True):
 
@@ -120,6 +115,11 @@ class MainWindow(QMainWindow):
         self.coord_label = QLabel()
         self.statusBar().addPermanentWidget(self.coord_label)
         self.coord_label.hide()
+        self.busyIndicator = QProgressBar()
+        self.busyIndicator.setRange(0, 0)
+        self.busyIndicator.setMaximumWidth(self.font_metric.averageCharWidth() * 12)
+        self.busyIndicator.setMaximumHeight(self.font_metric.height())
+        self.busyIndicator.hide()
         self.statusBar().addPermanentWidget(self.busyIndicator)
 
         self.plot_manager = self.model.plot_manager
