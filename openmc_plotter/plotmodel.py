@@ -123,15 +123,23 @@ class PlotWorker(QObject):
     def generate_maps(self, work_item: PlotWorkItem):
         try:
             params = work_item.view_params
-            view_param = ViewParam(params["origin"], params["width"],
-                                   params["height"], params["h_res"])
-            view_param.h_res = params["h_res"]
-            view_param.v_res = params["v_res"]
-            view_param.basis = params["basis"]
-            view_param.level = params["level"]
-            view_param.color_overlaps = params["color_overlaps"]
-            ids_map = openmc.lib.id_map(view_param)
-            properties = openmc.lib.property_map(view_param)
+
+            # Determine if we need filter bins for MeshMaterialFilter tally
+            filter_cpp = None
+            if params.get("filter_id") is not None:
+                filter_cpp = openmc.lib.filters[params["filter_id"]]
+
+            # Single call replaces id_map + property_map + get_plot_bins
+            ids_map, properties = openmc.lib.raster_plot(
+                origin=params["origin"],
+                width=(params["width"], params["height"]),
+                basis=params["basis"],
+                pixels=(params["h_res"], params["v_res"]),
+                color_overlaps=params["color_overlaps"],
+                level=params["level"],
+                filter=filter_cpp,
+            )
+
             self.finished.emit(work_item.view_params, ids_map, properties)
         except Exception as exc:
             self.error.emit(str(exc))
@@ -474,7 +482,21 @@ class PlotModel:
             "basis": str(vp.basis),
             "level": int(vp.level),
             "color_overlaps": bool(vp.color_overlaps),
+            "filter_id": self.get_active_mesh_material_filter_id(view),
         }
+
+    def get_active_mesh_material_filter_id(self, view: "PlotView") -> Optional[int]:
+        """Return the filter ID if displaying a MeshMaterialFilter tally, else None."""
+        if self._statepoint is None:
+            return None
+        if not view.tallyDataVisible or view.selectedTally is None:
+            return None
+
+        tally = self._statepoint.tallies[view.selectedTally]
+        if tally.contains_filter(openmc.MeshMaterialFilter):
+            filter = tally.find_filter(openmc.MeshMaterialFilter)
+            return filter.id
+        return None
 
     def can_reuse_maps(self, view: "PlotView"):
         if self.ids_map is None or self.properties is None:
@@ -496,8 +518,21 @@ class PlotModel:
         if ids_map is None or properties is None:
             if (self.currentView.view_params != view.view_params) or \
                 (self.ids_map is None) or (self.properties is None):
-                self.ids_map = openmc.lib.id_map(view.view_params)
-                self.properties = openmc.lib.property_map(view.view_params)
+                # Determine if we need filter bins for MeshMaterialFilter tally
+                filter_cpp = None
+                filter_id = self.get_active_mesh_material_filter_id(view)
+                if filter_id is not None:
+                    filter_cpp = openmc.lib.filters[filter_id]
+
+                self.ids_map, self.properties = openmc.lib.raster_plot(
+                    origin=view.origin,
+                    width=(view.width, view.height),
+                    basis=view.basis,
+                    pixels=(view.h_res, view.v_res),
+                    color_overlaps=view.color_overlaps,
+                    level=view.level,
+                    filter=filter_cpp,
+                )
             self.map_view_params = self.view_params_payload(view)
         else:
             self.ids_map = ids_map
@@ -1008,19 +1043,14 @@ class PlotModel:
                 selected_scores.append(idx)
         data = _do_op(data[np.array(selected_scores)], tally_value)
 
-        # Get mesh bins from openmc.lib
-        filter = tally.find_filter(filter_class)
-        filter_cpp = openmc.lib.filters[filter.id]
-
-        if view is None:
-            view = self.currentView
-
-        bins = filter_cpp.get_plot_bins(
-            origin=view.origin,
-            width=(view.width, view.height),
-            basis=view.basis,
-            pixels=(view.h_res, view.v_res),
-        )
+        # Extract filter bins from ids_map (computed during raster_plot call)
+        # ids_map has shape (v_res, h_res, 4) when filter was included
+        if self.ids_map.shape[2] < 4:
+            raise RuntimeError(
+                "Filter bins not available. Ensure raster_plot was called with "
+                "the appropriate filter for MeshMaterialFilter tallies."
+            )
+        bins = self.ids_map[:, :, 3]
 
         # set image data
         image_data = np.full_like(self.ids, np.nan, dtype=float)
