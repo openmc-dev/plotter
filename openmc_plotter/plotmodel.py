@@ -130,7 +130,7 @@ class PlotWorker(QObject):
                 filter_cpp = openmc.lib.filters[params["filter_id"]]
 
             # Single call replaces id_map + property_map + get_plot_bins
-            ids_map, properties = openmc.lib.raster_plot(
+            geom_data, property_data = openmc.lib.raster_plot(
                 origin=params["origin"],
                 width=(params["width"], params["height"]),
                 basis=params["basis"],
@@ -140,7 +140,7 @@ class PlotWorker(QObject):
                 filter=filter_cpp,
             )
 
-            self.finished.emit(work_item.view_params, ids_map, properties)
+            self.finished.emit(work_item.view_params, geom_data, property_data)
         except Exception as exc:
             self.error.emit(str(exc))
 
@@ -233,12 +233,12 @@ class PlotManager(QObject):
         self.work_requested.emit(work_item)
 
     @Slot(object, object, object)
-    def _on_worker_finished(self, view_params, ids_map, properties):
+    def _on_worker_finished(self, view_params, geom_data, property_data):
         request = self._in_flight_request
         self._in_flight_request = None
         if request is not None:
             self.plot_finished.emit(request.view_snapshot,
-                                    view_params, ids_map, properties)
+                                    view_params, geom_data, property_data)
         if self._pending_request is not None:
             self._start_next()
         else:
@@ -275,10 +275,10 @@ class PlotModel:
         Dictionary mapping material IDs to openmc.Material instances
     ids : NumPy int array (v_res, h_res, 1)
         Mapping of plot coordinates to cell/material ID by pixel
-    ids_map : NumPy int32 array (v_res, h_res, 3)
-        Mapping of cell and material ids
-    properties : Numpy float array (v_res, h_res, 3)
-        Mapping of cell temperatures and material densities
+    geom_data : NumPy int32 array (v_res, h_res, 3) or (v_res, h_res, 4)
+        Geometry data with cell IDs, instances, material IDs, and optionally filter bins
+    property_data : Numpy float array (v_res, h_res, 2)
+        Property data with cell temperatures and material densities
     image : NumPy int array (v_res, h_res, 3)
         The current RGB image data
     statepoint : StatePointModel
@@ -319,9 +319,9 @@ class PlotModel:
         # Cell/Material ID by coordinates
         self.ids = None
 
-        # Return values from id_map and property_map
-        self.ids_map = None
-        self.properties = None
+        # Return values from raster_plot
+        self.geom_data = None
+        self.property_data = None
         self.map_view_params = None
 
         self.version = __version__
@@ -499,32 +499,28 @@ class PlotModel:
         return None
 
     def can_reuse_maps(self, view: "PlotView"):
-        if self.ids_map is None or self.properties is None:
+        if self.geom_data is None or self.property_data is None:
             return False
         return self.map_view_params == self.view_params_payload(view)
 
     def makePlot(self, view: Optional["PlotView"] = None,
-                 ids_map=None, properties=None):
-        """ Generate new plot image from active view settings
-
-        Creates corresponding .xml files from user-chosen settings.
-        Runs OpenMC in plot mode to generate new plot image.
-        """
+                 geom_data=None, property_data=None):
+        """Generate new plot image from active view settings"""
         if view is None:
             view = self.activeView
         # update/call maps under 2 circumstances
-        #   1. this is the intial plot (ids_map/properties are None)
+        #   1. this is the intial plot (geom_data/property_data are None)
         #   2. The active (desired) view differs from the current view parameters
-        if ids_map is None or properties is None:
+        if geom_data is None or property_data is None:
             if (self.currentView.view_params != view.view_params) or \
-                (self.ids_map is None) or (self.properties is None):
+                (self.geom_data is None) or (self.property_data is None):
                 # Determine if we need filter bins for MeshMaterialFilter tally
                 filter_cpp = None
                 filter_id = self.get_active_mesh_material_filter_id(view)
                 if filter_id is not None:
                     filter_cpp = openmc.lib.filters[filter_id]
 
-                self.ids_map, self.properties = openmc.lib.raster_plot(
+                self.geom_data, self.property_data = openmc.lib.raster_plot(
                     origin=view.origin,
                     width=(view.width, view.height),
                     basis=view.basis,
@@ -535,8 +531,8 @@ class PlotModel:
                 )
             self.map_view_params = self.view_params_payload(view)
         else:
-            self.ids_map = ids_map
-            self.properties = properties
+            self.geom_data = geom_data
+            self.property_data = property_data
             self.map_view_params = self.view_params_payload(view)
 
         # update current view
@@ -584,15 +580,15 @@ class PlotModel:
         # tally data
         self.tally_data = None
 
-        self.properties[self.properties < 0.0] = np.nan
+        self.property_data[self.property_data < 0.0] = np.nan
 
-        self.temperatures = self.properties[..., _PROPERTY_INDICES['temperature']]
-        self.densities = self.properties[..., _PROPERTY_INDICES['density']]
+        self.temperatures = self.property_data[..., _PROPERTY_INDICES['temperature']]
+        self.densities = self.property_data[..., _PROPERTY_INDICES['density']]
 
         minmax = {}
         for prop in _MODEL_PROPERTIES:
             idx = _PROPERTY_INDICES[prop]
-            prop_data = self.properties[:, :, idx]
+            prop_data = self.property_data[:, :, idx]
             minmax[prop] = (np.min(np.nan_to_num(prop_data)),
                             np.max(np.nan_to_num(prop_data)))
 
@@ -1043,14 +1039,14 @@ class PlotModel:
                 selected_scores.append(idx)
         data = _do_op(data[np.array(selected_scores)], tally_value)
 
-        # Extract filter bins from ids_map (computed during raster_plot call)
-        # ids_map has shape (v_res, h_res, 4) when filter was included
-        if self.ids_map.shape[2] < 4:
+        # Extract filter bins from geom_data (computed during raster_plot call)
+        # geom_data has shape (v_res, h_res, 4) when filter was included
+        if self.geom_data.shape[2] < 4:
             raise RuntimeError(
                 "Filter bins not available. Ensure raster_plot was called with "
                 "the appropriate filter for MeshMaterialFilter tallies."
             )
-        bins = self.ids_map[:, :, 3]
+        bins = self.geom_data[:, :, 3]
 
         # set image data
         image_data = np.full_like(self.ids, np.nan, dtype=float)
@@ -1065,15 +1061,15 @@ class PlotModel:
 
     @property
     def cell_ids(self):
-        return self.ids_map[:, :, 0]
+        return self.geom_data[:, :, 0]
 
     @property
     def instances(self):
-        return self.ids_map[:, :, 1]
+        return self.geom_data[:, :, 1]
 
     @property
     def mat_ids(self):
-        return self.ids_map[:, :, 2]
+        return self.geom_data[:, :, 2]
 
 
 class ViewParam(openmc.lib.plot._PlotBase):

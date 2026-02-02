@@ -1224,7 +1224,7 @@ class MainWindow(QMainWindow):
             view_params = self.model.view_params_payload(view_snapshot)
             self.plot_manager.set_latest_view_params(view_params)
             self.plot_manager.clear_pending()
-            self.model.makePlot(view_snapshot, self.model.ids_map, self.model.properties)
+            self.model.makePlot(view_snapshot, self.model.geom_data, self.model.property_data)
             self.resetModels()
             self.showCurrentView()
             if not self.plot_manager.is_busy:
@@ -1244,10 +1244,10 @@ class MainWindow(QMainWindow):
     def _on_plot_queued(self):
         self.plotIm.showUpdatingOverlay("Generating Plot... (update queued)")
 
-    def _on_plot_finished(self, view_snapshot, view_params, ids_map, properties):
+    def _on_plot_finished(self, view_snapshot, view_params, geom_data, property_data):
         if view_params != self.plot_manager.latest_view_params:
             return
-        self.model.makePlot(view_snapshot, ids_map, properties)
+        self.model.makePlot(view_snapshot, geom_data, property_data)
         self.resetModels()
         self.showCurrentView()
 

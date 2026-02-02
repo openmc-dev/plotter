@@ -255,8 +255,8 @@ class PlotImage(FigureCanvas):
            and 0 <= xPos and xPos < self.model.currentView.h_res:
             id = self.model.ids[yPos, xPos]
             instance = self.model.instances[yPos, xPos]
-            temp = "{:g}".format(self.model.properties[yPos, xPos, 0])
-            density = "{:g}".format(self.model.properties[yPos, xPos, 1])
+            temp = "{:g}".format(self.model.property_data[yPos, xPos, 0])
+            density = "{:g}".format(self.model.property_data[yPos, xPos, 1])
         else:
             id = _NOT_FOUND
             instance = _NOT_FOUND
@@ -579,7 +579,7 @@ class PlotImage(FigureCanvas):
             norm = SymLogNorm(
                 1E-10) if cv.color_scale_log[cv.colorby] else None
 
-            data = self.model.properties[:, :, idx]
+            data = self.model.property_data[:, :, idx]
             self.image = self.figure.subplots().imshow(data,
                                                        cmap=cmap,
                                                        norm=norm,
