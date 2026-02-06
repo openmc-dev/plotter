@@ -1217,13 +1217,6 @@ class MainWindow(QMainWindow):
     def requestPlotUpdate(self, view=None):
         if self.model is None:
             return
-        if self.plot_manager is None:
-            self.plot_manager = self.model.plot_manager
-            self.plot_manager.plot_started.connect(self._on_plot_started)
-            self.plot_manager.plot_queued.connect(self._on_plot_queued)
-            self.plot_manager.plot_finished.connect(self._on_plot_finished)
-            self.plot_manager.plot_error.connect(self._on_plot_error)
-            self.plot_manager.plot_idle.connect(self._on_plot_idle)
         if view is None:
             view = self.model.activeView
         view_snapshot = copy.deepcopy(view)
@@ -1246,12 +1239,10 @@ class MainWindow(QMainWindow):
         return True
 
     def _on_plot_started(self):
-        if hasattr(self, "plotIm") and self.plotIm is not None:
-            self.plotIm.showUpdatingOverlay("Generating Plot...")
+        self.plotIm.showUpdatingOverlay("Generating Plot...")
 
     def _on_plot_queued(self):
-        if hasattr(self, "plotIm") and self.plotIm is not None:
-            self.plotIm.showUpdatingOverlay("Generating Plot... (update queued)")
+        self.plotIm.showUpdatingOverlay("Generating Plot... (update queued)")
 
     def _on_plot_finished(self, view_snapshot, view_params, ids_map, properties):
         if view_params != self.plot_manager.latest_view_params:
@@ -1268,8 +1259,7 @@ class MainWindow(QMainWindow):
         msg_box.exec()
 
     def _on_plot_idle(self):
-        if hasattr(self, "plotIm") and self.plotIm is not None:
-            self.plotIm.hideUpdatingOverlay()
+        self.plotIm.hideUpdatingOverlay()
 
     def saveSettings(self):
         if self.model.statepoint:
