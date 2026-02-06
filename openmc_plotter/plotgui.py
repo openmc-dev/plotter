@@ -38,9 +38,8 @@ class PlotUpdateOverlay(QWidget):
         self.label.setAlignment(QtCore.Qt.AlignCenter)
         font = self.label.font()
         font.setPointSize(max(12, font.pointSize() + 6))
-        font.setWeight(QtGui.QFont.DemiBold)
         self.label.setFont(font)
-        self.label.setStyleSheet("color: white;")
+        self.label.setStyleSheet("color: white; background-color: transparent;")
         layout.addWidget(self.label)
 
         self.hide()
