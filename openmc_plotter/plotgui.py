@@ -2,7 +2,7 @@ from functools import partial
 
 from PySide6 import QtCore, QtGui
 from PySide6.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
-                               QFormLayout, QComboBox, QSpinBox,
+                               QFormLayout, QComboBox, QSpinBox, QLabel,
                                QDoubleSpinBox, QSizePolicy, QMessageBox,
                                QCheckBox, QRubberBand, QMenu, QDialog,
                                QTabWidget, QTableView, QHeaderView)
@@ -19,6 +19,34 @@ from .plotmodel import DomainDelegate, PlotModel
 from .plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
 from .scientific_spin_box import ScientificDoubleSpinBox
 from .custom_widgets import HorizontalLine
+
+
+class PlotUpdateOverlay(QWidget):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
+        self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
+        self.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.setStyleSheet("background-color: rgba(20, 20, 20, 140);")
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.label = QLabel("Generating Plot...", self)
+        self.label.setAlignment(QtCore.Qt.AlignCenter)
+        font = self.label.font()
+        font.setPointSize(max(12, font.pointSize() + 6))
+        font.setWeight(QtGui.QFont.DemiBold)
+        self.label.setFont(font)
+        self.label.setStyleSheet("color: white;")
+        layout.addWidget(self.label)
+
+        self.hide()
+
+    def set_message(self, message: str):
+        self.label.setText(message)
 
 
 
@@ -59,6 +87,7 @@ class PlotImage(FigureCanvas):
         self._last_data_indicator_value = None
 
         self.menu = QMenu(self)
+        self.update_overlay = PlotUpdateOverlay(self)
 
     def enterEvent(self, event):
         self.setCursor(QtCore.Qt.CrossCursor)
@@ -121,6 +150,24 @@ class PlotImage(FigureCanvas):
         # resize plot
         self.resize(self.parent.width() * z,
                     self.parent.height() * z)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.update_overlay is not None:
+            self.update_overlay.setGeometry(self.rect())
+
+    def showUpdatingOverlay(self, message: str = "Generating Plot..."):
+        if self.update_overlay is None:
+            return
+        self.update_overlay.set_message(message)
+        self.update_overlay.setGeometry(self.rect())
+        self.update_overlay.raise_()
+        self.update_overlay.show()
+
+    def hideUpdatingOverlay(self):
+        if self.update_overlay is None:
+            return
+        self.update_overlay.hide()
 
     def saveImage(self, filename):
         """Save an image of the current view

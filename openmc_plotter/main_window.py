@@ -9,7 +9,7 @@ from PySide6.QtGui import QKeyEvent, QAction
 from PySide6.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMessageBox, QFileDialog,
                                QColorDialog, QInputDialog, QWidget,
-                               QGestureEvent, QProgressBar)
+                               QGestureEvent)
 
 import openmc
 import openmc.lib
@@ -115,12 +115,6 @@ class MainWindow(QMainWindow):
         self.coord_label = QLabel()
         self.statusBar().addPermanentWidget(self.coord_label)
         self.coord_label.hide()
-        self.busyIndicator = QProgressBar()
-        self.busyIndicator.setRange(0, 0)
-        self.busyIndicator.setMaximumWidth(self.font_metric.averageCharWidth() * 12)
-        self.busyIndicator.setMaximumHeight(self.font_metric.height())
-        self.busyIndicator.hide()
-        self.statusBar().addPermanentWidget(self.busyIndicator)
 
         self.plot_manager = self.model.plot_manager
         self.plot_manager.plot_started.connect(self._on_plot_started)
@@ -1252,11 +1246,12 @@ class MainWindow(QMainWindow):
         return True
 
     def _on_plot_started(self):
-        self.busyIndicator.show()
-        self.statusBar().showMessage('Generating Plot...')
+        if hasattr(self, "plotIm") and self.plotIm is not None:
+            self.plotIm.showUpdatingOverlay("Generating Plot...")
 
     def _on_plot_queued(self):
-        self.statusBar().showMessage('Generating Plot... (update queued)')
+        if hasattr(self, "plotIm") and self.plotIm is not None:
+            self.plotIm.showUpdatingOverlay("Generating Plot... (update queued)")
 
     def _on_plot_finished(self, view_snapshot, view_params, ids_map, properties):
         if view_params != self.plot_manager.latest_view_params:
@@ -1273,8 +1268,8 @@ class MainWindow(QMainWindow):
         msg_box.exec()
 
     def _on_plot_idle(self):
-        self.busyIndicator.hide()
-        self.statusBar().showMessage('')
+        if hasattr(self, "plotIm") and self.plotIm is not None:
+            self.plotIm.hideUpdatingOverlay()
 
     def saveSettings(self):
         if self.model.statepoint:
