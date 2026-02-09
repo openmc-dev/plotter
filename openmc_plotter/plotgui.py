@@ -2,7 +2,7 @@ from functools import partial
 
 from PySide6 import QtCore, QtGui
 from PySide6.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
-                               QFormLayout, QComboBox, QSpinBox,
+                               QFormLayout, QComboBox, QSpinBox, QLabel,
                                QDoubleSpinBox, QSizePolicy, QMessageBox,
                                QCheckBox, QRubberBand, QMenu, QDialog,
                                QTabWidget, QTableView, QHeaderView)
@@ -19,6 +19,33 @@ from .plotmodel import DomainDelegate, PlotModel
 from .plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
 from .scientific_spin_box import ScientificDoubleSpinBox
 from .custom_widgets import HorizontalLine
+
+
+class PlotUpdateOverlay(QWidget):
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, True)
+        self.setAttribute(QtCore.Qt.WA_StyledBackground, True)
+        self.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.setStyleSheet("background-color: rgba(20, 20, 20, 140);")
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setAlignment(QtCore.Qt.AlignCenter)
+
+        self.label = QLabel("Generating Plot...", self)
+        self.label.setAlignment(QtCore.Qt.AlignCenter)
+        font = self.label.font()
+        font.setPointSize(max(12, font.pointSize() + 6))
+        self.label.setFont(font)
+        self.label.setStyleSheet("color: white; background-color: transparent;")
+        layout.addWidget(self.label)
+
+        self.hide()
+
+    def set_message(self, message: str):
+        self.label.setText(message)
 
 
 
@@ -51,6 +78,7 @@ class PlotImage(FigureCanvas):
         self.tally_colorbar = None
         self.tally_image = None
         self.image = None
+        self.ax = None
 
         self._property_colorbar_bg = None
         self._tally_colorbar_bg = None
@@ -58,6 +86,7 @@ class PlotImage(FigureCanvas):
         self._last_data_indicator_value = None
 
         self.menu = QMenu(self)
+        self.update_overlay = PlotUpdateOverlay(self)
 
     def enterEvent(self, event):
         self.setCursor(QtCore.Qt.CrossCursor)
@@ -79,6 +108,8 @@ class PlotImage(FigureCanvas):
                                                   QtCore.QSize()))
 
     def getPlotCoords(self, pos):
+        if self.ax is None:
+            return (0.0, 0.0)
         x, y = self.mouseEventCoords(pos)
 
         # get the normalized axis coordinates from the event display units
@@ -118,6 +149,24 @@ class PlotImage(FigureCanvas):
         # resize plot
         self.resize(self.parent.width() * z,
                     self.parent.height() * z)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self.update_overlay is not None:
+            self.update_overlay.setGeometry(self.rect())
+
+    def showUpdatingOverlay(self, message: str = "Generating Plot..."):
+        if self.update_overlay is None:
+            return
+        self.update_overlay.set_message(message)
+        self.update_overlay.setGeometry(self.rect())
+        self.update_overlay.raise_()
+        self.update_overlay.show()
+
+    def hideUpdatingOverlay(self):
+        if self.update_overlay is None:
+            return
+        self.update_overlay.hide()
 
     def saveImage(self, filename):
         """Save an image of the current view
@@ -238,6 +287,8 @@ class PlotImage(FigureCanvas):
 
     def mouseMoveEvent(self, event):
         cv = self.model.currentView
+        if self.ax is None or self.model.image is None:
+            return
         # Show Cursor position relative to plot in status bar
         xPlotPos, yPlotPos = self.getPlotCoords(event.pos())
 
@@ -343,6 +394,11 @@ class PlotImage(FigureCanvas):
             self.rubber_band.hide()
             self.main_window.applyChanges()
         else:
+            plot_manager = self.main_window.plot_manager
+            if plot_manager.is_busy or plot_manager.has_pending:
+                return
+            if self.main_window.model.activeView != self.main_window.model.currentView:
+                return
             self.main_window.revertDockControls()
 
     def wheelEvent(self, event):
@@ -479,9 +535,7 @@ class PlotImage(FigureCanvas):
         if self.frozen:
             return
 
-        self.model.generatePlot()
-        if update:
-            self.updatePixmap()
+        self.main_window.requestPlotUpdate()
 
     def updatePixmap(self):
 
@@ -500,9 +554,8 @@ class PlotImage(FigureCanvas):
                        cv.origin[self.main_window.yBasis] - cv.height/2.,
                        cv.origin[self.main_window.yBasis] + cv.height/2.]
 
-        # make sure we have a domain image to load
-        if not hasattr(self.model, 'image'):
-            self.model.generatePlot()
+        if not hasattr(self.model, 'image') or self.model.image is None:
+            return
 
         ### DRAW DOMAIN IMAGE ###
 
