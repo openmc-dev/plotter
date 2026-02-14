@@ -130,7 +130,7 @@ class PlotWorker(QObject):
                 filter_cpp = openmc.lib.filters[params["filter_id"]]
 
             # Single call replaces id_map + property_map + get_plot_bins
-            geom_data, property_data = openmc.lib.raster_plot(
+            geom_data, property_data = openmc.lib.slice_plot(
                 origin=params["origin"],
                 width=(params["width"], params["height"]),
                 basis=params["basis"],
@@ -319,7 +319,7 @@ class PlotModel:
         # Cell/Material ID by coordinates
         self.ids = None
 
-        # Return values from raster_plot
+        # Return values from slice_plot
         self.geom_data = None
         self.property_data = None
         self.map_view_params = None
@@ -520,7 +520,7 @@ class PlotModel:
                 if filter_id is not None:
                     filter_cpp = openmc.lib.filters[filter_id]
 
-                self.geom_data, self.property_data = openmc.lib.raster_plot(
+                self.geom_data, self.property_data = openmc.lib.slice_plot(
                     origin=view.origin,
                     width=(view.width, view.height),
                     basis=view.basis,
@@ -1039,11 +1039,11 @@ class PlotModel:
                 selected_scores.append(idx)
         data = _do_op(data[np.array(selected_scores)], tally_value)
 
-        # Extract filter bins from geom_data (computed during raster_plot call)
+        # Extract filter bins from geom_data (computed during slice_plot call)
         # geom_data has shape (v_res, h_res, 4) when filter was included
         if self.geom_data.shape[2] < 4:
             raise RuntimeError(
-                "Filter bins not available. Ensure raster_plot was called with "
+                "Filter bins not available. Ensure slice_plot was called with "
                 "the appropriate filter for MeshMaterialFilter tallies."
             )
         bins = self.geom_data[:, :, 3]
