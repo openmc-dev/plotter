@@ -321,6 +321,7 @@ class RendererWidget(QWidget):
 
     def _populateVisibilityList(self, items):
         self._clearLayout(self.visibilityLayout)
+        mode = self.modeCombo.currentData()
 
         for domain_id, name in items:
             row = QWidget(self.scrollContainer)
@@ -332,9 +333,7 @@ class RendererWidget(QWidget):
             color = self.plotter.get_color(domain_id)
             self._setColorButtonStyle(color_button, color)
 
-            label_text = f"{domain_id}"
-            if name:
-                label_text = f"{domain_id} - {name}"
+            label_text = self._formatDomainLabel(mode, domain_id, name)
             label = QLabel(label_text, row)
             label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
@@ -352,6 +351,12 @@ class RendererWidget(QWidget):
             rowLayout.addWidget(label, 1)
             rowLayout.addWidget(checkbox)
             self.visibilityLayout.addWidget(row)
+
+    def _formatDomainLabel(self, mode, domain_id, name):
+        domain_kind = "Cell" if mode == self._cell_mode else "Material"
+        if name:
+            return f'{domain_kind} {domain_id}: "{name}"'
+        return f"{domain_kind} {domain_id}"
 
     def _setColorButtonStyle(self, button, rgb):
         r, g, b = rgb
