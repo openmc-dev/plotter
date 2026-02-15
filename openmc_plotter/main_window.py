@@ -73,6 +73,7 @@ class MainWindow(QMainWindow):
         self.plot_manager = None
         self._render_dialog = None
         self._render_plotter = None
+        self._renderer_widget = None
         self._renderer_classes = None
 
     def loadGui(self, use_settings_pkl=True):
@@ -512,6 +513,7 @@ class MainWindow(QMainWindow):
 
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
+        self._connectDomainModelSignals()
 
         openmc_args = {'threads': self.threads, 'model_path': self.model_path}
 
@@ -663,6 +665,7 @@ class MainWindow(QMainWindow):
         self.sourceSitesDialog.activateWindow()
 
     def applyChanges(self):
+        self._syncRendererFromModel(use_active=True)
         if self.model.activeView != self.model.currentView:
             if self.model.activeView.selectedTally is not None:
                 self.tallyPanel.updateModel()
@@ -839,6 +842,7 @@ class MainWindow(QMainWindow):
         if self._render_dialog is not None:
             self._render_dialog.raise_()
             self._render_dialog.activateWindow()
+            self._syncRendererFromModel(use_active=True)
             return
 
         try:
@@ -849,11 +853,10 @@ class MainWindow(QMainWindow):
             openmc_args.append(str(self.model_path))
 
             plotter = OpenMCPlotter(args=openmc_args)
-            material_colors, cell_colors = self._getRendererDomainColors()
-            if self.model.currentView.colorby == "cell":
-                initial_color_mode = plotter.COLOR_BY_CELL
-            else:
-                initial_color_mode = plotter.COLOR_BY_MATERIAL
+            material_domains, cell_domains = self._getRendererDomainData(
+                view=self.model.activeView
+            )
+            initial_color_mode = self.model.activeView.colorby
 
             dialog = QDialog(self)
             dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
@@ -864,9 +867,10 @@ class MainWindow(QMainWindow):
             renderer_widget = RendererWidget(
                 plotter,
                 GLPlotWidget,
-                material_colors=material_colors,
-                cell_colors=cell_colors,
+                material_domains=material_domains,
+                cell_domains=cell_domains,
                 initial_color_mode=initial_color_mode,
+                on_color_changed=self._onRendererDomainColorChanged,
                 parent=dialog,
             )
             layout.addWidget(renderer_widget)
@@ -876,6 +880,7 @@ class MainWindow(QMainWindow):
 
             self._render_dialog = dialog
             self._render_plotter = plotter
+            self._renderer_widget = renderer_widget
 
         except Exception as exc:
             msg_box = QMessageBox(self)
@@ -890,6 +895,7 @@ class MainWindow(QMainWindow):
     def _rendererDialogClosed(self, _result):
         self._render_dialog = None
         self._render_plotter = None
+        self._renderer_widget = None
 
     def _loadRendererClasses(self):
         if self._renderer_classes is not None:
@@ -931,23 +937,25 @@ class MainWindow(QMainWindow):
 
         return None
 
-    def _getRendererDomainColors(self):
-        view = self.model.currentView
-        return (self._extractDomainColors(view.materials),
-                self._extractDomainColors(view.cells))
+    def _getRendererDomainData(self, view=None):
+        if view is None:
+            view = self.model.activeView
+        return (self._extractDomainData(view.materials),
+                self._extractDomainData(view.cells))
 
-    def _extractDomainColors(self, domains):
-        color_map = {}
+    def _extractDomainData(self, domains):
+        domain_data = {}
         for domain_id in domains.defaults:
-            if int(domain_id) < 0:
+            did = int(domain_id)
+            if did < 0:
                 continue
 
-            domain = domains[domain_id]
-            rgb = self._normalizeRendererColor(domain.color)
-            if rgb is None:
-                continue
-            color_map[int(domain_id)] = rgb
-        return color_map
+            domain = domains[did]
+            domain_data[did] = {
+                "name": domain.name if domain.name is not None else "",
+                "color": self._normalizeRendererColor(domain.color),
+            }
+        return domain_data
 
     def _normalizeRendererColor(self, color):
         if color is None:
@@ -968,6 +976,52 @@ class MainWindow(QMainWindow):
             return None
 
         return tuple(max(0, min(255, component)) for component in rgb)
+
+    def _onRendererDomainColorChanged(self, domain_kind, domain_id, color):
+        rgb = self._normalizeRendererColor(color)
+        if rgb is None:
+            return
+
+        if domain_kind == "cell":
+            domains = self.model.activeView.cells
+        else:
+            domains = self.model.activeView.materials
+
+        domain_id = int(domain_id)
+        if domain_id not in domains.defaults:
+            return
+        if self._normalizeRendererColor(domains[domain_id].color) == rgb:
+            return
+
+        domains.set_color(domain_id, rgb)
+        self._syncRendererFromModel(use_active=True)
+        self.applyChanges()
+
+    def _syncRendererFromModel(self, use_active=True, sync_color_mode=False):
+        if self._renderer_widget is None:
+            return
+
+        view = self.model.activeView if use_active else self.model.currentView
+        material_domains, cell_domains = self._getRendererDomainData(view=view)
+        color_mode = None
+        if sync_color_mode:
+            color_mode = "cell" if view.colorby == "cell" else "material"
+        self._renderer_widget.syncDomainData(
+            material_domains=material_domains,
+            cell_domains=cell_domains,
+            color_mode=color_mode,
+        )
+
+    def _connectDomainModelSignals(self):
+        for table_model in (self.cellsModel, self.materialsModel):
+            try:
+                table_model.dataChanged.disconnect(self._onDomainModelDataChanged)
+            except (TypeError, RuntimeError):
+                pass
+            table_model.dataChanged.connect(self._onDomainModelDataChanged)
+
+    def _onDomainModelDataChanged(self, *_args):
+        self._syncRendererFromModel(use_active=True)
 
     def showExportDialog(self):
         self.exportDataDialog.show()
@@ -1275,11 +1329,13 @@ class MainWindow(QMainWindow):
     def resetModels(self):
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
+        self._connectDomainModelSignals()
         self.cellsModel.beginResetModel()
         self.cellsModel.endResetModel()
         self.materialsModel.beginResetModel()
         self.materialsModel.endResetModel()
         self.colorDialog.updateDomainTabs()
+        self._syncRendererFromModel(use_active=True)
 
     def showCurrentView(self):
         self.updateScale()
@@ -1377,6 +1433,7 @@ class MainWindow(QMainWindow):
             self.model.makePlot(view_snapshot, self.model.ids_map, self.model.properties)
             self.resetModels()
             self.showCurrentView()
+            self._syncRendererFromModel(use_active=False)
             if not self.plot_manager.is_busy:
                 self._on_plot_idle()
             return
@@ -1400,6 +1457,7 @@ class MainWindow(QMainWindow):
         self.model.makePlot(view_snapshot, ids_map, properties)
         self.resetModels()
         self.showCurrentView()
+        self._syncRendererFromModel(use_active=False)
 
     def _on_plot_error(self, error_msg):
         msg_box = QMessageBox()

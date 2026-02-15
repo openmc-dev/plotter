@@ -12,9 +12,10 @@ class RendererWidget(QWidget):
         self,
         plotter,
         gl_widget_cls,
-        material_colors=None,
-        cell_colors=None,
-        initial_color_mode=None,
+        material_domains=None,
+        cell_domains=None,
+        initial_color_mode="material",
+        on_color_changed=None,
         parent=None,
     ):
         super().__init__(parent)
@@ -22,14 +23,14 @@ class RendererWidget(QWidget):
         self.gl_widget = gl_widget_cls(plotter, self)
         self._material_mode = self.plotter.COLOR_BY_MATERIAL
         self._cell_mode = self.plotter.COLOR_BY_CELL
-        self._color_maps = {
-            self._material_mode: dict(material_colors or {}),
-            self._cell_mode: dict(cell_colors or {}),
-        }
-        if initial_color_mode in (self._material_mode, self._cell_mode):
-            self._initial_color_mode = initial_color_mode
-        else:
-            self._initial_color_mode = self._material_mode
+        self._on_color_changed = on_color_changed
+
+        self._domain_data = {}
+        self._color_maps = {}
+        self._setDomainData(material_domains, cell_domains)
+
+        mode_value = self._resolveModeValue(initial_color_mode)
+        self._initial_mode = self._material_mode if mode_value is None else mode_value
 
         self._buildUi()
         self._connectSignals()
@@ -65,8 +66,8 @@ class RendererWidget(QWidget):
         modeLayout = QHBoxLayout()
         modeLayout.addWidget(QLabel("Color by:", self.controlsWidget))
         self.modeCombo = QComboBox(self.controlsWidget)
-        self.modeCombo.addItem("Material", self.plotter.COLOR_BY_MATERIAL)
-        self.modeCombo.addItem("Cell", self.plotter.COLOR_BY_CELL)
+        self.modeCombo.addItem("Material", self._material_mode)
+        self.modeCombo.addItem("Cell", self._cell_mode)
         modeLayout.addWidget(self.modeCombo, 1)
         controlsLayout.addLayout(modeLayout)
 
@@ -158,11 +159,11 @@ class RendererWidget(QWidget):
     def _initializeState(self):
         if self.plotter.available:
             self.plotter.set_diffuse_fraction(0.1)
-            initial_idx = 0 if self._initial_color_mode == self._material_mode else 1
+            initial_idx = 0 if self._initial_mode == self._material_mode else 1
             self.modeCombo.blockSignals(True)
             self.modeCombo.setCurrentIndex(initial_idx)
             self.modeCombo.blockSignals(False)
-            self._onColorModeChange(initial_idx)
+            self._refreshCurrentMode(self.modeCombo.itemData(initial_idx), request_render=True)
         else:
             self.visibilityLayout.addWidget(QLabel("OpenMC not available.", self.scrollContainer))
 
@@ -197,12 +198,126 @@ class RendererWidget(QWidget):
     def _scaleFromSlider(self, value, min_value, max_value):
         return min_value + (max_value - min_value) * (value / 100.0)
 
+    def _normalizeRgb(self, color):
+        if color is None:
+            return None
+
+        try:
+            rgb = tuple(int(component) for component in color)
+        except (TypeError, ValueError):
+            return None
+
+        if len(rgb) != 3:
+            return None
+
+        return tuple(max(0, min(255, component)) for component in rgb)
+
+    def _normalizeDomainMap(self, domains):
+        normalized = {}
+        if not domains:
+            return normalized
+
+        for domain_id, payload in domains.items():
+            try:
+                did = int(domain_id)
+            except (TypeError, ValueError):
+                continue
+
+            name = ""
+            color = None
+
+            if isinstance(payload, dict):
+                name = payload.get("name") or ""
+                color = payload.get("color")
+
+            normalized[did] = {
+                "name": str(name),
+                "color": self._normalizeRgb(color),
+            }
+
+        return normalized
+
+    def _setDomainData(self, material_domains, cell_domains):
+        self._domain_data = {
+            self._material_mode: self._normalizeDomainMap(material_domains),
+            self._cell_mode: self._normalizeDomainMap(cell_domains),
+        }
+
+        self._color_maps = {
+            self._material_mode: {
+                domain_id: entry["color"]
+                for domain_id, entry in self._domain_data[self._material_mode].items()
+                if entry["color"] is not None
+            },
+            self._cell_mode: {
+                domain_id: entry["color"]
+                for domain_id, entry in self._domain_data[self._cell_mode].items()
+                if entry["color"] is not None
+            },
+        }
+
+    def _resolveModeValue(self, color_mode):
+        if color_mode in (self._material_mode, self._cell_mode):
+            return color_mode
+
+        if isinstance(color_mode, str):
+            mode_name = color_mode.strip().lower()
+            if mode_name == "material":
+                return self._material_mode
+            if mode_name == "cell":
+                return self._cell_mode
+
+        return None
+
+    def _modeValueToName(self, mode):
+        return "cell" if mode == self._cell_mode else "material"
+
+    def syncDomainData(self, material_domains=None, cell_domains=None, color_mode=None):
+        self._setDomainData(material_domains, cell_domains)
+
+        if not self.plotter.available:
+            return
+
+        mode_value = self._resolveModeValue(color_mode)
+        if mode_value is not None:
+            index = 0 if mode_value == self._material_mode else 1
+            self.modeCombo.blockSignals(True)
+            self.modeCombo.setCurrentIndex(index)
+            self.modeCombo.blockSignals(False)
+
+        current_mode = self.modeCombo.currentData()
+        self._refreshCurrentMode(current_mode, request_render=True)
+
     def _clearLayout(self, layout):
         while layout.count():
             item = layout.takeAt(0)
             widget = item.widget()
             if widget is not None:
                 widget.deleteLater()
+
+    def _domainItemsForMode(self, mode):
+        if mode == self._cell_mode:
+            base_items = self.plotter.cell_list() if self.plotter.available else []
+        else:
+            base_items = self.plotter.material_list() if self.plotter.available else []
+
+        domain_data = self._domain_data.get(mode, {})
+
+        items = []
+        used_ids = set()
+        for domain_id, fallback_name in base_items:
+            did = int(domain_id)
+            info = domain_data.get(did, {})
+            name = info.get("name") or fallback_name or ""
+            items.append((did, name))
+            used_ids.add(did)
+
+        for did in sorted(domain_data):
+            if did in used_ids:
+                continue
+            items.append((did, domain_data[did].get("name") or ""))
+
+        return items
 
     def _populateVisibilityList(self, items):
         self._clearLayout(self.visibilityLayout)
@@ -254,12 +369,21 @@ class RendererWidget(QWidget):
         color = QColorDialog.getColor(initial, button, "Select Color")
         if not color.isValid():
             return
+
         rgb = (color.red(), color.green(), color.blue())
-        self.plotter.set_color(domain_id, rgb)
         mode = self.modeCombo.currentData()
+
+        self.plotter.set_color(domain_id, rgb)
         self._color_maps.setdefault(mode, {})[domain_id] = rgb
+        mode_domain_data = self._domain_data.setdefault(mode, {})
+        entry = mode_domain_data.setdefault(domain_id, {"name": "", "color": None})
+        entry["color"] = rgb
+
         self._setColorButtonStyle(button, rgb)
         self.gl_widget.request_final_render()
+
+        if self._on_color_changed is not None:
+            self._on_color_changed(self._modeValueToName(mode), int(domain_id), rgb)
 
     def _applyMappedColors(self, mode):
         for domain_id, rgb in self._color_maps.get(mode, {}).items():
@@ -268,16 +392,16 @@ class RendererWidget(QWidget):
             except Exception:
                 continue
 
-    def _onColorModeChange(self, index):
-        mode = self.modeCombo.itemData(index)
+    def _refreshCurrentMode(self, mode, request_render):
         self.plotter.set_color_by(mode)
         self._applyMappedColors(mode)
-        if mode == self._cell_mode:
-            items = self.plotter.cell_list()
-        else:
-            items = self.plotter.material_list()
-        self._populateVisibilityList(items)
-        self.gl_widget.request_final_render()
+        self._populateVisibilityList(self._domainItemsForMode(mode))
+        if request_render:
+            self.gl_widget.request_final_render()
+
+    def _onColorModeChange(self, index):
+        mode = self.modeCombo.itemData(index)
+        self._refreshCurrentMode(mode, request_render=True)
 
     def _updateCameraSpeeds(self):
         rotate = self._scaleFromSlider(self.rotateSlider.value(), 0.001, 0.02)
