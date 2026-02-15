@@ -1,7 +1,10 @@
 import copy
 from functools import partial
+import importlib.util
+import os
 from pathlib import Path
 import pickle
+import sys
 from threading import Thread
 
 from PySide6 import QtCore, QtGui
@@ -9,7 +12,7 @@ from PySide6.QtGui import QKeyEvent, QAction
 from PySide6.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMessageBox, QFileDialog,
                                QColorDialog, QInputDialog, QWidget,
-                               QGestureEvent)
+                               QGestureEvent, QDialog, QVBoxLayout)
 
 import openmc
 import openmc.lib
@@ -24,6 +27,7 @@ from .plotmodel import PlotModel, DomainTableModel, hash_model
 from .plotgui import PlotImage, ColorDialog
 from .docks import TabbedDock
 from .overlays import ShortcutsOverlay
+from .renderer_widget import RendererWidget
 from .tools import ExportDataDialog, SourceSitesDialog
 
 
@@ -39,6 +43,15 @@ def _openmcReload(threads=None, model_path='.'):
     args.append(str(model_path))
     openmc.lib.init(args)
     openmc.lib.settings.verbosity = 1
+
+
+def _load_module_from_path(module_name, module_path):
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Unable to load module from {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class MainWindow(QMainWindow):
@@ -58,6 +71,9 @@ class MainWindow(QMainWindow):
         self.default_res = resolution
         self.model = None
         self.plot_manager = None
+        self._render_dialog = None
+        self._render_plotter = None
+        self._renderer_classes = None
 
     def loadGui(self, use_settings_pkl=True):
 
@@ -818,6 +834,89 @@ class MainWindow(QMainWindow):
         self.colorDialog.show()
         self.colorDialog.raise_()
         self.colorDialog.activateWindow()
+
+    def showRendererDialog(self):
+        if self._render_dialog is not None:
+            self._render_dialog.raise_()
+            self._render_dialog.activateWindow()
+            return
+
+        try:
+            OpenMCPlotter, GLPlotWidget = self._loadRendererClasses()
+            openmc_args = ["-c"]
+            if self.threads is not None:
+                openmc_args += ["-s", str(self.threads)]
+            openmc_args.append(str(self.model_path))
+
+            plotter = OpenMCPlotter(args=openmc_args)
+            dialog = QDialog(self)
+            dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+            dialog.setWindowTitle("OpenMC Renderer")
+            dialog.resize(900, 700)
+
+            layout = QVBoxLayout(dialog)
+            renderer_widget = RendererWidget(plotter, GLPlotWidget, dialog)
+            layout.addWidget(renderer_widget)
+
+            dialog.finished.connect(self._rendererDialogClosed)
+            dialog.show()
+
+            self._render_dialog = dialog
+            self._render_plotter = plotter
+
+        except Exception as exc:
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.setText(
+                "Unable to start the OpenMC renderer.\n\n"
+                f"{exc}\n\n"
+                "Ensure openmc_renderer is available and dependencies are installed."
+            )
+            msg_box.exec()
+
+    def _rendererDialogClosed(self, _result):
+        self._render_dialog = None
+        self._render_plotter = None
+
+    def _loadRendererClasses(self):
+        if self._renderer_classes is not None:
+            return self._renderer_classes
+
+        renderer_python_dir = self._findRendererPythonDir()
+        if renderer_python_dir is None:
+            raise FileNotFoundError(
+                "Could not locate openmc_renderer/Python. "
+                "Set OPENMC_RENDERER_PATH to the renderer repository root."
+            )
+
+        renderer_python_dir_str = str(renderer_python_dir)
+        if renderer_python_dir_str not in sys.path:
+            sys.path.insert(0, renderer_python_dir_str)
+
+        plotter_module = _load_module_from_path(
+            "openmc_renderer_plotter", renderer_python_dir / "openmc_plotter.py"
+        )
+        gl_module = _load_module_from_path(
+            "openmc_renderer_gl_widget", renderer_python_dir / "gl_widget.py"
+        )
+
+        self._renderer_classes = (plotter_module.OpenMCPlotter,
+                                  gl_module.GLPlotWidget)
+        return self._renderer_classes
+
+    def _findRendererPythonDir(self):
+        env_path = os.environ.get("OPENMC_RENDERER_PATH")
+        if env_path:
+            candidate = Path(env_path) / "Python"
+            if candidate.is_dir():
+                return candidate
+
+        for parent in Path(__file__).resolve().parents:
+            candidate = parent / "openmc_renderer" / "Python"
+            if candidate.is_dir():
+                return candidate
+
+        return None
 
     def showExportDialog(self):
         self.exportDataDialog.show()
