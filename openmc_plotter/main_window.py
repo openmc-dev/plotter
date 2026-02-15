@@ -849,13 +849,26 @@ class MainWindow(QMainWindow):
             openmc_args.append(str(self.model_path))
 
             plotter = OpenMCPlotter(args=openmc_args)
+            material_colors, cell_colors = self._getRendererDomainColors()
+            if self.model.currentView.colorby == "cell":
+                initial_color_mode = plotter.COLOR_BY_CELL
+            else:
+                initial_color_mode = plotter.COLOR_BY_MATERIAL
+
             dialog = QDialog(self)
             dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
             dialog.setWindowTitle("OpenMC Renderer")
             dialog.resize(900, 700)
 
             layout = QVBoxLayout(dialog)
-            renderer_widget = RendererWidget(plotter, GLPlotWidget, dialog)
+            renderer_widget = RendererWidget(
+                plotter,
+                GLPlotWidget,
+                material_colors=material_colors,
+                cell_colors=cell_colors,
+                initial_color_mode=initial_color_mode,
+                parent=dialog,
+            )
             layout.addWidget(renderer_widget)
 
             dialog.finished.connect(self._rendererDialogClosed)
@@ -917,6 +930,44 @@ class MainWindow(QMainWindow):
                 return candidate
 
         return None
+
+    def _getRendererDomainColors(self):
+        view = self.model.currentView
+        return (self._extractDomainColors(view.materials),
+                self._extractDomainColors(view.cells))
+
+    def _extractDomainColors(self, domains):
+        color_map = {}
+        for domain_id in domains.defaults:
+            if int(domain_id) < 0:
+                continue
+
+            domain = domains[domain_id]
+            rgb = self._normalizeRendererColor(domain.color)
+            if rgb is None:
+                continue
+            color_map[int(domain_id)] = rgb
+        return color_map
+
+    def _normalizeRendererColor(self, color):
+        if color is None:
+            return None
+
+        if isinstance(color, str):
+            color_name = color.lower()
+            if color_name not in openmc.plots._SVG_COLORS:
+                return None
+            color = openmc.plots._SVG_COLORS[color_name]
+
+        try:
+            rgb = tuple(int(component) for component in color)
+        except TypeError:
+            return None
+
+        if len(rgb) != 3:
+            return None
+
+        return tuple(max(0, min(255, component)) for component in rgb)
 
     def showExportDialog(self):
         self.exportDataDialog.show()

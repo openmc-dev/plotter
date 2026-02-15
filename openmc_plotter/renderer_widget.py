@@ -8,10 +8,28 @@ from PySide6.QtWidgets import (QCheckBox, QComboBox, QColorDialog, QGridLayout,
 class RendererWidget(QWidget):
     """Embedded OpenMC renderer with controls panel."""
 
-    def __init__(self, plotter, gl_widget_cls, parent=None):
+    def __init__(
+        self,
+        plotter,
+        gl_widget_cls,
+        material_colors=None,
+        cell_colors=None,
+        initial_color_mode=None,
+        parent=None,
+    ):
         super().__init__(parent)
         self.plotter = plotter
         self.gl_widget = gl_widget_cls(plotter, self)
+        self._material_mode = self.plotter.COLOR_BY_MATERIAL
+        self._cell_mode = self.plotter.COLOR_BY_CELL
+        self._color_maps = {
+            self._material_mode: dict(material_colors or {}),
+            self._cell_mode: dict(cell_colors or {}),
+        }
+        if initial_color_mode in (self._material_mode, self._cell_mode):
+            self._initial_color_mode = initial_color_mode
+        else:
+            self._initial_color_mode = self._material_mode
 
         self._buildUi()
         self._connectSignals()
@@ -29,10 +47,11 @@ class RendererWidget(QWidget):
         viewerLayout.setContentsMargins(0, 0, 0, 0)
 
         toolbarLayout = QHBoxLayout()
+        self.controlsButton = QPushButton("What's this?", viewerWidget)
+        self.controlsButton.setToolTip("Show renderer controls")
         self.saveButton = QPushButton("Save PNG", viewerWidget)
-        self.controlsButton = QPushButton("Controls", viewerWidget)
-        toolbarLayout.addWidget(self.saveButton)
         toolbarLayout.addWidget(self.controlsButton)
+        toolbarLayout.addWidget(self.saveButton)
         toolbarLayout.addStretch()
 
         viewerLayout.addLayout(toolbarLayout)
@@ -139,7 +158,11 @@ class RendererWidget(QWidget):
     def _initializeState(self):
         if self.plotter.available:
             self.plotter.set_diffuse_fraction(0.1)
-            self._populateVisibilityList(self.plotter.material_list())
+            initial_idx = 0 if self._initial_color_mode == self._material_mode else 1
+            self.modeCombo.blockSignals(True)
+            self.modeCombo.setCurrentIndex(initial_idx)
+            self.modeCombo.blockSignals(False)
+            self._onColorModeChange(initial_idx)
         else:
             self.visibilityLayout.addWidget(QLabel("OpenMC not available.", self.scrollContainer))
 
@@ -233,13 +256,23 @@ class RendererWidget(QWidget):
             return
         rgb = (color.red(), color.green(), color.blue())
         self.plotter.set_color(domain_id, rgb)
+        mode = self.modeCombo.currentData()
+        self._color_maps.setdefault(mode, {})[domain_id] = rgb
         self._setColorButtonStyle(button, rgb)
         self.gl_widget.request_final_render()
+
+    def _applyMappedColors(self, mode):
+        for domain_id, rgb in self._color_maps.get(mode, {}).items():
+            try:
+                self.plotter.set_color(domain_id, rgb)
+            except Exception:
+                continue
 
     def _onColorModeChange(self, index):
         mode = self.modeCombo.itemData(index)
         self.plotter.set_color_by(mode)
-        if mode == self.plotter.COLOR_BY_CELL:
+        self._applyMappedColors(mode)
+        if mode == self._cell_mode:
             items = self.plotter.cell_list()
         else:
             items = self.plotter.material_list()
