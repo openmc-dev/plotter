@@ -1013,12 +1013,15 @@ class MainWindow(QMainWindow):
         )
 
     def _connectDomainModelSignals(self):
+        unique = QtCore.Qt.ConnectionType.UniqueConnection
         for table_model in (self.cellsModel, self.materialsModel):
             try:
-                table_model.dataChanged.disconnect(self._onDomainModelDataChanged)
+                table_model.dataChanged.connect(
+                    self._onDomainModelDataChanged, unique
+                )
             except (TypeError, RuntimeError):
+                # Already connected for this model instance.
                 pass
-            table_model.dataChanged.connect(self._onDomainModelDataChanged)
 
     def _onDomainModelDataChanged(self, *_args):
         self._syncRendererFromModel(use_active=True)
