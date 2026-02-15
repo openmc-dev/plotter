@@ -965,6 +965,18 @@ class MainWindow(QMainWindow):
     def editColorbarTickFontSize(self, value):
         self.model.activeView.colorbarTickSize = int(value)
 
+    def editAxisLabelFont(self, value):
+        self.model.activeView.axisLabelFont = value or None
+
+    def editAxisTickFont(self, value):
+        self.model.activeView.axisTickFont = value or None
+
+    def editColorbarLabelFont(self, value):
+        self.model.activeView.colorbarLabelFont = value or None
+
+    def editColorbarTickFont(self, value):
+        self.model.activeView.colorbarTickFont = value or None
+
     # Tally dock methods
 
     def editSelectedTally(self, event):

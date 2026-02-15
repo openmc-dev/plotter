@@ -1145,6 +1145,14 @@ class PlotViewIndependent:
         Font size for colorbar labels
     colorbarTickSize : int
         Font size for colorbar tick labels
+    axisLabelFont : str or None
+        Font family for axis labels
+    axisTickFont : str or None
+        Font family for axis tick labels
+    colorbarLabelFont : str or None
+        Font family for colorbar labels
+    colorbarTickFont : str or None
+        Font family for colorbar tick labels
     """
 
     def __init__(self):
@@ -1194,6 +1202,10 @@ class PlotViewIndependent:
         self.axisTickSize = _DEFAULT_AXIS_TICK_SIZE
         self.colorbarLabelSize = _DEFAULT_COLORBAR_LABEL_SIZE
         self.colorbarTickSize = _DEFAULT_COLORBAR_TICK_SIZE
+        self.axisLabelFont = None
+        self.axisTickFont = None
+        self.colorbarLabelFont = None
+        self.colorbarTickFont = None
 
     def __setstate__(self, state):
         """Handle backward compatibility when unpickling old views"""
@@ -1219,6 +1231,14 @@ class PlotViewIndependent:
             self.colorbarLabelSize = _DEFAULT_COLORBAR_LABEL_SIZE
         if not hasattr(self, 'colorbarTickSize'):
             self.colorbarTickSize = _DEFAULT_COLORBAR_TICK_SIZE
+        if not hasattr(self, 'axisLabelFont'):
+            self.axisLabelFont = None
+        if not hasattr(self, 'axisTickFont'):
+            self.axisTickFont = None
+        if not hasattr(self, 'colorbarLabelFont'):
+            self.colorbarLabelFont = None
+        if not hasattr(self, 'colorbarTickFont'):
+            self.colorbarTickFont = None
 
     def getDataLimits(self):
         return self.data_minmax
