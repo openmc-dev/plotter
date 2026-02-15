@@ -322,6 +322,7 @@ class RendererWidget(QWidget):
     def _populateVisibilityList(self, items):
         self._clearLayout(self.visibilityLayout)
         mode = self.modeCombo.currentData()
+        self._addVisibilityHeader()
 
         for domain_id, name in items:
             row = QWidget(self.scrollContainer)
@@ -351,6 +352,19 @@ class RendererWidget(QWidget):
             rowLayout.addWidget(label, 1)
             rowLayout.addWidget(checkbox)
             self.visibilityLayout.addWidget(row)
+
+    def _addVisibilityHeader(self):
+        header_row = QWidget(self.scrollContainer)
+        header_layout = QHBoxLayout(header_row)
+        header_layout.setContentsMargins(0, 0, 0, 2)
+
+        empty_label = QLabel("", header_row)
+        visibility_label = QLabel("Visibility", header_row)
+        visibility_label.setAlignment(QtCore.Qt.AlignCenter)
+
+        header_layout.addWidget(empty_label, 1)
+        header_layout.addWidget(visibility_label)
+        self.visibilityLayout.addWidget(header_row)
 
     def _formatDomainLabel(self, mode, domain_id, name):
         domain_kind = "Cell" if mode == self._cell_mode else "Material"
