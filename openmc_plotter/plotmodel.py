@@ -21,6 +21,30 @@ from . import __version__
 from .statepointmodel import StatePointModel
 from .plot_colors import random_rgb
 
+
+def _resolve_font_size(value, fallback):
+    try:
+        from matplotlib.font_manager import FontProperties
+        return int(round(FontProperties(size=value).get_size_in_points()))
+    except Exception:
+        return fallback
+
+
+def _default_font_sizes():
+    try:
+        from matplotlib import rcParams
+        axis_label = _resolve_font_size(rcParams.get("axes.labelsize", 10), 10)
+        axis_tick = _resolve_font_size(rcParams.get("xtick.labelsize", 10), 10)
+        colorbar_label = _resolve_font_size(rcParams.get("axes.labelsize", axis_label), axis_label)
+        colorbar_tick = _resolve_font_size(rcParams.get("ytick.labelsize", axis_tick), axis_tick)
+        return axis_label, axis_tick, colorbar_label, colorbar_tick
+    except Exception:
+        return (10, 10, 10, 10)
+
+
+_DEFAULT_AXIS_LABEL_SIZE, _DEFAULT_AXIS_TICK_SIZE, \
+    _DEFAULT_COLORBAR_LABEL_SIZE, _DEFAULT_COLORBAR_TICK_SIZE = _default_font_sizes()
+
 ID, NAME, COLOR, COLORLABEL, MASK, HIGHLIGHT = range(6)
 
 _VOID_REGION = -1
@@ -1113,6 +1137,14 @@ class PlotViewIndependent:
         Indicates whether or not tallies are displayed as contours
     tallyContourLevels : str
         Number of contours levels or explicit level values
+    axisLabelSize : int
+        Font size for axis labels
+    axisTickSize : int
+        Font size for axis tick labels
+    colorbarLabelSize : int
+        Font size for colorbar labels
+    colorbarTickSize : int
+        Font size for colorbar tick labels
     """
 
     def __init__(self):
@@ -1157,6 +1189,12 @@ class PlotViewIndependent:
         self.tallyContours = False
         self.tallyContourLevels = ""
 
+        # Plot text sizing
+        self.axisLabelSize = _DEFAULT_AXIS_LABEL_SIZE
+        self.axisTickSize = _DEFAULT_AXIS_TICK_SIZE
+        self.colorbarLabelSize = _DEFAULT_COLORBAR_LABEL_SIZE
+        self.colorbarTickSize = _DEFAULT_COLORBAR_TICK_SIZE
+
     def __setstate__(self, state):
         """Handle backward compatibility when unpickling old views"""
         self.__dict__.update(state)
@@ -1173,6 +1211,14 @@ class PlotViewIndependent:
                 self.tallyDataMinMaxType = 'full'
         # Remove old attributes if present
         self.__dict__.pop('tallyDataUserMinMax', None)
+        if not hasattr(self, 'axisLabelSize'):
+            self.axisLabelSize = _DEFAULT_AXIS_LABEL_SIZE
+        if not hasattr(self, 'axisTickSize'):
+            self.axisTickSize = _DEFAULT_AXIS_TICK_SIZE
+        if not hasattr(self, 'colorbarLabelSize'):
+            self.colorbarLabelSize = _DEFAULT_COLORBAR_LABEL_SIZE
+        if not hasattr(self, 'colorbarTickSize'):
+            self.colorbarTickSize = _DEFAULT_COLORBAR_TICK_SIZE
 
     def getDataLimits(self):
         return self.data_minmax
