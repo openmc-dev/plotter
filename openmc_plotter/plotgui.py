@@ -1453,13 +1453,10 @@ class AppearanceDialog(QDialog):
     def createButtonBox(self):
         applyButton = QPushButton("Apply Changes")
         applyButton.clicked.connect(self.main_window.applyChanges)
-        closeButton = QPushButton("Close")
-        closeButton.clicked.connect(self.hide)
+        applyButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
 
         buttonLayout = QHBoxLayout()
-        buttonLayout.addStretch(1)
-        buttonLayout.addWidget(applyButton)
-        buttonLayout.addWidget(closeButton)
+        buttonLayout.addWidget(applyButton, 1)
 
         self.buttonBox = QWidget()
         self.buttonBox.setLayout(buttonLayout)
