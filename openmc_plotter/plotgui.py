@@ -5,10 +5,13 @@ from PySide6.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
                                QFormLayout, QComboBox, QSpinBox, QLabel,
                                QDoubleSpinBox, QSizePolicy, QMessageBox,
                                QCheckBox, QRubberBand, QMenu, QDialog,
-                               QTabWidget, QTableView, QHeaderView)
+                               QTabWidget, QTableView, QHeaderView, QListView)
 from matplotlib.figure import Figure
 from matplotlib import lines as mlines
+from matplotlib import font_manager
 from matplotlib.colors import SymLogNorm
+from matplotlib.font_manager import FontProperties
+from matplotlib.textpath import TextPath
 from matplotlib.backends.backend_qt5agg import FigureCanvas
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,6 +22,38 @@ from .plotmodel import DomainDelegate, PlotModel
 from .plotmodel import _NOT_FOUND, _VOID_REGION, _OVERLAP, _MODEL_PROPERTIES
 from .scientific_spin_box import ScientificDoubleSpinBox
 from .custom_widgets import HorizontalLine
+
+_DEFAULT_FONT_LABEL = "Default (Matplotlib)"
+_FONT_FAMILY_CACHE = None
+
+
+def _matplotlib_font_names():
+    global _FONT_FAMILY_CACHE
+    if _FONT_FAMILY_CACHE is not None:
+        return _FONT_FAMILY_CACHE
+    names = set()
+    try:
+        for entry in font_manager.fontManager.ttflist:
+            name = getattr(entry, "name", None)
+            if name:
+                names.add(name)
+    except Exception:
+        names = set()
+    _FONT_FAMILY_CACHE = sorted(names, key=lambda s: s.lower())
+    return _FONT_FAMILY_CACHE
+
+
+def _build_font_combo():
+    combo = QComboBox()
+    combo.setEditable(False)
+    combo.setMaxVisibleItems(20)
+    view = QListView()
+    view.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+    combo.setView(view)
+    combo.addItem(_DEFAULT_FONT_LABEL, None)
+    for name in _matplotlib_font_names():
+        combo.addItem(name, name)
+    return combo
 
 
 class PlotUpdateOverlay(QWidget):
@@ -179,6 +214,69 @@ class PlotImage(FigureCanvas):
         if "." not in str(filename):
             filename += ".png"
         self.figure.savefig(filename, transparent=True)
+
+    def _colorbar_tick_texts(self, colorbar):
+        labels = [t.get_text() for t in colorbar.ax.get_yticklabels()]
+        labels = [t for t in labels if t]
+        if labels:
+            return labels
+        try:
+            formatter = colorbar.ax.yaxis.get_major_formatter()
+            locs = colorbar.get_ticks()
+            return [t for t in formatter.format_ticks(locs) if t]
+        except Exception:
+            return []
+
+    def _text_width_pts(self, text, size, font_name=None):
+        if not text:
+            return 0.0
+        try:
+            if font_name:
+                prop = FontProperties(size=size, family=font_name)
+            else:
+                prop = FontProperties(size=size)
+            path = TextPath((0, 0), text, prop=prop)
+            return path.get_extents().width
+        except Exception:
+            return 0.6 * size * len(text)
+
+    def _text_height_pts(self, text, size, font_name=None):
+        if not text:
+            return float(size)
+        try:
+            if font_name:
+                prop = FontProperties(size=size, family=font_name)
+            else:
+                prop = FontProperties(size=size)
+            path = TextPath((0, 0), text, prop=prop)
+            return path.get_extents().height
+        except Exception:
+            return float(size)
+
+    def _colorbar_tick_pad(self, colorbar):
+        ticks = colorbar.ax.yaxis.get_major_ticks()
+        if ticks:
+            try:
+                return float(ticks[0].get_pad())
+            except Exception:
+                pass
+        try:
+            return float(plt.rcParams.get("ytick.major.pad", 4))
+        except Exception:
+            return 4.0
+
+    def _colorbar_label_pad(self, colorbar, label_text, label_size, tick_size,
+                            label_font=None, tick_font=None):
+        # Estimate a label pad that grows with tick label width
+        # to avoid label/tick overlap when fonts are enlarged.
+        tick_texts = self._colorbar_tick_texts(colorbar)
+        max_tick_width = 0.0
+        for text in tick_texts:
+            max_tick_width = max(max_tick_width,
+                                 self._text_width_pts(text, tick_size, tick_font))
+        label_height = self._text_height_pts(label_text, label_size, label_font)
+        tick_pad = self._colorbar_tick_pad(colorbar)
+        return max(15.0, max_tick_width + 0.5 * label_height + tick_pad + 2.0)
 
     def getDataIndices(self, event):
         cv = self.model.currentView
@@ -543,6 +641,14 @@ class PlotImage(FigureCanvas):
         self.figure.clear()
 
         cv = self.model.currentView
+        axis_label_size = cv.axisLabelSize
+        axis_tick_size = cv.axisTickSize
+        colorbar_label_size = cv.colorbarLabelSize
+        colorbar_tick_size = cv.colorbarTickSize
+        axis_label_font = cv.axisLabelFont
+        axis_tick_font = cv.axisTickFont
+        colorbar_label_font = cv.colorbarLabelFont
+        colorbar_tick_font = cv.colorbarTickFont
         # set figure bg color to match window
         window_bg = self.parent.palette().color(QtGui.QPalette.Window)
         self.figure.patch.set_facecolor(rgb_normalize(window_bg.getRgb()))
@@ -589,9 +695,28 @@ class PlotImage(FigureCanvas):
             # add colorbar
             self.property_colorbar = self.figure.colorbar(self.image,
                                                           anchor=(1.0, 0.0))
-            self.property_colorbar.set_label(cmap_label,
-                                             rotation=-90,
-                                             labelpad=15)
+            self.property_colorbar.ax.tick_params(labelsize=colorbar_tick_size)
+            if colorbar_tick_font:
+                for label in self.property_colorbar.ax.get_yticklabels():
+                    label.set_fontname(colorbar_tick_font)
+            labelpad = self._colorbar_label_pad(self.property_colorbar,
+                                                cmap_label,
+                                                colorbar_label_size,
+                                                colorbar_tick_size,
+                                                label_font=colorbar_label_font,
+                                                tick_font=colorbar_tick_font)
+            if colorbar_label_font:
+                label_prop = FontProperties(family=colorbar_label_font)
+                self.property_colorbar.set_label(cmap_label,
+                                                 rotation=-90,
+                                                 labelpad=labelpad,
+                                                 fontsize=colorbar_label_size,
+                                                 fontproperties=label_prop)
+            else:
+                self.property_colorbar.set_label(cmap_label,
+                                                 rotation=-90,
+                                                 labelpad=labelpad,
+                                                 fontsize=colorbar_label_size)
             # draw line on colorbar
             dl = self.property_colorbar.ax.dataLim.get_points()
             self.data_indicator = mlines.Line2D(dl[:][0],
@@ -610,8 +735,23 @@ class PlotImage(FigureCanvas):
 
         # set axis labels
         axis_label_str = "{} (cm)"
-        self.ax.set_xlabel(axis_label_str.format(cv.basis[0]))
-        self.ax.set_ylabel(axis_label_str.format(cv.basis[1]))
+        if axis_label_font:
+            axis_label_prop = FontProperties(family=axis_label_font)
+            self.ax.set_xlabel(axis_label_str.format(cv.basis[0]),
+                               fontsize=axis_label_size,
+                               fontproperties=axis_label_prop)
+            self.ax.set_ylabel(axis_label_str.format(cv.basis[1]),
+                               fontsize=axis_label_size,
+                               fontproperties=axis_label_prop)
+        else:
+            self.ax.set_xlabel(axis_label_str.format(cv.basis[0]),
+                               fontsize=axis_label_size)
+            self.ax.set_ylabel(axis_label_str.format(cv.basis[1]),
+                               fontsize=axis_label_size)
+        self.ax.tick_params(axis='both', labelsize=axis_tick_size)
+        if axis_tick_font:
+            for label in self.ax.get_xticklabels() + self.ax.get_yticklabels():
+                label.set_fontname(axis_tick_font)
 
         # generate tally image
         image_data, extents, data_min, data_max, units = self.model.create_tally_image()
@@ -715,9 +855,28 @@ class PlotImage(FigureCanvas):
             self.main_window.updateTallyMinMax()
 
             self.tally_colorbar.mappable.set_clim(data_min, data_max)
-            self.tally_colorbar.set_label(units,
-                                          rotation=-90,
-                                          labelpad=15)
+            self.tally_colorbar.ax.tick_params(labelsize=colorbar_tick_size)
+            if colorbar_tick_font:
+                for label in self.tally_colorbar.ax.get_yticklabels():
+                    label.set_fontname(colorbar_tick_font)
+            labelpad = self._colorbar_label_pad(self.tally_colorbar,
+                                                units,
+                                                colorbar_label_size,
+                                                colorbar_tick_size,
+                                                label_font=colorbar_label_font,
+                                                tick_font=colorbar_tick_font)
+            if colorbar_label_font:
+                label_prop = FontProperties(family=colorbar_label_font)
+                self.tally_colorbar.set_label(units,
+                                              rotation=-90,
+                                              labelpad=labelpad,
+                                              fontsize=colorbar_label_size,
+                                              fontproperties=label_prop)
+            else:
+                self.tally_colorbar.set_label(units,
+                                              rotation=-90,
+                                              labelpad=labelpad,
+                                              fontsize=colorbar_label_size)
 
         # annotate outlines
         self.add_outlines()
@@ -1318,3 +1477,130 @@ class ColorDialog(QDialog):
     def updateDomainTabs(self):
         self.cellTable.setModel(self.main_window.cellsModel)
         self.matTable.setModel(self.main_window.materialsModel)
+
+
+class AppearanceDialog(QDialog):
+
+    def __init__(self, model, font_metric, parent=None):
+        super().__init__(parent)
+
+        self.setWindowTitle('Appearance')
+
+        self.model = model
+        self.font_metric = font_metric
+        self.main_window = parent
+
+        self.createDialogLayout()
+
+    def createDialogLayout(self):
+        self.axisLabelSizeBox = QSpinBox()
+        self.axisLabelSizeBox.setRange(1, 96)
+        self.axisLabelSizeBox.setSuffix(" pt")
+        self.axisLabelSizeBox.valueChanged.connect(
+            self.main_window.editAxisLabelFontSize)
+
+        self.axisTickSizeBox = QSpinBox()
+        self.axisTickSizeBox.setRange(1, 96)
+        self.axisTickSizeBox.setSuffix(" pt")
+        self.axisTickSizeBox.valueChanged.connect(
+            self.main_window.editAxisTickFontSize)
+
+        self.colorbarLabelSizeBox = QSpinBox()
+        self.colorbarLabelSizeBox.setRange(1, 96)
+        self.colorbarLabelSizeBox.setSuffix(" pt")
+        self.colorbarLabelSizeBox.valueChanged.connect(
+            self.main_window.editColorbarLabelFontSize)
+
+        self.colorbarTickSizeBox = QSpinBox()
+        self.colorbarTickSizeBox.setRange(1, 96)
+        self.colorbarTickSizeBox.setSuffix(" pt")
+        self.colorbarTickSizeBox.valueChanged.connect(
+            self.main_window.editColorbarTickFontSize)
+
+        self.axisLabelFontBox = _build_font_combo()
+        self.axisLabelFontBox.currentIndexChanged.connect(
+            lambda _: self.main_window.editAxisLabelFont(
+                self.axisLabelFontBox.currentData()))
+
+        self.axisTickFontBox = _build_font_combo()
+        self.axisTickFontBox.currentIndexChanged.connect(
+            lambda _: self.main_window.editAxisTickFont(
+                self.axisTickFontBox.currentData()))
+
+        self.colorbarLabelFontBox = _build_font_combo()
+        self.colorbarLabelFontBox.currentIndexChanged.connect(
+            lambda _: self.main_window.editColorbarLabelFont(
+                self.colorbarLabelFontBox.currentData()))
+
+        self.colorbarTickFontBox = _build_font_combo()
+        self.colorbarTickFontBox.currentIndexChanged.connect(
+            lambda _: self.main_window.editColorbarTickFont(
+                self.colorbarTickFontBox.currentData()))
+
+        formLayout = QFormLayout()
+        formLayout.setAlignment(QtCore.Qt.AlignHCenter)
+        formLayout.setFormAlignment(QtCore.Qt.AlignHCenter)
+        formLayout.setLabelAlignment(QtCore.Qt.AlignLeft)
+        formLayout.addRow('Axis Labels:', self.axisLabelSizeBox)
+        formLayout.addRow('Axis Label Font:', self.axisLabelFontBox)
+        formLayout.addRow('Axis Ticks:', self.axisTickSizeBox)
+        formLayout.addRow('Axis Tick Font:', self.axisTickFontBox)
+        formLayout.addRow(HorizontalLine())
+        formLayout.addRow('Colorbar Labels:', self.colorbarLabelSizeBox)
+        formLayout.addRow('Colorbar Label Font:', self.colorbarLabelFontBox)
+        formLayout.addRow('Colorbar Ticks:', self.colorbarTickSizeBox)
+        formLayout.addRow('Colorbar Tick Font:', self.colorbarTickFontBox)
+
+        self.createButtonBox()
+
+        layout = QVBoxLayout()
+        layout.addLayout(formLayout)
+        layout.addWidget(self.buttonBox)
+        self.setLayout(layout)
+
+    def createButtonBox(self):
+        applyButton = QPushButton("Apply Changes")
+        applyButton.clicked.connect(self.main_window.applyChanges)
+        applyButton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+
+        buttonLayout = QHBoxLayout()
+        buttonLayout.addWidget(applyButton, 1)
+
+        self.buttonBox = QWidget()
+        self.buttonBox.setLayout(buttonLayout)
+
+    def updateDialogValues(self):
+        av = self.model.activeView
+        boxes = (
+            self.axisLabelSizeBox,
+            self.axisTickSizeBox,
+            self.colorbarLabelSizeBox,
+            self.colorbarTickSizeBox,
+            self.axisLabelFontBox,
+            self.axisTickFontBox,
+            self.colorbarLabelFontBox,
+            self.colorbarTickFontBox,
+        )
+        for box in boxes:
+            box.blockSignals(True)
+
+        self.axisLabelSizeBox.setValue(av.axisLabelSize)
+        self.axisTickSizeBox.setValue(av.axisTickSize)
+        self.colorbarLabelSizeBox.setValue(av.colorbarLabelSize)
+        self.colorbarTickSizeBox.setValue(av.colorbarTickSize)
+        av.axisLabelFont = self._set_font_box(self.axisLabelFontBox, av.axisLabelFont)
+        av.axisTickFont = self._set_font_box(self.axisTickFontBox, av.axisTickFont)
+        av.colorbarLabelFont = self._set_font_box(self.colorbarLabelFontBox, av.colorbarLabelFont)
+        av.colorbarTickFont = self._set_font_box(self.colorbarTickFontBox, av.colorbarTickFont)
+
+        for box in boxes:
+            box.blockSignals(False)
+
+    def _set_font_box(self, box, value):
+        idx = box.findData(value)
+        if idx < 0:
+            idx = box.findData(None)
+        if idx < 0:
+            idx = 0
+        box.setCurrentIndex(idx)
+        return box.currentData()

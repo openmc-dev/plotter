@@ -21,7 +21,7 @@ except ImportError:
     _HAVE_VTK = False
 
 from .plotmodel import PlotModel, DomainTableModel, hash_model
-from .plotgui import PlotImage, ColorDialog
+from .plotgui import PlotImage, ColorDialog, AppearanceDialog
 from .docks import TabbedDock
 from .overlays import ShortcutsOverlay
 from .tools import ExportDataDialog, SourceSitesDialog
@@ -96,6 +96,10 @@ class MainWindow(QMainWindow):
         self.colorDialog = ColorDialog(self.model, self.font_metric, self)
         self.colorDialog.hide()
 
+        # Appearance Dialog
+        self.appearanceDialog = AppearanceDialog(self.model, self.font_metric, self)
+        self.appearanceDialog.hide()
+
         # Tools
         self.exportDataDialog = ExportDataDialog(self.model, self.font_metric, self)
         self.sourceSitesDialog = SourceSitesDialog(self.model, self.font_metric, self)
@@ -127,6 +131,7 @@ class MainWindow(QMainWindow):
         self.geometryPanel.update()
         self.tallyPanel.update()
         self.colorDialog.updateDialogValues()
+        self.appearanceDialog.updateDialogValues()
 
         QtCore.QTimer.singleShot(0, self.requestPlotUpdate)
 
@@ -254,6 +259,11 @@ class MainWindow(QMainWindow):
         self.restoreAction.setStatusTip('Restore to default plot view')
         self.restoreAction.triggered.connect(self.restoreDefault)
 
+        self.appearanceAction = QAction("Appearance...", self)
+        self.appearanceAction.setToolTip('Edit plot font sizes')
+        self.appearanceAction.setStatusTip('Edit plot font sizes')
+        self.appearanceAction.triggered.connect(self.showAppearanceDialog)
+
         self.editMenu = self.mainMenu.addMenu('&Edit')
         self.editMenu.addAction(self.applyAction)
         self.editMenu.addSeparator()
@@ -261,6 +271,8 @@ class MainWindow(QMainWindow):
         self.editMenu.addAction(self.redoAction)
         self.editMenu.addSeparator()
         self.editMenu.addAction(self.restoreAction)
+        self.editMenu.addSeparator()
+        self.editMenu.addAction(self.appearanceAction)
         self.editMenu.addSeparator()
         self.editMenu.aboutToShow.connect(self.updateEditMenu)
 
@@ -551,6 +563,7 @@ class MainWindow(QMainWindow):
                 self.model.activeView.outlinesMat = False
             self.geometryPanel.update()
             self.colorDialog.updateDialogValues()
+            self.appearanceDialog.updateDialogValues()
             self.applyChanges()
             message = '{} loaded'.format(filename)
         else:
@@ -663,6 +676,7 @@ class MainWindow(QMainWindow):
         self.model.undo()
         self.geometryPanel.update()
         self.colorDialog.updateDialogValues()
+        self.appearanceDialog.updateDialogValues()
         self.requestPlotUpdate()
 
         if not self.model.previousViews:
@@ -675,6 +689,7 @@ class MainWindow(QMainWindow):
         self.model.redo()
         self.geometryPanel.update()
         self.colorDialog.updateDialogValues()
+        self.appearanceDialog.updateDialogValues()
         self.requestPlotUpdate()
 
         if not self.model.subsequentViews:
@@ -687,6 +702,7 @@ class MainWindow(QMainWindow):
             self.model.activeView.adopt_plotbase(self.model.defaultView)
             self.geometryPanel.update()
             self.colorDialog.updateDialogValues()
+            self.appearanceDialog.updateDialogValues()
             self.requestPlotUpdate()
 
             self.model.subsequentViews = []
@@ -819,6 +835,11 @@ class MainWindow(QMainWindow):
         self.colorDialog.raise_()
         self.colorDialog.activateWindow()
 
+    def showAppearanceDialog(self):
+        self.appearanceDialog.show()
+        self.appearanceDialog.raise_()
+        self.appearanceDialog.activateWindow()
+
     def showExportDialog(self):
         self.exportDataDialog.show()
         self.exportDataDialog.raise_()
@@ -930,6 +951,31 @@ class MainWindow(QMainWindow):
         self.model.resetColors()
         self.colorDialog.updateDialogValues()
         self.applyChanges()
+
+    # Appearance dialog methods
+    def editAxisLabelFontSize(self, value):
+        self.model.activeView.axisLabelSize = int(value)
+
+    def editAxisTickFontSize(self, value):
+        self.model.activeView.axisTickSize = int(value)
+
+    def editColorbarLabelFontSize(self, value):
+        self.model.activeView.colorbarLabelSize = int(value)
+
+    def editColorbarTickFontSize(self, value):
+        self.model.activeView.colorbarTickSize = int(value)
+
+    def editAxisLabelFont(self, value):
+        self.model.activeView.axisLabelFont = value or None
+
+    def editAxisTickFont(self, value):
+        self.model.activeView.axisTickFont = value or None
+
+    def editColorbarLabelFont(self, value):
+        self.model.activeView.colorbarLabelFont = value or None
+
+    def editColorbarTickFont(self, value):
+        self.model.activeView.colorbarTickFont = value or None
 
     # Tally dock methods
 
