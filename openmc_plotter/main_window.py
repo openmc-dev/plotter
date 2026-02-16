@@ -839,6 +839,16 @@ class MainWindow(QMainWindow):
         self.colorDialog.activateWindow()
 
     def showRendererDialog(self):
+        msg_box = QMessageBox(self)
+        msg_box.setIcon(QMessageBox.Information)
+        msg_box.setWindowTitle("Experimental Renderer")
+        msg_box.setText(
+            "The render widget is experimental.\n\n"
+            "Complex models may cause the plotter application to lag."
+        )
+        msg_box.setStandardButtons(QMessageBox.Ok)
+        msg_box.exec()
+
         if self._render_dialog is not None:
             self._render_dialog.raise_()
             self._render_dialog.activateWindow()

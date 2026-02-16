@@ -1,8 +1,8 @@
 from PySide6 import QtCore, QtGui
-from PySide6.QtWidgets import (QCheckBox, QComboBox, QColorDialog, QGridLayout,
-                               QGroupBox, QHBoxLayout, QLabel, QPushButton,
-                               QScrollArea, QSlider, QSplitter, QStyle, QVBoxLayout,
-                               QWidget)
+from PySide6.QtWidgets import (QCheckBox, QComboBox, QColorDialog, QFrame,
+                               QGridLayout, QGroupBox, QHBoxLayout, QLabel,
+                               QPushButton, QScrollArea, QSlider, QSplitter,
+                               QStyle, QVBoxLayout, QWidget)
 
 
 class RendererWidget(QWidget):
@@ -35,6 +35,7 @@ class RendererWidget(QWidget):
         self._buildUi()
         self._connectSignals()
         self._initializeState()
+        self._startCameraInfoUpdates()
 
     def _buildUi(self):
         self.mainLayout = QHBoxLayout(self)
@@ -81,6 +82,25 @@ class RendererWidget(QWidget):
         cameraGroup = QGroupBox("Camera", self.controlsWidget)
         cameraLayout = QVBoxLayout(cameraGroup)
 
+        cameraInfoLayout = QGridLayout()
+        cameraInfoLayout.addWidget(QLabel("Position:", cameraGroup), 0, 0)
+        cameraInfoLayout.addWidget(QLabel("Look At:", cameraGroup), 1, 0)
+        cameraInfoLayout.addWidget(QLabel("Up:", cameraGroup), 2, 0)
+
+        self.cameraPositionValue = QLabel("", cameraGroup)
+        self.cameraLookAtValue = QLabel("", cameraGroup)
+        self.cameraUpValue = QLabel("", cameraGroup)
+
+        for value_label in (self.cameraPositionValue,
+                            self.cameraLookAtValue,
+                            self.cameraUpValue):
+            value_label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+
+        cameraInfoLayout.addWidget(self.cameraPositionValue, 0, 1)
+        cameraInfoLayout.addWidget(self.cameraLookAtValue, 1, 1)
+        cameraInfoLayout.addWidget(self.cameraUpValue, 2, 1)
+        cameraLayout.addLayout(cameraInfoLayout)
+
         presetLayout = QGridLayout()
         self.isoButton = QPushButton("Iso", cameraGroup)
         self.xPosButton = QPushButton("+X", cameraGroup)
@@ -98,6 +118,14 @@ class RendererWidget(QWidget):
         presetLayout.addWidget(self.zPosButton, 3, 0)
         presetLayout.addWidget(self.zNegButton, 3, 1)
         cameraLayout.addLayout(presetLayout)
+
+        sensitivityDivider = QFrame(cameraGroup)
+        sensitivityDivider.setFrameShape(QFrame.HLine)
+        sensitivityDivider.setFrameShadow(QFrame.Sunken)
+        cameraLayout.addWidget(sensitivityDivider)
+
+        sensitivityLabel = QLabel("Camera Sensitivity", cameraGroup)
+        cameraLayout.addWidget(sensitivityLabel)
 
         self.rotateSlider = self._makeScaledSlider(cameraLayout, "Rotate", 0.001, 0.02, 0.005)
         self.panSlider = self._makeScaledSlider(cameraLayout, "Pan", 0.2, 5.0, 1.0)
@@ -175,6 +203,29 @@ class RendererWidget(QWidget):
             self.visibilityLayout.addWidget(QLabel("OpenMC not available.", self.scrollContainer))
 
         self._updateCameraSpeeds()
+        self._refreshCameraInfo()
+
+    def _startCameraInfoUpdates(self):
+        self._cameraInfoTimer = QtCore.QTimer(self)
+        self._cameraInfoTimer.setInterval(100)
+        self._cameraInfoTimer.timeout.connect(self._refreshCameraInfo)
+        self._cameraInfoTimer.start()
+
+    def _formatVector(self, vec):
+        return f"({vec[0]:.3f}, {vec[1]:.3f}, {vec[2]:.3f})"
+
+    def _refreshCameraInfo(self):
+        camera = getattr(self.gl_widget, "_camera", None)
+        if camera is None:
+            return
+
+        position = camera.position()
+        look_at = camera.target
+        _, _, up = camera.view_vectors()
+
+        self.cameraPositionValue.setText(self._formatVector(position))
+        self.cameraLookAtValue.setText(self._formatVector(look_at))
+        self.cameraUpValue.setText(self._formatVector(up))
 
     def _makeScaledSlider(self, parent_layout, label_text, min_value, max_value, default_value):
         layout = QHBoxLayout()
@@ -182,18 +233,9 @@ class RendererWidget(QWidget):
         slider = QSlider(QtCore.Qt.Horizontal, self.controlsWidget)
         slider.setRange(0, 100)
         slider.setValue(self._sliderFromScale(default_value, min_value, max_value))
-        value_label = QLabel(self.controlsWidget)
-
-        def _updateValue(value):
-            scaled = self._scaleFromSlider(value, min_value, max_value)
-            value_label.setText(f"{scaled:.3f}")
-
-        slider.valueChanged.connect(_updateValue)
-        _updateValue(slider.value())
 
         layout.addWidget(label)
         layout.addWidget(slider, 1)
-        layout.addWidget(value_label)
         parent_layout.addLayout(layout)
         return slider
 
