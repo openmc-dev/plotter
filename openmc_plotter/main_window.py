@@ -1,7 +1,6 @@
 import copy
 from functools import partial
 import importlib.util
-import os
 from pathlib import Path
 import pickle
 import sys
@@ -844,10 +843,24 @@ class MainWindow(QMainWindow):
         msg_box.setWindowTitle("Experimental Renderer")
         msg_box.setText(
             "The render widget is experimental.\n\n"
-            "Complex models may cause the plotter application to lag."
+            "Complex models may cause the plotter application to lag or, in some cases, crash."
         )
         msg_box.setStandardButtons(QMessageBox.Ok)
         msg_box.exec()
+
+        if not self._hasSolidRayTracePlot():
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.setWindowTitle("Renderer Unavailable")
+            msg_box.setText(
+                "This OpenMC installation is missing:\n"
+                "openmc.lib.capi.SolidRayTracePlot\n\n"
+                "Install an OpenMC build that provides SolidRayTracePlot "
+                "to use the render widget."
+            )
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.exec()
+            return
 
         if self._render_dialog is not None:
             self._render_dialog.raise_()
@@ -914,8 +927,7 @@ class MainWindow(QMainWindow):
         renderer_python_dir = self._findRendererPythonDir()
         if renderer_python_dir is None:
             raise FileNotFoundError(
-                "Could not locate openmc_renderer/Python. "
-                "Set OPENMC_RENDERER_PATH to the renderer repository root."
+                "Could not locate bundled renderer_core directory."
             )
 
         renderer_python_dir_str = str(renderer_python_dir)
@@ -938,18 +950,10 @@ class MainWindow(QMainWindow):
         if local_runtime.is_dir():
             return local_runtime
 
-        env_path = os.environ.get("OPENMC_RENDERER_PATH")
-        if env_path:
-            candidate = Path(env_path) / "Python"
-            if candidate.is_dir():
-                return candidate
-
-        for parent in Path(__file__).resolve().parents:
-            candidate = parent / "openmc_renderer" / "Python"
-            if candidate.is_dir():
-                return candidate
-
         return None
+
+    def _hasSolidRayTracePlot(self):
+        return getattr(openmc.lib, "SolidRayTracePlot", None) is not None
 
     def _getRendererDomainData(self, view=None):
         if view is None:
