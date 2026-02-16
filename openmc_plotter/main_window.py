@@ -934,6 +934,10 @@ class MainWindow(QMainWindow):
         return self._renderer_classes
 
     def _findRendererPythonDir(self):
+        local_runtime = Path(__file__).resolve().parent / "renderer_core"
+        if local_runtime.is_dir():
+            return local_runtime
+
         env_path = os.environ.get("OPENMC_RENDERER_PATH")
         if env_path:
             candidate = Path(env_path) / "Python"
