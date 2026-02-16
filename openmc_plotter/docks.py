@@ -172,6 +172,11 @@ class GeometryPanel(PlotterPanel):
         self.zoomWidget = QWidget()
         self.zoomWidget.setLayout(self.zoomLayout)
 
+        # OpenMC renderer launcher
+        self.renderButton = QPushButton('Render')
+        self.renderButton.setMinimumHeight(self.font_metric.height() * 1.6)
+        self.renderButton.clicked.connect(self.main_window.showRendererDialog)
+
         # Create Layout
         self.panelLayout = QVBoxLayout()
         self.panelLayout.addWidget(self.originGroupBox)
@@ -179,6 +184,7 @@ class GeometryPanel(PlotterPanel):
         self.panelLayout.addWidget(self.resGroupBox)
         self.panelLayout.addWidget(HorizontalLine())
         self.panelLayout.addWidget(self.zoomWidget)
+        self.panelLayout.addWidget(self.renderButton)
         self.panelLayout.addStretch()
 
         self.setLayout(self.panelLayout)

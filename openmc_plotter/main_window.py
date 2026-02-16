@@ -1,7 +1,9 @@
 import copy
 from functools import partial
+import importlib.util
 from pathlib import Path
 import pickle
+import sys
 from threading import Thread
 
 from PySide6 import QtCore, QtGui
@@ -9,7 +11,7 @@ from PySide6.QtGui import QKeyEvent, QAction
 from PySide6.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMessageBox, QFileDialog,
                                QColorDialog, QInputDialog, QWidget,
-                               QGestureEvent)
+                               QGestureEvent, QDialog, QVBoxLayout)
 
 import openmc
 import openmc.lib
@@ -24,6 +26,7 @@ from .plotmodel import PlotModel, DomainTableModel, hash_model
 from .plotgui import PlotImage, ColorDialog
 from .docks import TabbedDock
 from .overlays import ShortcutsOverlay
+from .renderer_widget import RendererWidget
 from .tools import ExportDataDialog, SourceSitesDialog
 
 
@@ -39,6 +42,15 @@ def _openmcReload(threads=None, model_path='.'):
     args.append(str(model_path))
     openmc.lib.init(args)
     openmc.lib.settings.verbosity = 1
+
+
+def _load_module_from_path(module_name, module_path):
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Unable to load module from {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class MainWindow(QMainWindow):
@@ -58,6 +70,10 @@ class MainWindow(QMainWindow):
         self.default_res = resolution
         self.model = None
         self.plot_manager = None
+        self._render_dialog = None
+        self._render_plotter = None
+        self._renderer_widget = None
+        self._renderer_classes = None
 
     def loadGui(self, use_settings_pkl=True):
 
@@ -496,6 +512,7 @@ class MainWindow(QMainWindow):
 
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
+        self._connectDomainModelSignals()
 
         openmc_args = {'threads': self.threads, 'model_path': self.model_path}
 
@@ -647,6 +664,7 @@ class MainWindow(QMainWindow):
         self.sourceSitesDialog.activateWindow()
 
     def applyChanges(self):
+        self._syncRendererFromModel(use_active=True)
         if self.model.activeView != self.model.currentView:
             if self.model.activeView.selectedTally is not None:
                 self.tallyPanel.updateModel()
@@ -818,6 +836,213 @@ class MainWindow(QMainWindow):
         self.colorDialog.show()
         self.colorDialog.raise_()
         self.colorDialog.activateWindow()
+
+    def showRendererDialog(self):
+        msg_box = QMessageBox(self)
+        msg_box.setIcon(QMessageBox.Information)
+        msg_box.setWindowTitle("Experimental Renderer")
+        msg_box.setText(
+            "The render widget is experimental.\n\n"
+            "Complex models may cause the plotter application to lag or, in some cases, crash."
+        )
+        msg_box.setStandardButtons(QMessageBox.Ok)
+        msg_box.exec()
+
+        if not self._hasSolidRayTracePlot():
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.setWindowTitle("Renderer Unavailable")
+            msg_box.setText(
+                "This OpenMC installation is missing:\n"
+                "openmc.lib.capi.SolidRayTracePlot\n\n"
+                "Install an OpenMC build that provides SolidRayTracePlot "
+                "to use the render widget."
+            )
+            msg_box.setStandardButtons(QMessageBox.Ok)
+            msg_box.exec()
+            return
+
+        if self._render_dialog is not None:
+            self._render_dialog.raise_()
+            self._render_dialog.activateWindow()
+            self._syncRendererFromModel(use_active=True)
+            return
+
+        try:
+            OpenMCPlotter, GLPlotWidget = self._loadRendererClasses()
+            openmc_args = ["-c"]
+            if self.threads is not None:
+                openmc_args += ["-s", str(self.threads)]
+            openmc_args.append(str(self.model_path))
+
+            plotter = OpenMCPlotter(args=openmc_args)
+            material_domains, cell_domains = self._getRendererDomainData(
+                view=self.model.activeView
+            )
+            initial_color_mode = self.model.activeView.colorby
+
+            dialog = QDialog(self)
+            dialog.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+            dialog.setWindowTitle("OpenMC Renderer")
+            dialog.resize(900, 700)
+
+            layout = QVBoxLayout(dialog)
+            renderer_widget = RendererWidget(
+                plotter,
+                GLPlotWidget,
+                material_domains=material_domains,
+                cell_domains=cell_domains,
+                initial_color_mode=initial_color_mode,
+                on_color_changed=self._onRendererDomainColorChanged,
+                parent=dialog,
+            )
+            layout.addWidget(renderer_widget)
+
+            dialog.finished.connect(self._rendererDialogClosed)
+            dialog.show()
+
+            self._render_dialog = dialog
+            self._render_plotter = plotter
+            self._renderer_widget = renderer_widget
+
+        except Exception as exc:
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Warning)
+            msg_box.setText(
+                "Unable to start the OpenMC renderer.\n\n"
+                f"{exc}\n\n"
+                "Ensure openmc_renderer is available and dependencies are installed."
+            )
+            msg_box.exec()
+
+    def _rendererDialogClosed(self, _result):
+        self._render_dialog = None
+        self._render_plotter = None
+        self._renderer_widget = None
+
+    def _loadRendererClasses(self):
+        if self._renderer_classes is not None:
+            return self._renderer_classes
+
+        renderer_python_dir = self._findRendererPythonDir()
+        if renderer_python_dir is None:
+            raise FileNotFoundError(
+                "Could not locate bundled renderer_core directory."
+            )
+
+        renderer_python_dir_str = str(renderer_python_dir)
+        if renderer_python_dir_str not in sys.path:
+            sys.path.insert(0, renderer_python_dir_str)
+
+        plotter_module = _load_module_from_path(
+            "openmc_renderer_plotter", renderer_python_dir / "openmc_plotter.py"
+        )
+        gl_module = _load_module_from_path(
+            "openmc_renderer_gl_widget", renderer_python_dir / "gl_widget.py"
+        )
+
+        self._renderer_classes = (plotter_module.OpenMCPlotter,
+                                  gl_module.GLPlotWidget)
+        return self._renderer_classes
+
+    def _findRendererPythonDir(self):
+        local_runtime = Path(__file__).resolve().parent / "renderer_core"
+        if local_runtime.is_dir():
+            return local_runtime
+
+        return None
+
+    def _hasSolidRayTracePlot(self):
+        return getattr(openmc.lib, "SolidRayTracePlot", None) is not None
+
+    def _getRendererDomainData(self, view=None):
+        if view is None:
+            view = self.model.activeView
+        return (self._extractDomainData(view.materials),
+                self._extractDomainData(view.cells))
+
+    def _extractDomainData(self, domains):
+        domain_data = {}
+        for domain_id in domains.defaults:
+            did = int(domain_id)
+            if did < 0:
+                continue
+
+            domain = domains[did]
+            domain_data[did] = {
+                "name": domain.name if domain.name is not None else "",
+                "color": self._normalizeRendererColor(domain.color),
+            }
+        return domain_data
+
+    def _normalizeRendererColor(self, color):
+        if color is None:
+            return None
+
+        if isinstance(color, str):
+            color_name = color.lower()
+            if color_name not in openmc.plots._SVG_COLORS:
+                return None
+            color = openmc.plots._SVG_COLORS[color_name]
+
+        try:
+            rgb = tuple(int(component) for component in color)
+        except TypeError:
+            return None
+
+        if len(rgb) != 3:
+            return None
+
+        return tuple(max(0, min(255, component)) for component in rgb)
+
+    def _onRendererDomainColorChanged(self, domain_kind, domain_id, color):
+        rgb = self._normalizeRendererColor(color)
+        if rgb is None:
+            return
+
+        if domain_kind == "cell":
+            domains = self.model.activeView.cells
+        else:
+            domains = self.model.activeView.materials
+
+        domain_id = int(domain_id)
+        if domain_id not in domains.defaults:
+            return
+        if self._normalizeRendererColor(domains[domain_id].color) == rgb:
+            return
+
+        domains.set_color(domain_id, rgb)
+        self._syncRendererFromModel(use_active=True)
+        self.applyChanges()
+
+    def _syncRendererFromModel(self, use_active=True, sync_color_mode=False):
+        if self._renderer_widget is None:
+            return
+
+        view = self.model.activeView if use_active else self.model.currentView
+        material_domains, cell_domains = self._getRendererDomainData(view=view)
+        color_mode = None
+        if sync_color_mode:
+            color_mode = "cell" if view.colorby == "cell" else "material"
+        self._renderer_widget.syncDomainData(
+            material_domains=material_domains,
+            cell_domains=cell_domains,
+            color_mode=color_mode,
+        )
+
+    def _connectDomainModelSignals(self):
+        unique = QtCore.Qt.ConnectionType.UniqueConnection
+        for table_model in (self.cellsModel, self.materialsModel):
+            try:
+                table_model.dataChanged.connect(
+                    self._onDomainModelDataChanged, unique
+                )
+            except (TypeError, RuntimeError):
+                # Already connected for this model instance.
+                pass
+
+    def _onDomainModelDataChanged(self, *_args):
+        self._syncRendererFromModel(use_active=True)
 
     def showExportDialog(self):
         self.exportDataDialog.show()
@@ -1125,11 +1350,13 @@ class MainWindow(QMainWindow):
     def resetModels(self):
         self.cellsModel = DomainTableModel(self.model.activeView.cells)
         self.materialsModel = DomainTableModel(self.model.activeView.materials)
+        self._connectDomainModelSignals()
         self.cellsModel.beginResetModel()
         self.cellsModel.endResetModel()
         self.materialsModel.beginResetModel()
         self.materialsModel.endResetModel()
         self.colorDialog.updateDomainTabs()
+        self._syncRendererFromModel(use_active=True)
 
     def showCurrentView(self):
         self.updateScale()
@@ -1227,6 +1454,7 @@ class MainWindow(QMainWindow):
             self.model.makePlot(view_snapshot, self.model.ids_map, self.model.properties)
             self.resetModels()
             self.showCurrentView()
+            self._syncRendererFromModel(use_active=False)
             if not self.plot_manager.is_busy:
                 self._on_plot_idle()
             return
@@ -1250,6 +1478,7 @@ class MainWindow(QMainWindow):
         self.model.makePlot(view_snapshot, ids_map, properties)
         self.resetModels()
         self.showCurrentView()
+        self._syncRendererFromModel(use_active=False)
 
     def _on_plot_error(self, error_msg):
         msg_box = QMessageBox()
