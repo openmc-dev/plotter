@@ -1,7 +1,7 @@
 from PySide6 import QtCore, QtGui
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QColorDialog, QGridLayout,
                                QGroupBox, QHBoxLayout, QLabel, QPushButton,
-                               QScrollArea, QSlider, QSplitter, QVBoxLayout,
+                               QScrollArea, QSlider, QSplitter, QStyle, QVBoxLayout,
                                QWidget)
 
 
@@ -48,9 +48,16 @@ class RendererWidget(QWidget):
         viewerLayout.setContentsMargins(0, 0, 0, 0)
 
         toolbarLayout = QHBoxLayout()
-        self.controlsButton = QPushButton("What's this?", viewerWidget)
+        self.controlsButton = QPushButton("", viewerWidget)
+        self.controlsButton.setIcon(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_MessageBoxQuestion)
+        )
         self.controlsButton.setToolTip("Show renderer controls")
-        self.saveButton = QPushButton("Save PNG", viewerWidget)
+        self.saveButton = QPushButton("", viewerWidget)
+        self.saveButton.setIcon(
+            self.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton)
+        )
+        self.saveButton.setToolTip("Save PNG")
         toolbarLayout.addWidget(self.controlsButton)
         toolbarLayout.addWidget(self.saveButton)
         toolbarLayout.addStretch()
