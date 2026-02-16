@@ -174,6 +174,16 @@ class RendererWidget(QWidget):
         self.controlsButton.clicked.connect(self.gl_widget.toggle_help_overlay)
 
         self.modeCombo.currentIndexChanged.connect(self._onColorModeChange)
+        self._cellShortcut = QtGui.QShortcut(QtGui.QKeySequence("Alt+C"), self)
+        self._cellShortcut.setContext(QtCore.Qt.WidgetWithChildrenShortcut)
+        self._cellShortcut.activated.connect(
+            lambda: self._setColorMode(self._cell_mode)
+        )
+        self._materialShortcut = QtGui.QShortcut(QtGui.QKeySequence("Alt+M"), self)
+        self._materialShortcut.setContext(QtCore.Qt.WidgetWithChildrenShortcut)
+        self._materialShortcut.activated.connect(
+            lambda: self._setColorMode(self._material_mode)
+        )
 
         self.isoButton.clicked.connect(self.gl_widget.set_isometric_view)
         self.xPosButton.clicked.connect(lambda: self.gl_widget.set_axis_view("x", negative=False))
@@ -317,6 +327,10 @@ class RendererWidget(QWidget):
                 return self._cell_mode
 
         return None
+
+    def _setColorMode(self, mode):
+        index = 0 if mode == self._material_mode else 1
+        self.modeCombo.setCurrentIndex(index)
 
     def _modeValueToName(self, mode):
         return "cell" if mode == self._cell_mode else "material"
