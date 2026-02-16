@@ -184,8 +184,8 @@ class GeometryPanel(PlotterPanel):
         self.panelLayout.addWidget(self.resGroupBox)
         self.panelLayout.addWidget(HorizontalLine())
         self.panelLayout.addWidget(self.zoomWidget)
-        self.panelLayout.addStretch()
         self.panelLayout.addWidget(self.renderButton)
+        self.panelLayout.addStretch()
 
         self.setLayout(self.panelLayout)
 
