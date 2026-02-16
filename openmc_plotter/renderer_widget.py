@@ -27,6 +27,7 @@ class RendererWidget(QWidget):
 
         self._domain_data = {}
         self._color_maps = {}
+        self._visibility_maps = {}
         self._setDomainData(material_domains, cell_domains)
 
         mode_value = self._resolveModeValue(initial_color_mode)
@@ -302,6 +303,18 @@ class RendererWidget(QWidget):
             self._cell_mode: self._normalizeDomainMap(cell_domains),
         }
 
+        previous_visibility = self._visibility_maps
+        self._visibility_maps = {
+            self._material_mode: {
+                domain_id: previous_visibility.get(self._material_mode, {}).get(domain_id, True)
+                for domain_id in self._domain_data[self._material_mode]
+            },
+            self._cell_mode: {
+                domain_id: previous_visibility.get(self._cell_mode, {}).get(domain_id, True)
+                for domain_id in self._domain_data[self._cell_mode]
+            },
+        }
+
         self._color_maps = {
             self._material_mode: {
                 domain_id: entry["color"]
@@ -402,7 +415,8 @@ class RendererWidget(QWidget):
             label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
 
             checkbox = QCheckBox(row)
-            checkbox.setChecked(True)
+            visible = self._visibility_maps.setdefault(mode, {}).setdefault(domain_id, True)
+            checkbox.setChecked(visible)
 
             checkbox.toggled.connect(
                 lambda checked, did=domain_id: self._onVisibilityToggle(did, checked)
@@ -442,6 +456,8 @@ class RendererWidget(QWidget):
         )
 
     def _onVisibilityToggle(self, domain_id, checked):
+        mode = self.modeCombo.currentData()
+        self._visibility_maps.setdefault(mode, {})[int(domain_id)] = bool(checked)
         self.plotter.set_visibility(domain_id, checked)
         self.gl_widget.request_final_render()
 
@@ -474,9 +490,17 @@ class RendererWidget(QWidget):
             except Exception:
                 continue
 
+    def _applyMappedVisibility(self, mode):
+        for domain_id, visible in self._visibility_maps.get(mode, {}).items():
+            try:
+                self.plotter.set_visibility(domain_id, visible)
+            except Exception:
+                continue
+
     def _refreshCurrentMode(self, mode, request_render):
         self.plotter.set_color_by(mode)
         self._applyMappedColors(mode)
+        self._applyMappedVisibility(mode)
         self._populateVisibilityList(self._domainItemsForMode(mode))
         if request_render:
             self.gl_widget.request_final_render()
