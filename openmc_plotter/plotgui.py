@@ -1,3 +1,4 @@
+import io
 from functools import partial
 
 from PySide6 import QtCore, QtGui
@@ -182,21 +183,59 @@ class PlotImage(FigureCanvas):
 
     def copyImageToClipboard(self):
         """Copy the current canvas image to the clipboard."""
+        image = self._export_plot_image()
+        if image is None:
+            return False
+
+        clipboard = QtGui.QGuiApplication.clipboard()
+        if clipboard is None:
+            return False
+
+        clipboard.setImage(image)
+        return True
+
+    def _export_plot_image(self):
         self.draw()
         width, height = self.get_width_height()
         if width <= 0 or height <= 0:
-            return False
+            return None
 
-        image = QtGui.QImage(self.buffer_rgba(),
-                             width,
-                             height,
-                             QtGui.QImage.Format_RGBA8888).copy()
-        pixmap = QtGui.QPixmap.fromImage(image)
-        if pixmap.isNull():
-            return False
+        buffer = io.BytesIO()
+        self.figure.savefig(buffer,
+                            format='png',
+                            transparent=True)
+        image = QtGui.QImage.fromData(buffer.getvalue(), 'PNG')
+        if image.isNull():
+            return None
 
-        QtGui.QGuiApplication.clipboard().setPixmap(pixmap)
-        return True
+        crop_rect = self._visible_canvas_rect(image.width(), image.height())
+        if crop_rect.isEmpty():
+            return None
+
+        return image.copy(crop_rect)
+
+    def _visible_canvas_rect(self, image_width, image_height):
+        if self.width() <= 0 or self.height() <= 0:
+            return QtCore.QRect()
+
+        if self.parent is None or not hasattr(self.parent, 'viewport'):
+            return QtCore.QRect(0, 0, image_width, image_height)
+
+        viewport = self.parent.viewport()
+        visible_width = min(viewport.width(), self.width())
+        visible_height = min(viewport.height(), self.height())
+        x_offset = self.parent.horizontalScrollBar().value()
+        y_offset = self.parent.verticalScrollBar().value()
+
+        scale_x = image_width / self.width()
+        scale_y = image_height / self.height()
+
+        return QtCore.QRect(round(x_offset * scale_x),
+                            round(y_offset * scale_y),
+                            round(visible_width * scale_x),
+                            round(visible_height * scale_y)).intersected(
+                                QtCore.QRect(0, 0, image_width, image_height)
+                            )
 
     def getDataIndices(self, event):
         cv = self.model.currentView
