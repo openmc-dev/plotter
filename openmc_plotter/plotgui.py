@@ -180,6 +180,24 @@ class PlotImage(FigureCanvas):
             filename += ".png"
         self.figure.savefig(filename, transparent=True)
 
+    def copyImageToClipboard(self):
+        """Copy the current canvas image to the clipboard."""
+        self.draw()
+        width, height = self.get_width_height()
+        if width <= 0 or height <= 0:
+            return False
+
+        image = QtGui.QImage(self.buffer_rgba(),
+                             width,
+                             height,
+                             QtGui.QImage.Format_RGBA8888).copy()
+        pixmap = QtGui.QPixmap.fromImage(image)
+        if pixmap.isNull():
+            return False
+
+        QtGui.QGuiApplication.clipboard().setPixmap(pixmap)
+        return True
+
     def getDataIndices(self, event):
         cv = self.model.currentView
 
@@ -506,6 +524,7 @@ class PlotImage(FigureCanvas):
                     olapColorAction.triggered.connect(connector)
 
         self.menu.addSeparator()
+        self.menu.addAction(self.main_window.copyImageAction)
         self.menu.addAction(self.main_window.saveImageAction)
         self.menu.addAction(self.main_window.saveViewAction)
         self.menu.addAction(self.main_window.openAction)

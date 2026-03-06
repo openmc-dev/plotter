@@ -2,6 +2,7 @@ import filecmp
 import shutil
 
 import pytest
+from PySide6 import QtGui, QtWidgets
 
 from openmc_plotter.main_window import MainWindow, _openmcReload
 
@@ -54,5 +55,35 @@ def test_batch_image(tmpdir, qtbot):
 
     filecmp.cmp(orig / 'ref.png', tmpdir / 'test.png')
     filecmp.cmp(orig / 'ref1.png', tmpdir / 'test1.png')
+
+    mw.close()
+
+def test_copy_image_to_clipboard(tmpdir, monkeypatch):
+    orig = tmpdir.chdir()
+    QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+    mw = MainWindow(model_path=orig)
+    _openmcReload(model_path=orig)
+    mw.loadGui()
+
+    class FakeClipboard:
+        def __init__(self):
+            self.pixmap = None
+
+        def setPixmap(self, pixmap):
+            self.pixmap = pixmap
+
+    fake_clipboard = FakeClipboard()
+    monkeypatch.setattr(QtGui.QGuiApplication,
+                        'clipboard',
+                        staticmethod(lambda: fake_clipboard))
+
+    try:
+        assert mw.waitForPlotIdle(60000)
+        assert mw.copyImageToClipboard()
+    finally:
+        orig.chdir()
+
+    assert fake_clipboard.pixmap is not None
+    assert not fake_clipboard.pixmap.isNull()
 
     mw.close()

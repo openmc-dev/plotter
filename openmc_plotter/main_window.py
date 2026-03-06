@@ -172,6 +172,12 @@ class MainWindow(QMainWindow):
         save_image_connector = partial(self.saveImage, filename=None)
         self.saveImageAction.triggered.connect(save_image_connector)
 
+        self.copyImageAction = QAction("&Copy Image", self)
+        self.copyImageAction.setShortcut("Ctrl+Shift+C")
+        self.copyImageAction.setToolTip('Copy plot image to clipboard')
+        self.copyImageAction.setStatusTip('Copy plot image to clipboard')
+        self.copyImageAction.triggered.connect(self.copyImageToClipboard)
+
         self.saveViewAction = QAction("Save &View...", self)
         self.saveViewAction.setShortcut(QtGui.QKeySequence.Save)
         self.saveViewAction.setStatusTip('Save current view settings')
@@ -199,6 +205,7 @@ class MainWindow(QMainWindow):
 
         self.fileMenu = self.mainMenu.addMenu('&File')
         self.fileMenu.addAction(self.reloadModelAction)
+        self.fileMenu.addAction(self.copyImageAction)
         self.fileMenu.addAction(self.saveImageAction)
         self.fileMenu.addAction(self.exportDataAction)
         self.fileMenu.addSeparator()
@@ -518,6 +525,14 @@ class MainWindow(QMainWindow):
         if filename:
             self.plotIm.saveImage(filename)
             self.statusBar().showMessage('Plot Image Saved', 5000)
+
+    def copyImageToClipboard(self):
+        if self.plotIm.copyImageToClipboard():
+            self.statusBar().showMessage('Plot Image Copied', 5000)
+            return True
+
+        self.statusBar().showMessage('No Plot Image Available', 5000)
+        return False
 
     def saveView(self):
         filename, ext = QFileDialog.getSaveFileName(self,
