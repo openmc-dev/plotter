@@ -8,7 +8,8 @@ from PySide6 import QtCore, QtGui
 from PySide6.QtGui import QKeyEvent, QAction
 from PySide6.QtWidgets import (QApplication, QLabel, QSizePolicy, QMainWindow,
                                QScrollArea, QMessageBox, QFileDialog,
-                               QColorDialog, QInputDialog, QWidget,
+                               QColorDialog, QInputDialog, QWidget, QDialog,
+                               QVBoxLayout, QPlainTextEdit, QDialogButtonBox,
                                QGestureEvent)
 
 import openmc
@@ -58,6 +59,8 @@ class MainWindow(QMainWindow):
         self.default_res = resolution
         self.model = None
         self.plot_manager = None
+        self.materialPropsDialog = None
+        self.materialPropsText = None
 
     def loadGui(self, use_settings_pkl=True):
 
@@ -1287,12 +1290,14 @@ class MainWindow(QMainWindow):
         self.showExportDialog()
 
     def viewMaterialProps(self, id):
-        """display material properties in message box"""
+        """Display material properties in a scrollable dialog."""
         mat = openmc.lib.materials[id]
         if mat.name:
-            msg_str = f"Material {id} ({mat.name}) Properties\n\n"
+            title = f"Material {id} ({mat.name}) Properties"
         else:
-            msg_str = f"Material {id} Properties\n\n"
+            title = f"Material {id} Properties"
+
+        msg_str = f"{title}\n\n"
 
         # get density and temperature
         dens_g = mat.get_density(units='g/cm3')
@@ -1305,7 +1310,28 @@ class MainWindow(QMainWindow):
         for nuc, dens in zip(mat.nuclides, mat.densities):
             msg_str += f'{nuc}: {dens:5.3e}\n'
 
-        msg_box = QMessageBox(self)
-        msg_box.setText(msg_str)
-        msg_box.setModal(False)
-        msg_box.show()
+        if self.materialPropsDialog is None:
+            dialog = QDialog(self)
+            dialog.setModal(False)
+            dialog.setMinimumSize(560, 420)
+
+            layout = QVBoxLayout(dialog)
+            text = QPlainTextEdit(dialog)
+            text.setReadOnly(True)
+            text.setLineWrapMode(QPlainTextEdit.NoWrap)
+            layout.addWidget(text)
+
+            buttons = QDialogButtonBox(QDialogButtonBox.Close, parent=dialog)
+            buttons.rejected.connect(dialog.close)
+            buttons.accepted.connect(dialog.close)
+            layout.addWidget(buttons)
+
+            self.materialPropsDialog = dialog
+            self.materialPropsText = text
+
+        self.materialPropsDialog.setWindowTitle(title)
+        self.materialPropsText.setPlainText(msg_str)
+        self.materialPropsText.moveCursor(QtGui.QTextCursor.Start)
+        self.materialPropsDialog.show()
+        self.materialPropsDialog.raise_()
+        self.materialPropsDialog.activateWindow()
