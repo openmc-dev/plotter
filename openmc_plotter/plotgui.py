@@ -201,9 +201,7 @@ class PlotImage(FigureCanvas):
             return None
 
         buffer = io.BytesIO()
-        self.figure.savefig(buffer,
-                            format='png',
-                            transparent=True)
+        self.figure.savefig(buffer, format='png', transparent=True)
         image = QtGui.QImage.fromData(buffer.getvalue(), 'PNG')
         if image.isNull():
             return None
