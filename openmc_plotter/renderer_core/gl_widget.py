@@ -106,6 +106,7 @@ Color by: switch between material and cell coloring<br>
 Visibility list: toggle per material/cell<br>
 Color swatch: edit per material/cell color<br>
 Save PNG: Ctrl+S / Cmd+S<br>
+Copy image: Ctrl+C / Cmd+C or right-click<br>
 """
         )
         overlay_layout.addWidget(help_text, 1)
@@ -254,8 +255,28 @@ Save PNG: Ctrl+S / Cmd+S<br>
             self._help_overlay.raise_()
             self._help_overlay.setFocus(QtCore.Qt.ActiveWindowFocusReason)
 
+    def _capture_frame(self):
+        if not self.isValid():
+            return QtGui.QImage()
+        if self._render_mode != "final" or self._dirty:
+            self._render_mode = "final"
+            self._dirty = True
+            self.repaint()
+        return self.grabFramebuffer()
+
+    def copy_screenshot_to_clipboard(self):
+        image = self._capture_frame()
+        if image.isNull():
+            QtWidgets.QMessageBox.warning(
+                self,
+                "Copy Image",
+                "Failed to capture the current frame.",
+            )
+            return
+        QtWidgets.QApplication.clipboard().setImage(image)
+
     def save_screenshot(self):
-        image = self.grabFramebuffer()
+        image = self._capture_frame()
         if image.isNull():
             QtWidgets.QMessageBox.warning(
                 self,
@@ -291,6 +312,22 @@ Save PNG: Ctrl+S / Cmd+S<br>
                 "Save PNG",
                 f"Failed to save image to:\n{filename}",
             )
+
+    def contextMenuEvent(self, event):
+        if self._help_overlay.isVisible():
+            event.accept()
+            return
+
+        menu = QtWidgets.QMenu(self)
+        copy_action = menu.addAction("Copy Image")
+        save_action = menu.addAction("Save Image As...")
+        selected_action = menu.exec(event.globalPos())
+
+        if selected_action == copy_action:
+            self.copy_screenshot_to_clipboard()
+        elif selected_action == save_action:
+            self.save_screenshot()
+        event.accept()
 
     def set_light_follows_camera(self, enabled):
         self._light_follows_camera = bool(enabled)
@@ -424,6 +461,10 @@ Save PNG: Ctrl+S / Cmd+S<br>
         key = event.key()
         if event.matches(QtGui.QKeySequence.Save):
             self.save_screenshot()
+            event.accept()
+            return
+        if event.matches(QtGui.QKeySequence.Copy):
+            self.copy_screenshot_to_clipboard()
             event.accept()
             return
         if key == QtCore.Qt.Key_F1 or (
