@@ -2,7 +2,7 @@ from __future__ import annotations
 from ast import literal_eval
 from collections import defaultdict
 import copy
-from ctypes import c_int32, c_char_p, Structure, c_int, c_size_t, c_bool, c_double
+from ctypes import c_int32, c_char_p
 from dataclasses import dataclass
 import hashlib
 import itertools
@@ -1072,246 +1072,17 @@ class PlotModel:
         return self.geom_data[:, :, 2]
 
 
-class _Position(Structure):
-    """Definition of an xyz location in space with underlying c-types
-
-    C-type Attributes
-    -----------------
-    x : c_double
-        Position's x value (default: 0.0)
-    y : c_double
-        Position's y value (default: 0.0)
-    z : c_double
-        Position's z value (default: 0.0)
-    """
-    _fields_ = [('x', c_double),
-                ('y', c_double),
-                ('z', c_double)]
-
-    def __getitem__(self, idx):
-        if idx == 0:
-            return self.x
-        elif idx == 1:
-            return self.y
-        elif idx == 2:
-            return self.z
-        else:
-            raise IndexError(f"{idx} index is invalid for _Position")
-
-    def __setitem__(self, idx, val):
-        if idx == 0:
-            self.x = val
-        elif idx == 1:
-            self.y = val
-        elif idx == 2:
-            self.z = val
-        else:
-            raise IndexError(f"{idx} index is invalid for _Position")
-
-    def __repr__(self):
-        return f"({self.x}, {self.y}, {self.z})"
 
 
-class _PlotBase(Structure):
-    """A structure defining a 2-D geometry slice with underlying c-types
 
-    C-Type Attributes
-    -----------------
-    origin_ : openmc.lib.plot._Position
-        A position defining the origin of the plot.
-    u_span_ : openmc.lib.plot._Position
-        Full-width span vector defining the plot's horizontal axis.
-    v_span_ : openmc.lib.plot._Position
-        Full-height span vector defining the plot's vertical axis.
-    width_ : openmc.lib.plot._Position
-        The width of the plot along the x, y, and z axes, respectively
-    basis_ : c_int
-        The axes basis of the plot view.
-    pixels_ : c_size_t[3]
-        The resolution of the plot in the horizontal and vertical dimensions
-    color_overlaps_ : c_bool
-        Whether to assign unique IDs (-3) to overlapping regions.
-    level_ : c_int
-        The universe level for the plot view
-
-    Attributes
-    ----------
-    origin : tuple or list of ndarray
-        Origin (center) of the plot
-    width : float
-        The horizontal dimension of the plot in geometry units (cm)
-    height : float
-        The vertical dimension of the plot in geometry units (cm)
-    basis : string
-        One of {'xy', 'xz', 'yz'} indicating the horizontal and vertical
-        axes of the plot.
-    h_res : int
-        The horizontal resolution of the plot in pixels
-    v_res : int
-        The vertical resolution of the plot in pixels
-    level : int
-        The universe level for the plot (default: -1 -> all universes shown)
-    """
-    _fields_ = [('origin_', _Position),
-                ('u_span_', _Position),
-                ('v_span_', _Position),
-                ('width_', _Position),
-                ('basis_', c_int),
-                ('pixels_', 3*c_size_t),
-                ('color_overlaps_', c_bool),
-                ('level_', c_int)]
-
-    def __init__(self):
-        self.level_ = -1
-        self.basis_ = 1
-        self.color_overlaps_ = False
-        self._update_spans()
-
-    def _update_spans(self):
-        if self.basis_ == 1:
-            self.u_span_.x = self.width_.x
-            self.u_span_.y = 0.0
-            self.u_span_.z = 0.0
-            self.v_span_.x = 0.0
-            self.v_span_.y = self.width_.y
-            self.v_span_.z = 0.0
-        elif self.basis_ == 2:
-            self.u_span_.x = self.width_.x
-            self.u_span_.y = 0.0
-            self.u_span_.z = 0.0
-            self.v_span_.x = 0.0
-            self.v_span_.y = 0.0
-            self.v_span_.z = self.width_.y
-        elif self.basis_ == 3:
-            self.u_span_.x = 0.0
-            self.u_span_.y = self.width_.x
-            self.u_span_.z = 0.0
-            self.v_span_.x = 0.0
-            self.v_span_.y = 0.0
-            self.v_span_.z = self.width_.y
-
-    @property
-    def origin(self):
-        return self.origin_
-
-    @origin.setter
-    def origin(self, origin):
-        self.origin_.x = origin[0]
-        self.origin_.y = origin[1]
-        self.origin_.z = origin[2]
-
-    @property
-    def width(self):
-        return self.width_.x
-
-    @width.setter
-    def width(self, width):
-        self.width_.x = width
-        self._update_spans()
-
-    @property
-    def height(self):
-        return self.width_.y
-
-    @height.setter
-    def height(self, height):
-        self.width_.y = height
-        self._update_spans()
-
-    @property
-    def basis(self):
-        if self.basis_ == 1:
-            return 'xy'
-        elif self.basis_ == 2:
-            return 'xz'
-        elif self.basis_ == 3:
-            return 'yz'
-
-        raise ValueError(f"Plot basis {self.basis_} is invalid")
-
-    @basis.setter
-    def basis(self, basis):
-        if isinstance(basis, str):
-            valid_bases = ('xy', 'xz', 'yz')
-            basis = basis.lower()
-            if basis not in valid_bases:
-                raise ValueError(f"{basis} is not a valid plot basis.")
-
-            if basis == 'xy':
-                self.basis_ = 1
-            elif basis == 'xz':
-                self.basis_ = 2
-            elif basis == 'yz':
-                self.basis_ = 3
-            self._update_spans()
-            return
-
-        if isinstance(basis, int):
-            valid_bases = (1, 2, 3)
-            if basis not in valid_bases:
-                raise ValueError(f"{basis} is not a valid plot basis.")
-            self.basis_ = basis
-            self._update_spans()
-            return
-
-        raise ValueError(f"{basis} of type {type(basis)} is an invalid plot basis")
-
-    @property
-    def h_res(self):
-        return self.pixels_[0]
-
-    @h_res.setter
-    def h_res(self, h_res):
-        self.pixels_[0] = h_res
-
-    @property
-    def v_res(self):
-        return self.pixels_[1]
-
-    @v_res.setter
-    def v_res(self, v_res):
-        self.pixels_[1] = v_res
-
-    @property
-    def level(self):
-        return int(self.level_)
-
-    @level.setter
-    def level(self, level):
-        self.level_ = level
-
-    @property
-    def color_overlaps(self):
-        return self.color_overlaps_
-
-    @color_overlaps.setter
-    def color_overlaps(self, color_overlaps):
-        self.color_overlaps_ = color_overlaps
-
-    def __repr__(self):
-        out_str = ["-----",
-                   "Plot:",
-                   "-----",
-                   f"Origin: {self.origin}",
-                   f"Width: {self.width}",
-                   f"Height: {self.height}",
-                   f"Basis: {self.basis}",
-                   f"HRes: {self.h_res}",
-                   f"VRes: {self.v_res}",
-                   f"Color Overlaps: {self.color_overlaps}",
-                   f"Level: {self.level}"]
-        return '\n'.join(out_str)
-
-
-class ViewParam(_PlotBase):
-    """Viewer settings that are needed for _PlotBase and are independent
-    of all other plotter/model settings.
+class ViewParam:
+    """View parameters defining a 2-D geometry slice.
 
     Parameters
     ----------
     origin : 3-tuple of floats
         Origin (center) of plot view
-    width: float
+    width : float
         Width of plot view in model units
     height : float
         Height of plot view in model units
@@ -1320,7 +1091,7 @@ class ViewParam(_PlotBase):
 
     Attributes
     ----------
-    origin : 3-tuple of floats
+    origin : tuple of float
         Origin (center) of plot view
     width : float
         Width of the plot view in model units
@@ -1340,36 +1111,46 @@ class ViewParam(_PlotBase):
         The universe level for the plot (default: -1 -> all universes shown)
     """
 
+    _VALID_BASES = ('xy', 'xz', 'yz')
+
     def __init__(self, origin=(0, 0, 0), width=10, height=10, default_res=1000):
         """Initialize ViewParam attributes"""
-        super().__init__()
-
-        # View Parameters
-        self.level = -1
-        self.origin = origin
-        self.width = width
-        self.height = height
-        self.h_res = default_res
-        self.v_res = default_res
+        self.origin = tuple(origin)
+        self.width = float(width)
+        self.height = float(height)
+        self.h_res = int(default_res)
+        self.v_res = int(default_res)
         self.basis = 'xy'
+        self.level = -1
         self.color_overlaps = False
 
     @property
+    def basis(self):
+        return self._basis
+
+    @basis.setter
+    def basis(self, basis):
+        if basis not in self._VALID_BASES:
+            raise ValueError(f"'{basis}' is not a valid plot basis. "
+                             f"Must be one of {self._VALID_BASES}.")
+        self._basis = basis
+
+    @property
     def slice_axis(self):
-        if self.basis == 'xy':
+        if self._basis == 'xy':
             return 2
-        elif self.basis == 'yz':
+        elif self._basis == 'yz':
             return 0
         else:
             return 1
 
     @property
     def llc(self):
-        if self.basis == 'xy':
+        if self._basis == 'xy':
             x = self.origin[0] - self.width / 2.0
             y = self.origin[1] - self.height / 2.0
             z = self.origin[2]
-        elif self.basis == 'yz':
+        elif self._basis == 'yz':
             x = self.origin[0]
             y = self.origin[1] - self.width / 2.0
             z = self.origin[2] - self.height / 2.0
@@ -1381,11 +1162,11 @@ class ViewParam(_PlotBase):
 
     @property
     def urc(self):
-        if self.basis == 'xy':
+        if self._basis == 'xy':
             x = self.origin[0] + self.width / 2.0
             y = self.origin[1] + self.height / 2.0
             z = self.origin[2]
-        elif self.basis == 'yz':
+        elif self._basis == 'yz':
             x = self.origin[0]
             y = self.origin[1] + self.width / 2.0
             z = self.origin[2] + self.height / 2.0
@@ -1394,6 +1175,20 @@ class ViewParam(_PlotBase):
             y = self.origin[1]
             z = self.origin[2] + self.height / 2.0
         return x, y, z
+
+    def __repr__(self):
+        out_str = ["-----",
+                   "Plot:",
+                   "-----",
+                   f"Origin: {self.origin}",
+                   f"Width: {self.width}",
+                   f"Height: {self.height}",
+                   f"Basis: {self.basis}",
+                   f"HRes: {self.h_res}",
+                   f"VRes: {self.v_res}",
+                   f"Color Overlaps: {self.color_overlaps}",
+                   f"Level: {self.level}"]
+        return '\n'.join(out_str)
 
     def __eq__(self, other):
         return repr(self) == repr(other)
@@ -1553,7 +1348,7 @@ class PlotView:
     view_ind : PlotViewIndependent instance
         viewing parameters that are independent of the model
     view_params : ViewParam instance
-        view parameters necesary for _PlotBase
+        view parameters defining the 2-D geometry slice
     cells : Dict of DomainView instances
         Dictionary of cell view settings by ID
     materials : Dict of DomainView instances
@@ -1563,8 +1358,8 @@ class PlotView:
     """
 
     attrs = ('view_ind', 'view_params', 'cells', 'materials', 'selectedTally', 'mesh_annotations')
-    plotbase_attrs = ('level', 'origin', 'width', 'height',
-                      'h_res', 'v_res', 'basis', 'llc', 'urc', 'color_overlaps')
+    view_param_attrs = ('level', 'origin', 'width', 'height',
+                        'h_res', 'v_res', 'basis', 'llc', 'urc', 'color_overlaps', 'slice_axis')
 
     def __init__(self, origin=(0, 0, 0), width=10, height=10, restore_view=None,
                  restore_domains=False, default_res=None):
@@ -1602,7 +1397,7 @@ class PlotView:
             if name not in self.__dict__:
                 raise AttributeError('{} not in PlotView dict'.format(name))
             return self.__dict__[name]
-        elif name in self.plotbase_attrs:
+        elif name in self.view_param_attrs:
             return getattr(self.view_params, name)
         else:
             return getattr(self.view_ind, name)
@@ -1610,7 +1405,7 @@ class PlotView:
     def __setattr__(self, name, value):
         if name in self.attrs:
             super().__setattr__(name, value)
-        elif name in self.plotbase_attrs:
+        elif name in self.view_param_attrs:
             setattr(self.view_params, name, value)
         else:
             setattr(self.view_ind, name, value)
@@ -1674,7 +1469,7 @@ class PlotView:
 
         return DomainViewDict(defaults)
 
-    def adopt_plotbase(self, view):
+    def adopt_view_params(self, view):
         """
         Applies only the geometric aspects of a view to the current view
 

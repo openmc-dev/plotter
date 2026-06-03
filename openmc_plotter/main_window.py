@@ -684,7 +684,7 @@ class MainWindow(QMainWindow):
     def restoreDefault(self):
         if self.model.currentView != self.model.defaultView:
             self.model.storeCurrent()
-            self.model.activeView.adopt_plotbase(self.model.defaultView)
+            self.model.activeView.adopt_view_params(self.model.defaultView)
             self.geometryPanel.update()
             self.colorDialog.updateDialogValues()
             self.requestPlotUpdate()
