@@ -1,5 +1,6 @@
 import io
 from functools import partial
+import openmc
 
 from PySide6 import QtCore, QtGui
 from PySide6.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
@@ -371,7 +372,45 @@ class PlotImage(FigureCanvas):
             if id == _VOID_REGION:
                 domainInfo = ("VOID")
             elif id == _OVERLAP:
-                domainInfo = ("OVERLAP")
+                x_pix, y_pix = self.getDataIndices(event)
+                cell1, cell2, universe = openmc.lib.slice_plot_overlap_data(x_pix, y_pix)
+
+                if len(cell1) > 0:
+                    unique_cells = []
+                    seen = set()
+
+                    for c1, c2 in zip(cell1, cell2):
+                        for cid in (c1, c2):
+                            if cid not in seen:
+                                seen.add(cid)
+                                try:
+                                    cell_obj = self.model.activeView.cells[cid]
+                                    label = f'"{cell_obj.name}"' if cell_obj.name else f'cell {cid}'
+                                except Exception:
+                                    label = f'cell {cid}'
+                                unique_cells.append(label)
+
+                    max_names = 3
+                    if len(unique_cells) <= max_names:
+                        if len(unique_cells) == 1:
+                            domainInfo = f"OVERLAP: {unique_cells[0]}"
+                        elif len(unique_cells) == 2:
+                            domainInfo = f"OVERLAP: {unique_cells[0]} and {unique_cells[1]} have an overlap"
+                        else:
+                            domainInfo = (
+                                "OVERLAP: "
+                                + ", ".join(unique_cells[:-1])
+                                + f", and {unique_cells[-1]} have an overlap"
+                            )
+                    else:
+                        shown = ", ".join(unique_cells[:max_names])
+                        remaining = len(unique_cells) - max_names
+                        domainInfo = (
+                            f"OVERLAP: {shown}, and {remaining} more cells have an overlap"
+                        )
+                else:
+                    domainInfo = "OVERLAP"
+
             elif id != _NOT_FOUND and domain[id].name:
                 domainInfo = ("{} {}{}: \"{}\"\t Density: {} g/cc\t"
                               "Temperature: {} K".format(
