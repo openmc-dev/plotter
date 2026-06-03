@@ -129,7 +129,7 @@ class PlotWorker(QObject):
             if params.get("filter_id") is not None:
                 filter_cpp = openmc.lib.filters[params["filter_id"]]
 
-            # Single call replaces id_map + property_map + get_plot_bins
+            # Get geometry and property data from OpenMC library
             geom_data, property_data = openmc.lib.slice_plot(
                 origin=params["origin"],
                 width=(params["width"], params["height"]),
