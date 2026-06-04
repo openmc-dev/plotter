@@ -1080,7 +1080,7 @@ class ViewParam:
 
     Parameters
     ----------
-    origin : 3-tuple of floats
+    origin : sequence of float
         Origin (center) of plot view
     width : float
         Width of plot view in model units
@@ -1091,7 +1091,7 @@ class ViewParam:
 
     Attributes
     ----------
-    origin : tuple of float
+    origin : list of float
         Origin (center) of plot view
     width : float
         Width of the plot view in model units
@@ -1114,8 +1114,7 @@ class ViewParam:
     _VALID_BASES = ('xy', 'xz', 'yz')
 
     def __init__(self, origin=(0, 0, 0), width=10, height=10, default_res=1000):
-        """Initialize ViewParam attributes"""
-        self.origin = tuple(origin)
+        self.origin = list(origin)
         self.width = float(width)
         self.height = float(height)
         self.h_res = int(default_res)
