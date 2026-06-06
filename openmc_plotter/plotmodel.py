@@ -130,7 +130,7 @@ class PlotWorker(QObject):
                 filter_cpp = openmc.lib.filters[params["filter_id"]]
 
             # Get geometry and property data from OpenMC library
-            geom_data, property_data = openmc.lib.slice_plot(
+            geom_data, property_data = openmc.lib.slice_data(
                 origin=params["origin"],
                 width=(params["width"], params["height"]),
                 basis=params["basis"],
@@ -319,7 +319,7 @@ class PlotModel:
         # Cell/Material ID by coordinates
         self.ids = None
 
-        # Return values from slice_plot
+        # Return values from slice_data
         self.geom_data = None
         self.property_data = None
         self.map_view_params = None
@@ -520,7 +520,7 @@ class PlotModel:
                 if filter_id is not None:
                     filter_cpp = openmc.lib.filters[filter_id]
 
-                self.geom_data, self.property_data = openmc.lib.slice_plot(
+                self.geom_data, self.property_data = openmc.lib.slice_data(
                     origin=view.origin,
                     width=(view.width, view.height),
                     basis=view.basis,
@@ -1039,11 +1039,11 @@ class PlotModel:
                 selected_scores.append(idx)
         data = _do_op(data[np.array(selected_scores)], tally_value)
 
-        # Extract filter bins from geom_data (computed during slice_plot call)
+        # Extract filter bins from geom_data (computed during slice_data call)
         # geom_data has shape (v_res, h_res, 4) when filter was included
         if self.geom_data.shape[2] < 4:
             raise RuntimeError(
-                "Filter bins not available. Ensure slice_plot was called with "
+                "Filter bins not available. Ensure slice_data was called with "
                 "the appropriate filter for MeshMaterialFilter tallies."
             )
         bins = self.geom_data[:, :, 3]
@@ -1070,9 +1070,6 @@ class PlotModel:
     @property
     def mat_ids(self):
         return self.geom_data[:, :, 2]
-
-
-
 
 
 class ViewParam:
