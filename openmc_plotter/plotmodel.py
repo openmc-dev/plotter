@@ -135,7 +135,7 @@ class PlotWorker(QObject):
                 width=(params["width"], params["height"]),
                 basis=params["basis"],
                 pixels=(params["h_res"], params["v_res"]),
-                color_overlaps=params["color_overlaps"],
+                show_overlaps=params["color_overlaps"],
                 level=params["level"],
                 filter=filter_cpp,
             )
@@ -525,7 +525,7 @@ class PlotModel:
                     width=(view.width, view.height),
                     basis=view.basis,
                     pixels=(view.h_res, view.v_res),
-                    color_overlaps=view.color_overlaps,
+                    show_overlaps=view.color_overlaps,
                     level=view.level,
                     filter=filter_cpp,
                 )
