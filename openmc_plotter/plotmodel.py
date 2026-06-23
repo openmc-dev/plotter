@@ -44,7 +44,8 @@ _SPATIAL_FILTERS = (openmc.UniverseFilter,
                     openmc.CellFilter,
                     openmc.DistribcellFilter,
                     openmc.CellInstanceFilter,
-                    openmc.MeshFilter)
+                    openmc.MeshFilter,
+                    openmc.MeshMaterialFilter)
 
 _PRODUCTIONS = ('delayed-nu-fission', 'prompt-nu-fission', 'nu-fission',
                'nu-scatter', 'H1-production', 'H2-production',
@@ -122,16 +123,24 @@ class PlotWorker(QObject):
     def generate_maps(self, work_item: PlotWorkItem):
         try:
             params = work_item.view_params
-            view_param = ViewParam(params["origin"], params["width"],
-                                   params["height"], params["h_res"])
-            view_param.h_res = params["h_res"]
-            view_param.v_res = params["v_res"]
-            view_param.basis = params["basis"]
-            view_param.level = params["level"]
-            view_param.color_overlaps = params["color_overlaps"]
-            ids_map = openmc.lib.id_map(view_param)
-            properties = openmc.lib.property_map(view_param)
-            self.finished.emit(work_item.view_params, ids_map, properties)
+
+            # Determine if we need filter bins for MeshMaterialFilter tally
+            filter_cpp = None
+            if params.get("filter_id") is not None:
+                filter_cpp = openmc.lib.filters[params["filter_id"]]
+
+            # Get geometry and property data from OpenMC library
+            geom_data, property_data = openmc.lib.slice_data(
+                origin=params["origin"],
+                width=(params["width"], params["height"]),
+                basis=params["basis"],
+                pixels=(params["h_res"], params["v_res"]),
+                show_overlaps=params["color_overlaps"],
+                level=params["level"],
+                filter=filter_cpp,
+            )
+
+            self.finished.emit(work_item.view_params, geom_data, property_data)
         except Exception as exc:
             self.error.emit(str(exc))
 
@@ -224,12 +233,12 @@ class PlotManager(QObject):
         self.work_requested.emit(work_item)
 
     @Slot(object, object, object)
-    def _on_worker_finished(self, view_params, ids_map, properties):
+    def _on_worker_finished(self, view_params, geom_data, property_data):
         request = self._in_flight_request
         self._in_flight_request = None
         if request is not None:
             self.plot_finished.emit(request.view_snapshot,
-                                    view_params, ids_map, properties)
+                                    view_params, geom_data, property_data)
         if self._pending_request is not None:
             self._start_next()
         else:
@@ -266,10 +275,10 @@ class PlotModel:
         Dictionary mapping material IDs to openmc.Material instances
     ids : NumPy int array (v_res, h_res, 1)
         Mapping of plot coordinates to cell/material ID by pixel
-    ids_map : NumPy int32 array (v_res, h_res, 3)
-        Mapping of cell and material ids
-    properties : Numpy float array (v_res, h_res, 3)
-        Mapping of cell temperatures and material densities
+    geom_data : NumPy int32 array (v_res, h_res, 3) or (v_res, h_res, 4)
+        Geometry data with cell IDs, instances, material IDs, and optionally filter bins
+    property_data : Numpy float array (v_res, h_res, 2)
+        Property data with cell temperatures and material densities
     image : NumPy int array (v_res, h_res, 3)
         The current RGB image data
     statepoint : StatePointModel
@@ -310,9 +319,9 @@ class PlotModel:
         # Cell/Material ID by coordinates
         self.ids = None
 
-        # Return values from id_map and property_map
-        self.ids_map = None
-        self.properties = None
+        # Return values from slice_data
+        self.geom_data = None
+        self.property_data = None
         self.map_view_params = None
 
         self.version = __version__
@@ -473,34 +482,57 @@ class PlotModel:
             "basis": str(vp.basis),
             "level": int(vp.level),
             "color_overlaps": bool(vp.color_overlaps),
+            "filter_id": self.get_active_mesh_material_filter_id(view),
         }
 
+    def get_active_mesh_material_filter_id(self, view: "PlotView") -> Optional[int]:
+        """Return the filter ID if displaying a MeshMaterialFilter tally, else None."""
+        if self._statepoint is None:
+            return None
+        if not view.tallyDataVisible or view.selectedTally is None:
+            return None
+
+        tally = self._statepoint.tallies[view.selectedTally]
+        if tally.contains_filter(openmc.MeshMaterialFilter):
+            filter = tally.find_filter(openmc.MeshMaterialFilter)
+            return filter.id
+        return None
+
     def can_reuse_maps(self, view: "PlotView"):
-        if self.ids_map is None or self.properties is None:
+        if self.geom_data is None or self.property_data is None:
             return False
         return self.map_view_params == self.view_params_payload(view)
 
     def makePlot(self, view: Optional["PlotView"] = None,
-                 ids_map=None, properties=None):
-        """ Generate new plot image from active view settings
-
-        Creates corresponding .xml files from user-chosen settings.
-        Runs OpenMC in plot mode to generate new plot image.
-        """
+                 geom_data=None, property_data=None):
+        """Generate new plot image from active view settings"""
         if view is None:
             view = self.activeView
         # update/call maps under 2 circumstances
-        #   1. this is the intial plot (ids_map/properties are None)
+        #   1. this is the intial plot (geom_data/property_data are None)
         #   2. The active (desired) view differs from the current view parameters
-        if ids_map is None or properties is None:
+        if geom_data is None or property_data is None:
             if (self.currentView.view_params != view.view_params) or \
-                (self.ids_map is None) or (self.properties is None):
-                self.ids_map = openmc.lib.id_map(view.view_params)
-                self.properties = openmc.lib.property_map(view.view_params)
+                (self.geom_data is None) or (self.property_data is None):
+                # Determine if we need filter bins for MeshMaterialFilter tally
+                filter_cpp = None
+                filter_id = self.get_active_mesh_material_filter_id(view)
+                if filter_id is not None:
+                    filter_cpp = openmc.lib.filters[filter_id]
+
+                self.geom_data, self.property_data = openmc.lib.slice_data(
+                    origin=view.origin,
+                    width=(view.width, view.height),
+                    basis=view.basis,
+                    pixels=(view.h_res, view.v_res),
+                    show_overlaps=view.color_overlaps,
+                    level=view.level,
+                    filter=filter_cpp,
+                )
             self.map_view_params = self.view_params_payload(view)
         else:
-            self.ids_map = ids_map
-            self.properties = properties
+            self.geom_data = geom_data
+            self.property_data = property_data
             self.map_view_params = self.view_params_payload(view)
 
         # update current view
@@ -548,15 +580,15 @@ class PlotModel:
         # tally data
         self.tally_data = None
 
-        self.properties[self.properties < 0.0] = np.nan
+        self.property_data[self.property_data < 0.0] = np.nan
 
-        self.temperatures = self.properties[..., _PROPERTY_INDICES['temperature']]
-        self.densities = self.properties[..., _PROPERTY_INDICES['density']]
+        self.temperatures = self.property_data[..., _PROPERTY_INDICES['temperature']]
+        self.densities = self.property_data[..., _PROPERTY_INDICES['density']]
 
         minmax = {}
         for prop in _MODEL_PROPERTIES:
             idx = _PROPERTY_INDICES[prop]
-            prop_data = self.properties[:, :, idx]
+            prop_data = self.property_data[:, :, idx]
             minmax[prop] = (np.min(np.nan_to_num(prop_data)),
                             np.max(np.nan_to_num(prop_data)))
 
@@ -672,6 +704,13 @@ class PlotModel:
                                                       nuclides,
                                                       view)
                 return image + (units_out,)
+
+        elif tally.contains_filter(openmc.MeshMaterialFilter):
+            image = self._create_tally_filter_image(
+                tally, tally_value, openmc.MeshMaterialFilter, scores, nuclides, view)
+            return image + (units_out,)
+
+
         elif contains_distribcell or contains_cellinstance:
             if tally_value == 'rel_err':
                 mean_data = self._create_distribcell_image(
@@ -944,28 +983,103 @@ class PlotModel:
 
         return image_data, None, data_min, data_max
 
+    def _create_tally_filter_image(
+            self, tally: openmc.Tally, tally_value: TallyValueType, filter_class,
+            scores: Tuple[str], nuclides: Tuple[str], view: PlotView = None
+        ):
+        # some variables used throughout
+        if view is None:
+            view = self.currentView
+
+        def _do_op(array, tally_value, ax=0):
+            if tally_value == 'mean':
+                return np.sum(array, axis=ax)
+            elif tally_value == 'std_dev':
+                return np.sqrt(np.sum(array**2, axis=ax))
+
+        # start with reshaped data
+        data = tally.get_reshaped_data(tally_value)
+
+        # move mesh axes to the end of the filters
+        filter_idx = [type(filter) for filter in tally.filters].index(filter_class)
+        data = np.moveaxis(data, filter_idx, -1)
+
+        # sum over the rest of the tally filters
+        for tally_filter in tally.filters:
+            if type(tally_filter) is filter_class:
+                continue
+
+            selected_bins = self.appliedFilters[tally_filter]
+            if selected_bins:
+                # sum filter data for the selected bins
+                data = data[np.array(selected_bins)].sum(axis=0)
+            else:
+                # if the filter is completely unselected,
+                # set all of its data to zero and remove the axis
+                data[:] = 0.0
+                data = _do_op(data, tally_value)
+
+        # filter by selected nuclides
+        if not nuclides:
+            data = 0.0
+
+        selected_nuclides = []
+        for idx, nuclide in enumerate(tally.nuclides):
+            if nuclide in nuclides:
+                selected_nuclides.append(idx)
+        data = _do_op(data[np.array(selected_nuclides)], tally_value)
+
+        # filter by selected scores
+        if not scores:
+            data = 0.0
+
+        selected_scores = []
+        for idx, score in enumerate(tally.scores):
+            if score in scores:
+                selected_scores.append(idx)
+        data = _do_op(data[np.array(selected_scores)], tally_value)
+
+        # Extract filter bins from geom_data (computed during slice_data call)
+        # geom_data has shape (v_res, h_res, 4) when filter was included
+        if self.geom_data.shape[2] < 4:
+            raise RuntimeError(
+                "Filter bins not available. Ensure slice_data was called with "
+                "the appropriate filter for MeshMaterialFilter tallies."
+            )
+        bins = self.geom_data[:, :, 3]
+
+        # set image data
+        image_data = np.full_like(self.ids, np.nan, dtype=float)
+        mask = (bins >= 0)
+        image_data[mask] = data[bins[mask]]
+
+        # get dataset's min/max
+        data_min = np.min(data)
+        data_max = np.max(data)
+
+        return image_data, None, data_min, data_max
+
     @property
     def cell_ids(self):
-        return self.ids_map[:, :, 0]
+        return self.geom_data[:, :, 0]
 
     @property
     def instances(self):
-        return self.ids_map[:, :, 1]
+        return self.geom_data[:, :, 1]
 
     @property
     def mat_ids(self):
-        return self.ids_map[:, :, 2]
+        return self.geom_data[:, :, 2]
 
 
-class ViewParam(openmc.lib.plot._PlotBase):
-    """Viewer settings that are needed for _PlotBase and are independent
-    of all other plotter/model settings.
+class ViewParam:
+    """View parameters defining a 2-D geometry slice.
 
     Parameters
     ----------
-    origin : 3-tuple of floats
+    origin : sequence of float
         Origin (center) of plot view
-    width: float
+    width : float
         Width of plot view in model units
     height : float
         Height of plot view in model units
@@ -974,7 +1088,7 @@ class ViewParam(openmc.lib.plot._PlotBase):
 
     Attributes
     ----------
-    origin : 3-tuple of floats
+    origin : list of float
         Origin (center) of plot view
     width : float
         Width of the plot view in model units
@@ -994,36 +1108,45 @@ class ViewParam(openmc.lib.plot._PlotBase):
         The universe level for the plot (default: -1 -> all universes shown)
     """
 
-    def __init__(self, origin=(0, 0, 0), width=10, height=10, default_res=1000):
-        """Initialize ViewParam attributes"""
-        super().__init__()
+    _VALID_BASES = ('xy', 'xz', 'yz')
 
-        # View Parameters
-        self.level = -1
-        self.origin = origin
-        self.width = width
-        self.height = height
-        self.h_res = default_res
-        self.v_res = default_res
+    def __init__(self, origin=(0, 0, 0), width=10, height=10, default_res=1000):
+        self.origin = list(origin)
+        self.width = float(width)
+        self.height = float(height)
+        self.h_res = int(default_res)
+        self.v_res = int(default_res)
         self.basis = 'xy'
+        self.level = -1
         self.color_overlaps = False
 
     @property
+    def basis(self):
+        return self._basis
+
+    @basis.setter
+    def basis(self, basis):
+        if basis not in self._VALID_BASES:
+            raise ValueError(f"'{basis}' is not a valid plot basis. "
+                             f"Must be one of {self._VALID_BASES}.")
+        self._basis = basis
+
+    @property
     def slice_axis(self):
-        if self.basis == 'xy':
+        if self._basis == 'xy':
             return 2
-        elif self.basis == 'yz':
+        elif self._basis == 'yz':
             return 0
         else:
             return 1
 
     @property
     def llc(self):
-        if self.basis == 'xy':
+        if self._basis == 'xy':
             x = self.origin[0] - self.width / 2.0
             y = self.origin[1] - self.height / 2.0
             z = self.origin[2]
-        elif self.basis == 'yz':
+        elif self._basis == 'yz':
             x = self.origin[0]
             y = self.origin[1] - self.width / 2.0
             z = self.origin[2] - self.height / 2.0
@@ -1035,11 +1158,11 @@ class ViewParam(openmc.lib.plot._PlotBase):
 
     @property
     def urc(self):
-        if self.basis == 'xy':
+        if self._basis == 'xy':
             x = self.origin[0] + self.width / 2.0
             y = self.origin[1] + self.height / 2.0
             z = self.origin[2]
-        elif self.basis == 'yz':
+        elif self._basis == 'yz':
             x = self.origin[0]
             y = self.origin[1] + self.width / 2.0
             z = self.origin[2] + self.height / 2.0
@@ -1049,8 +1172,23 @@ class ViewParam(openmc.lib.plot._PlotBase):
             z = self.origin[2] + self.height / 2.0
         return x, y, z
 
+    def __repr__(self):
+        out_str = ["-----",
+                   "Plot:",
+                   "-----",
+                   f"Origin: {self.origin}",
+                   f"Width: {self.width}",
+                   f"Height: {self.height}",
+                   f"Basis: {self.basis}",
+                   f"HRes: {self.h_res}",
+                   f"VRes: {self.v_res}",
+                   f"Color Overlaps: {self.color_overlaps}",
+                   f"Level: {self.level}"]
+        return '\n'.join(out_str)
+
     def __eq__(self, other):
         return repr(self) == repr(other)
+
 
 class PlotViewIndependent:
     """View settings for OpenMC plot, independent of the model.
@@ -1206,7 +1344,7 @@ class PlotView:
     view_ind : PlotViewIndependent instance
         viewing parameters that are independent of the model
     view_params : ViewParam instance
-        view parameters necesary for _PlotBase
+        view parameters defining the 2-D geometry slice
     cells : Dict of DomainView instances
         Dictionary of cell view settings by ID
     materials : Dict of DomainView instances
@@ -1216,8 +1354,8 @@ class PlotView:
     """
 
     attrs = ('view_ind', 'view_params', 'cells', 'materials', 'selectedTally', 'mesh_annotations')
-    plotbase_attrs = ('level', 'origin', 'width', 'height',
-                      'h_res', 'v_res', 'basis', 'llc', 'urc', 'color_overlaps')
+    view_param_attrs = ('level', 'origin', 'width', 'height',
+                        'h_res', 'v_res', 'basis', 'llc', 'urc', 'color_overlaps', 'slice_axis')
 
     def __init__(self, origin=(0, 0, 0), width=10, height=10, restore_view=None,
                  restore_domains=False, default_res=None):
@@ -1255,7 +1393,7 @@ class PlotView:
             if name not in self.__dict__:
                 raise AttributeError('{} not in PlotView dict'.format(name))
             return self.__dict__[name]
-        elif name in self.plotbase_attrs:
+        elif name in self.view_param_attrs:
             return getattr(self.view_params, name)
         else:
             return getattr(self.view_ind, name)
@@ -1263,7 +1401,7 @@ class PlotView:
     def __setattr__(self, name, value):
         if name in self.attrs:
             super().__setattr__(name, value)
-        elif name in self.plotbase_attrs:
+        elif name in self.view_param_attrs:
             setattr(self.view_params, name, value)
         else:
             setattr(self.view_ind, name, value)
@@ -1327,7 +1465,7 @@ class PlotView:
 
         return DomainViewDict(defaults)
 
-    def adopt_plotbase(self, view):
+    def adopt_view_params(self, view):
         """
         Applies only the geometric aspects of a view to the current view
 
