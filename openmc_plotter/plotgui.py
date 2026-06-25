@@ -373,7 +373,7 @@ class PlotImage(FigureCanvas):
                 domainInfo = ("VOID")
             elif id == _OVERLAP:
                 x_pix, y_pix = self.getDataIndices(event)
-                cell1, cell2, universe = openmc.lib.slice_plot_overlap_data(x_pix, y_pix)
+                cell1, cell2, universe = openmc.lib.slice_data_overlap_info(x_pix, y_pix)
 
                 if len(cell1) > 0:
                     unique_cells = []
