@@ -309,7 +309,10 @@ class PlotImage(FigureCanvas):
         # check that the position is in the axes view
         if 0 <= yPos < self.model.currentView.v_res \
            and 0 <= xPos and xPos < self.model.currentView.h_res:
-            id = self.model.ids[yPos, xPos]
+            if self.model.currentView.colorby == 'cell':
+                id = int(self.model.cell_ids[yPos, xPos])
+            else:
+                id = int(self.model.mat_ids[yPos, xPos])            
             instance = self.model.instances[yPos, xPos]
             temp = "{:g}".format(self.model.property_data[yPos, xPos, 0])
             density = "{:g}".format(self.model.property_data[yPos, xPos, 1])
@@ -355,7 +358,6 @@ class PlotImage(FigureCanvas):
         tallyInfo = ""
 
         if self.parent.underMouse():
-
             if domain_kind.lower() in _MODEL_PROPERTIES:
                 line_val = float(properties[domain_kind.lower()])
                 line_val = max(line_val, 0.0)
@@ -371,46 +373,17 @@ class PlotImage(FigureCanvas):
                 instanceInfo = ""
             if id == _VOID_REGION:
                 domainInfo = ("VOID")
-            elif id == _OVERLAP:
-                x_pix, y_pix = self.getDataIndices(event)
-                cell1, cell2, universe = openmc.lib.slice_data_overlap_info(x_pix, y_pix)
-
-                if len(cell1) > 0:
-                    unique_cells = []
-                    seen = set()
-
-                    for c1, c2 in zip(cell1, cell2):
-                        for cid in (c1, c2):
-                            if cid not in seen:
-                                seen.add(cid)
-                                try:
-                                    cell_obj = self.model.activeView.cells[cid]
-                                    label = f'"{cell_obj.name}"' if cell_obj.name else f'cell {cid}'
-                                except Exception:
-                                    label = f'cell {cid}'
-                                unique_cells.append(label)
-
-                    max_names = 3
-                    if len(unique_cells) <= max_names:
-                        if len(unique_cells) == 1:
-                            domainInfo = f"OVERLAP: {unique_cells[0]}"
-                        elif len(unique_cells) == 2:
-                            domainInfo = f"OVERLAP: {unique_cells[0]} and {unique_cells[1]} have an overlap"
-                        else:
-                            domainInfo = (
-                                "OVERLAP: "
-                                + ", ".join(unique_cells[:-1])
-                                + f", and {unique_cells[-1]} have an overlap"
-                            )
-                    else:
-                        shown = ", ".join(unique_cells[:max_names])
-                        remaining = len(unique_cells) - max_names
-                        domainInfo = (
-                            f"OVERLAP: {shown}, and {remaining} more cells have an overlap"
-                        )
+            elif id < _OVERLAP:
+                # Unpack the index and find it in overlap map
+                overlap_idx = int(_OVERLAP - int(id) - 1)
+                if overlap_idx in self.model.overlap_map:
+                    universe, cell1, cell2 = self.model.overlap_map[overlap_idx]
+                    domainInfo = (
+                        f"OVERLAP: Universe {universe}, "
+                        f"Cells {cell1}/{cell2}"
+                    )
                 else:
-                    domainInfo = "OVERLAP"
-
+                    domainInfo = "OVERLAP (unknown region)"
             elif id != _NOT_FOUND and domain[id].name:
                 domainInfo = ("{} {}{}: \"{}\"\t Density: {} g/cc\t"
                               "Temperature: {} K".format(
@@ -522,7 +495,7 @@ class PlotImage(FigureCanvas):
         self.menu.addAction(self.main_window.redoAction)
         self.menu.addSeparator()
 
-        if int(id) not in (_NOT_FOUND, _OVERLAP) and \
+        if int(id) not in (_NOT_FOUND) and int(id) >= _OVERLAP and \
            cv.colorby not in _MODEL_PROPERTIES:
 
             # Domain ID

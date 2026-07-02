@@ -324,6 +324,9 @@ class PlotModel:
         self.property_data = None
         self.map_view_params = None
 
+        # Map to be populated by overlap functions
+        self.overlap_map = {}
+
         self.version = __version__
 
         # default statepoint value
@@ -530,23 +533,33 @@ class PlotModel:
                     filter=filter_cpp,
                 )
             self.map_view_params = self.view_params_payload(view)
+                
         else:
             self.geom_data = geom_data
             self.property_data = property_data
             self.map_view_params = self.view_params_payload(view)
+
+        overlap_info, n = openmc.lib.slice_data_overlap_info()
+        self.overlap_map = {}
+        for i in range(n):
+            self.overlap_map[i] = (overlap_info[i*3], overlap_info[i*3+1], overlap_info[i*3+2])
 
         # update current view
         cv = self.currentView = copy.deepcopy(view)
 
         # set model ids based on domain
         if cv.colorby == 'cell':
-            self.ids = self.cell_ids
+            self.ids = self.cell_ids.copy()
             domain = cv.cells
             source = self.modelCells
         else:
-            self.ids = self.mat_ids
+            self.ids = self.mat_ids.copy()
             domain = cv.materials
             source = self.modelMaterials
+
+        # Normalizes so that domain only sees -3, but 
+        # overlap indices are still available in cell_ids
+        self.ids[self.ids < _OVERLAP] = _OVERLAP  # new line
 
         # generate colors if not present
         for cell_id, cell in cv.cells.items():
