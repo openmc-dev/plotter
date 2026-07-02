@@ -378,9 +378,17 @@ class PlotImage(FigureCanvas):
                 overlap_idx = int(_OVERLAP - int(id) - 1)
                 if overlap_idx in self.model.overlap_map:
                     universe, cell1, cell2 = self.model.overlap_map[overlap_idx]
+                    try:
+                        name1 = self.model.activeView.cells[cell1].name or str(cell1)
+                    except KeyError:
+                        name1 = str(cell1)
+                    try:
+                        name2 = self.model.activeView.cells[cell2].name or str(cell2)
+                    except KeyError:
+                        name2 = str(cell2)
                     domainInfo = (
                         f"OVERLAP: Universe {universe}, "
-                        f"Cells {cell1}/{cell2}"
+                        f"Cells {name1} and {name2}"
                     )
                 else:
                     domainInfo = "OVERLAP (unknown region)"
