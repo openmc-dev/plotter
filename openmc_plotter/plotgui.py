@@ -1,6 +1,5 @@
 import io
 from functools import partial
-import openmc
 
 from PySide6 import QtCore, QtGui
 from PySide6.QtWidgets import (QWidget, QPushButton, QHBoxLayout, QVBoxLayout,
@@ -311,15 +310,7 @@ class PlotImage(FigureCanvas):
            and 0 <= xPos and xPos < self.model.currentView.h_res:
             cell_id = int(self.model.cell_ids[yPos, xPos])
             mat_id = int(self.model.mat_ids[yPos, xPos])
-            if self.model.currentView.colorby == 'cell':
-                id = cell_id
-            else:
-                id = mat_id
-            if id == _OVERLAP:
-                if cell_id < _OVERLAP:
-                    id = cell_id
-                elif mat_id < _OVERLAP:
-                    id = mat_id
+            id = self._domainId(cell_id, mat_id)
             instance = self.model.instances[yPos, xPos]
             temp = "{:g}".format(self.model.property_data[yPos, xPos, 0])
             density = "{:g}".format(self.model.property_data[yPos, xPos, 1])
@@ -347,6 +338,20 @@ class PlotImage(FigureCanvas):
 
         return id, instance, properties, domain, domain_kind
 
+    def _domainId(self, cell_id, mat_id):
+        if self.model.currentView.colorby != 'cell':
+            return mat_id
+        if cell_id == _OVERLAP and mat_id < _OVERLAP:
+            return mat_id
+        return cell_id
+
+    def _cellLabel(self, cell_id):
+        try:
+            name = self.model.activeView.cells[cell_id].name
+        except KeyError:
+            name = None
+        return f"{cell_id} ({name})" if name else str(cell_id)
+
     def _overlapInfo(self, id):
         if id == _OVERLAP:
             return "OVERLAP"
@@ -356,19 +361,9 @@ class PlotImage(FigureCanvas):
             return "OVERLAP (unknown region)"
 
         universe, cell1, cell2 = self.model.overlap_map[overlap_idx]
-        try:
-            name1 = self.model.activeView.cells[cell1].name or str(cell1)
-        except KeyError:
-            name1 = str(cell1)
-        try:
-            name2 = self.model.activeView.cells[cell2].name or str(cell2)
-        except KeyError:
-            name2 = str(cell2)
-
-        return (
-            f"OVERLAP: Universe {universe}, "
-            f"Cells {name1} and {name2}"
-        )
+        label1 = self._cellLabel(cell1)
+        label2 = self._cellLabel(cell2)
+        return f"OVERLAP: Universe {universe}, Cells {label1} and {label2}"
 
     def mouseDoubleClickEvent(self, event):
         xCenter, yCenter = self.getPlotCoords(event.pos())
