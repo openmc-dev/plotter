@@ -309,10 +309,17 @@ class PlotImage(FigureCanvas):
         # check that the position is in the axes view
         if 0 <= yPos < self.model.currentView.v_res \
            and 0 <= xPos and xPos < self.model.currentView.h_res:
+            cell_id = int(self.model.cell_ids[yPos, xPos])
+            mat_id = int(self.model.mat_ids[yPos, xPos])
             if self.model.currentView.colorby == 'cell':
-                id = int(self.model.cell_ids[yPos, xPos])
+                id = cell_id
             else:
-                id = int(self.model.mat_ids[yPos, xPos])            
+                id = mat_id
+            if id == _OVERLAP:
+                if cell_id < _OVERLAP:
+                    id = cell_id
+                elif mat_id < _OVERLAP:
+                    id = mat_id
             instance = self.model.instances[yPos, xPos]
             temp = "{:g}".format(self.model.property_data[yPos, xPos, 0])
             density = "{:g}".format(self.model.property_data[yPos, xPos, 1])
@@ -339,6 +346,29 @@ class PlotImage(FigureCanvas):
                       'temperature': temp}
 
         return id, instance, properties, domain, domain_kind
+
+    def _overlapInfo(self, id):
+        if id == _OVERLAP:
+            return "OVERLAP"
+
+        overlap_idx = int(_OVERLAP - int(id) - 1)
+        if overlap_idx not in self.model.overlap_map:
+            return "OVERLAP (unknown region)"
+
+        universe, cell1, cell2 = self.model.overlap_map[overlap_idx]
+        try:
+            name1 = self.model.activeView.cells[cell1].name or str(cell1)
+        except KeyError:
+            name1 = str(cell1)
+        try:
+            name2 = self.model.activeView.cells[cell2].name or str(cell2)
+        except KeyError:
+            name2 = str(cell2)
+
+        return (
+            f"OVERLAP: Universe {universe}, "
+            f"Cells {name1} and {name2}"
+        )
 
     def mouseDoubleClickEvent(self, event):
         xCenter, yCenter = self.getPlotCoords(event.pos())
@@ -373,25 +403,8 @@ class PlotImage(FigureCanvas):
                 instanceInfo = ""
             if id == _VOID_REGION:
                 domainInfo = ("VOID")
-            elif id < _OVERLAP:
-                # Unpack the index and find it in overlap map
-                overlap_idx = int(_OVERLAP - int(id) - 1)
-                if overlap_idx in self.model.overlap_map:
-                    universe, cell1, cell2 = self.model.overlap_map[overlap_idx]
-                    try:
-                        name1 = self.model.activeView.cells[cell1].name or str(cell1)
-                    except KeyError:
-                        name1 = str(cell1)
-                    try:
-                        name2 = self.model.activeView.cells[cell2].name or str(cell2)
-                    except KeyError:
-                        name2 = str(cell2)
-                    domainInfo = (
-                        f"OVERLAP: Universe {universe}, "
-                        f"Cells {name1} and {name2}"
-                    )
-                else:
-                    domainInfo = "OVERLAP (unknown region)"
+            elif id <= _OVERLAP:
+                domainInfo = self._overlapInfo(id)
             elif id != _NOT_FOUND and domain[id].name:
                 domainInfo = ("{} {}{}: \"{}\"\t Density: {} g/cc\t"
                               "Temperature: {} K".format(
@@ -503,8 +516,9 @@ class PlotImage(FigureCanvas):
         self.menu.addAction(self.main_window.redoAction)
         self.menu.addSeparator()
 
-        if int(id) not in (_NOT_FOUND) and int(id) >= _OVERLAP and \
-           cv.colorby not in _MODEL_PROPERTIES:
+        if (int(id) not in (_NOT_FOUND, _VOID_REGION) and
+                int(id) > _OVERLAP and
+                cv.colorby not in _MODEL_PROPERTIES):
 
             # Domain ID
             if domain[id].name:
@@ -571,7 +585,7 @@ class PlotImage(FigureCanvas):
                     connector = partial(self.main_window.editBackgroundColor,
                                         apply=True)
                     bgColorAction.triggered.connect(connector)
-                elif int(id) == _OVERLAP:
+                elif int(id) <= _OVERLAP:
                     olapColorAction = self.menu.addAction(
                         'Edit Overlap Color...')
                     olapColorAction.setToolTip('Edit overlap color')
