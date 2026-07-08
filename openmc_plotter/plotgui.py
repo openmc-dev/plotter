@@ -310,7 +310,10 @@ class PlotImage(FigureCanvas):
            and 0 <= xPos and xPos < self.model.currentView.h_res:
             cell_id = int(self.model.cell_ids[yPos, xPos])
             mat_id = int(self.model.mat_ids[yPos, xPos])
-            id = self._domainId(cell_id, mat_id)
+            if cell_id < _OVERLAP:
+                id = cell_id
+            else:
+                id = cell_id if self.model.currentView.colorby == 'cell' else mat_id
             instance = self.model.instances[yPos, xPos]
             temp = "{:g}".format(self.model.property_data[yPos, xPos, 0])
             density = "{:g}".format(self.model.property_data[yPos, xPos, 1])
@@ -338,13 +341,6 @@ class PlotImage(FigureCanvas):
 
         return id, instance, properties, domain, domain_kind
 
-    def _domainId(self, cell_id, mat_id):
-        if self.model.currentView.colorby != 'cell':
-            return mat_id
-        if cell_id == _OVERLAP and mat_id < _OVERLAP:
-            return mat_id
-        return cell_id
-
     def _cellLabel(self, cell_id):
         try:
             name = self.model.activeView.cells[cell_id].name
@@ -357,10 +353,10 @@ class PlotImage(FigureCanvas):
             return "OVERLAP"
 
         overlap_idx = int(_OVERLAP - int(id) - 1)
-        if overlap_idx not in self.model.overlap_map:
+        if not 0 <= overlap_idx < len(self.model.overlap_info):
             return "OVERLAP (unknown region)"
 
-        universe, cell1, cell2 = self.model.overlap_map[overlap_idx]
+        universe, cell1, cell2 = self.model.overlap_info[overlap_idx]
         label1 = self._cellLabel(cell1)
         label2 = self._cellLabel(cell2)
         return f"OVERLAP: Universe {universe}, Cells {label1} and {label2}"
