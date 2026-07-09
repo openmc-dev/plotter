@@ -582,31 +582,34 @@ class MainWindow(QMainWindow):
             self.loadViewFile(filename)
 
     def openStatePoint(self):
-        # check for an alread-open statepoint
+        # confirm replacement when a statepoint is already open
         if self.model.statepoint:
-            msg_box = QMessageBox()
-            msg_box.setText("Please close the current statepoint file before "
-                            "opening a new one.")
+            msg_box = QMessageBox(self)
+            msg_box.setText("A statepoint file is currently open. Continue to "
+                            "close it and open a new one?")
             msg_box.setIcon(QMessageBox.Information)
-            msg_box.setStandardButtons(QMessageBox.Ok)
-            msg_box.exec()
-            return
+            msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
+            msg_box.setDefaultButton(QMessageBox.Cancel)
+            msg_box.button(QMessageBox.Yes).setText("Continue")
+            if msg_box.exec() != QMessageBox.Yes:
+                return
+            self.closeStatePoint()
         filename, ext = QFileDialog.getOpenFileName(self, "Open StatePoint",
                                                     ".", "*.h5")
         if filename:
             try:
                 self.model.openStatePoint(filename)
-                message = 'Opened statepoint file: {}'
-            except (FileNotFoundError, OSError):
-                message = 'Error opening statepoint file: {}'
+                message = f'Opened statepoint file: {filename}'
+            except Exception as e:
+                message = f'Error opening statepoint file: {filename}'
                 msg_box = QMessageBox()
-                msg = "Could not open statepoint file: \n\n {} \n"
-                msg_box.setText(msg.format(filename))
+                msg = f"Could not open statepoint file:\n{filename}\n\n{e}"
+                msg_box.setText(msg)
                 msg_box.setIcon(QMessageBox.Warning)
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.exec()
             finally:
-                self.statusBar().showMessage(message.format(filename), 5000)
+                self.statusBar().showMessage(message, 5000)
             self.updateDataMenu()
             self.tallyPanel.update()
 
@@ -635,6 +638,7 @@ class MainWindow(QMainWindow):
     def closeStatePoint(self):
         # remove the statepoint object and update the data menu
         filename = self.model.statepoint.filename
+        self.model.statepoint.close()
         self.model.statepoint = None
         self.model.currentView.selectedTally = None
         self.model.activeView.selectedTally = None
