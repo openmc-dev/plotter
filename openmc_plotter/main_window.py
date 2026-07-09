@@ -599,17 +599,17 @@ class MainWindow(QMainWindow):
         if filename:
             try:
                 self.model.openStatePoint(filename)
-                message = 'Opened statepoint file: {}'
-            except (FileNotFoundError, OSError):
-                message = 'Error opening statepoint file: {}'
+                message = f'Opened statepoint file: {filename}'
+            except Exception as e:
+                message = f'Error opening statepoint file: {filename}'
                 msg_box = QMessageBox()
-                msg = "Could not open statepoint file: \n\n {} \n"
-                msg_box.setText(msg.format(filename))
+                msg = f"Could not open statepoint file:\n{filename}\n\n{e}"
+                msg_box.setText(msg)
                 msg_box.setIcon(QMessageBox.Warning)
                 msg_box.setStandardButtons(QMessageBox.Ok)
                 msg_box.exec()
             finally:
-                self.statusBar().showMessage(message.format(filename), 5000)
+                self.statusBar().showMessage(message, 5000)
             self.updateDataMenu()
             self.tallyPanel.update()
 
