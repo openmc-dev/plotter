@@ -308,7 +308,12 @@ class PlotImage(FigureCanvas):
         # check that the position is in the axes view
         if 0 <= yPos < self.model.currentView.v_res \
            and 0 <= xPos and xPos < self.model.currentView.h_res:
-            id = self.model.ids[yPos, xPos]
+            cell_id = int(self.model.cell_ids[yPos, xPos])
+            mat_id = int(self.model.mat_ids[yPos, xPos])
+            if cell_id < _OVERLAP:
+                id = cell_id
+            else:
+                id = cell_id if self.model.currentView.colorby == 'cell' else mat_id
             instance = self.model.instances[yPos, xPos]
             temp = "{:g}".format(self.model.property_data[yPos, xPos, 0])
             density = "{:g}".format(self.model.property_data[yPos, xPos, 1])
@@ -336,6 +341,26 @@ class PlotImage(FigureCanvas):
 
         return id, instance, properties, domain, domain_kind
 
+    def _cellLabel(self, cell_id):
+        try:
+            name = self.model.activeView.cells[cell_id].name
+        except KeyError:
+            name = None
+        return f"{cell_id} ({name})" if name else str(cell_id)
+
+    def _overlapInfo(self, id):
+        if id == _OVERLAP:
+            return "OVERLAP"
+
+        overlap_idx = int(_OVERLAP - int(id) - 1)
+        if not 0 <= overlap_idx < len(self.model.overlap_info):
+            return "OVERLAP (unknown region)"
+
+        universe, cell1, cell2 = self.model.overlap_info[overlap_idx]
+        label1 = self._cellLabel(cell1)
+        label2 = self._cellLabel(cell2)
+        return f"OVERLAP: Universe {universe}, Cells {label1} and {label2}"
+
     def mouseDoubleClickEvent(self, event):
         xCenter, yCenter = self.getPlotCoords(event.pos())
         self.main_window.editPlotOrigin(xCenter, yCenter, apply=True)
@@ -354,7 +379,6 @@ class PlotImage(FigureCanvas):
         tallyInfo = ""
 
         if self.parent.underMouse():
-
             if domain_kind.lower() in _MODEL_PROPERTIES:
                 line_val = float(properties[domain_kind.lower()])
                 line_val = max(line_val, 0.0)
@@ -370,8 +394,8 @@ class PlotImage(FigureCanvas):
                 instanceInfo = ""
             if id == _VOID_REGION:
                 domainInfo = ("VOID")
-            elif id == _OVERLAP:
-                domainInfo = ("OVERLAP")
+            elif id <= _OVERLAP:
+                domainInfo = self._overlapInfo(id)
             elif id != _NOT_FOUND and domain[id].name:
                 domainInfo = ("{} {}{}: \"{}\"\t Density: {} g/cc\t"
                               "Temperature: {} K".format(
@@ -483,8 +507,9 @@ class PlotImage(FigureCanvas):
         self.menu.addAction(self.main_window.redoAction)
         self.menu.addSeparator()
 
-        if int(id) not in (_NOT_FOUND, _OVERLAP) and \
-           cv.colorby not in _MODEL_PROPERTIES:
+        if (int(id) not in (_NOT_FOUND, _VOID_REGION) and
+                int(id) > _OVERLAP and
+                cv.colorby not in _MODEL_PROPERTIES):
 
             # Domain ID
             if domain[id].name:
@@ -551,7 +576,7 @@ class PlotImage(FigureCanvas):
                     connector = partial(self.main_window.editBackgroundColor,
                                         apply=True)
                     bgColorAction.triggered.connect(connector)
-                elif int(id) == _OVERLAP:
+                elif int(id) <= _OVERLAP:
                     olapColorAction = self.menu.addAction(
                         'Edit Overlap Color...')
                     olapColorAction.setToolTip('Edit overlap color')
