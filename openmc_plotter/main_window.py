@@ -378,6 +378,16 @@ class MainWindow(QMainWindow):
         self.overlapAct.toggled.connect(overlap_connector)
         self.editMenu.addAction(self.overlapAct)
 
+        self.undefinedAct = QAction('Enable Undefined Region Coloring', self)
+        self.undefinedAct.setShortcut('Ctrl+I')
+        self.undefinedAct.setCheckable(True)
+        self.undefinedAct.setToolTip('Toggle undefined regions')
+        self.undefinedAct.setStatusTip('Toggle display of undefined '
+                                       '(not found) regions when enabled')
+        undefined_connector = partial(self.toggleUndefined, apply=True)
+        self.undefinedAct.toggled.connect(undefined_connector)
+        self.editMenu.addAction(self.undefinedAct)
+
         self.outlineAct = QAction('Enable Domain Outlines', self)
         self.outlineAct.setShortcut('Ctrl+U')
         self.outlineAct.setCheckable(True)
@@ -438,7 +448,7 @@ class MainWindow(QMainWindow):
         self.restoreAction.setDisabled(not changed)
 
         toggle_actions = (self.maskingAction, self.highlightingAct,
-                          self.outlineAct, self.overlapAct)
+                          self.outlineAct, self.overlapAct, self.undefinedAct)
         # Temporarily block signals to avoid triggering plot update
         for action in toggle_actions:
             action.blockSignals(True)
@@ -446,6 +456,7 @@ class MainWindow(QMainWindow):
         self.highlightingAct.setChecked(self.model.currentView.highlighting)
         self.outlineAct.setChecked(self.model.currentView.outlinesCell)
         self.overlapAct.setChecked(self.model.currentView.color_overlaps)
+        self.undefinedAct.setChecked(self.model.currentView.color_undefined)
         for action in toggle_actions:
             action.blockSignals(False)
 
@@ -742,6 +753,12 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
+    def toggleUndefined(self, state, apply=False):
+        self.model.activeView.color_undefined = bool(state)
+        self.colorDialog.updateUndefined()
+        if apply:
+            self.applyChanges()
+
     def editColorMap(self, colormap_name, property_type, apply=False):
         self.model.activeView.colormaps[property_type] = colormap_name
         self.plotIm.updateColorMap(colormap_name, property_type)
@@ -931,6 +948,30 @@ class MainWindow(QMainWindow):
             new_color = dlg.currentColor().getRgb()[:3]
             self.model.activeView.overlap_color = new_color
             self.colorDialog.updateOverlapColor()
+
+        if apply:
+            self.applyChanges()
+
+    def editUndefinedInternalColor(self, apply=False):
+        current_color = self.model.activeView.undefined_internal_color
+        dlg = QColorDialog(self)
+        dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
+        if dlg.exec():
+            new_color = dlg.currentColor().getRgb()[:3]
+            self.model.activeView.undefined_internal_color = new_color
+            self.colorDialog.updateUndefinedColors()
+
+        if apply:
+            self.applyChanges()
+
+    def editUndefinedExternalColor(self, apply=False):
+        current_color = self.model.activeView.undefined_external_color
+        dlg = QColorDialog(self)
+        dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
+        if dlg.exec():
+            new_color = dlg.currentColor().getRgb()[:3]
+            self.model.activeView.undefined_external_color = new_color
+            self.colorDialog.updateUndefinedColors()
 
         if apply:
             self.applyChanges()

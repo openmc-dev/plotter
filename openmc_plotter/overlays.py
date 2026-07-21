@@ -29,6 +29,7 @@ class ShortcutsOverlay(QWidget):
                             ("Toggle Masking", c_key + "+M"),
                             ("Toggle Highlighting", c_key + "+L"),
                             ("Toggle Overlap Coloring", c_key + "+P"),
+                            ("Toggle Undefined Coloring", c_key + "+I"),
                             ("Toggle Domain Outlines", c_key + "+U"),
                             ("Set XY Basis", "Alt+X"),
                             ("Set YZ Basis", "Alt+Y"),
