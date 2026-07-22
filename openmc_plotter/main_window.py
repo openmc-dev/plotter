@@ -952,26 +952,14 @@ class MainWindow(QMainWindow):
         if apply:
             self.applyChanges()
 
-    def editUndefinedInternalColor(self, apply=False):
-        current_color = self.model.activeView.undefined_internal_color
+    def editUndefinedColor(self, apply=False):
+        current_color = self.model.activeView.undefined_color
         dlg = QColorDialog(self)
         dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
         if dlg.exec():
             new_color = dlg.currentColor().getRgb()[:3]
-            self.model.activeView.undefined_internal_color = new_color
-            self.colorDialog.updateUndefinedColors()
-
-        if apply:
-            self.applyChanges()
-
-    def editUndefinedExternalColor(self, apply=False):
-        current_color = self.model.activeView.undefined_external_color
-        dlg = QColorDialog(self)
-        dlg.setCurrentColor(QtGui.QColor.fromRgb(*current_color))
-        if dlg.exec():
-            new_color = dlg.currentColor().getRgb()[:3]
-            self.model.activeView.undefined_external_color = new_color
-            self.colorDialog.updateUndefinedColors()
+            self.model.activeView.undefined_color = new_color
+            self.colorDialog.updateUndefinedColor()
 
         if apply:
             self.applyChanges()
