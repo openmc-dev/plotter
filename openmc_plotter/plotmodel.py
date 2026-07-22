@@ -1302,7 +1302,7 @@ class PlotViewIndependent:
         self.overlap_color = (255, 0, 0)
         # Undefined (not-found) region coloring (internal regions only)
         self.color_undefined = False
-        self.undefined_color = (255, 0, 255)
+        self.undefined_color = (255, 165, 0)
         self.domainAlpha = 1.0
         self.domainVisible = True
         self.outlinesCell = False
@@ -1344,7 +1344,7 @@ class PlotViewIndependent:
         if not hasattr(self, 'color_undefined'):
             self.color_undefined = False
         if not hasattr(self, 'undefined_color'):
-            self.undefined_color = (255, 0, 255)
+            self.undefined_color = (255, 165, 0)
         # Migrate old boolean attributes to new tallyDataMinMaxType
         if not hasattr(self, 'tallyDataMinMaxType'):
             if getattr(self, 'tallyDataUserMinMax', False):

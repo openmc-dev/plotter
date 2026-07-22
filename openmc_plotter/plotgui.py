@@ -361,15 +361,19 @@ class PlotImage(FigureCanvas):
         label2 = self._cellLabel(cell2)
         return f"OVERLAP: Universe {universe}, Cells {label1} and {label2}"
 
-    def _undefinedInfo(self, event):
-        """Status-bar text for an undefined (not-found) pixel, if classified."""
+    def _isUndefinedInternal(self, event):
+        """Whether the pixel under the event is an internal undefined region."""
         if self.model.undefined_internal is None:
-            return ""
+            return False
         xPos, yPos = self.getDataIndices(event)
         cv = self.model.currentView
         if not (0 <= yPos < cv.v_res and 0 <= xPos < cv.h_res):
-            return ""
-        if self.model.undefined_internal[yPos, xPos]:
+            return False
+        return bool(self.model.undefined_internal[yPos, xPos])
+
+    def _undefinedInfo(self, event):
+        """Status-bar text for an undefined (not-found) pixel, if classified."""
+        if self._isUndefinedInternal(event):
             return "WARNING: undefined internal region"
         return ""
 
@@ -580,7 +584,16 @@ class PlotImage(FigureCanvas):
 
             if cv.colorby not in _MODEL_PROPERTIES:
                 self.menu.addSeparator()
-                if int(id) == _NOT_FOUND:
+                if int(id) == _NOT_FOUND and self._isUndefinedInternal(event):
+                    undefColorAction = self.menu.addAction(
+                        'Edit Undefined Color...')
+                    undefColorAction.setToolTip('Edit undefined color')
+                    undefColorAction.setStatusTip(
+                        'Edit plot undefined region color')
+                    connector = partial(self.main_window.editUndefinedColor,
+                                        apply=True)
+                    undefColorAction.triggered.connect(connector)
+                elif int(id) == _NOT_FOUND:
                     bgColorAction = self.menu.addAction(
                         'Edit Background Color...')
                     bgColorAction.setToolTip('Edit background color')
@@ -610,6 +623,7 @@ class PlotImage(FigureCanvas):
             self.menu.addAction(self.main_window.maskingAction)
             self.menu.addAction(self.main_window.highlightingAct)
             self.menu.addAction(self.main_window.overlapAct)
+            self.menu.addAction(self.main_window.undefinedAct)
             self.menu.addSeparator()
         self.menu.addAction(self.main_window.dockAction)
 
@@ -1145,10 +1159,8 @@ class ColorDialog(QDialog):
         self.undefinedColorButton = QPushButton()
         self.undefinedColorButton.setCursor(QtCore.Qt.PointingHandCursor)
         self.undefinedColorButton.setFixedWidth(button_width)
-        self.undefinedColorButton.setFixedHeight(
-            self.font_metric.height() * 1.5)
-        self.undefinedColorButton.clicked.connect(
-            main_window.editUndefinedColor)
+        self.undefinedColorButton.setFixedHeight(self.font_metric.height() * 1.5)
+        self.undefinedColorButton.clicked.connect(main_window.editUndefinedColor)
 
         self.colorResetButton = QPushButton("&Reset Colors")
         self.colorResetButton.setCursor(QtCore.Qt.PointingHandCursor)
@@ -1415,8 +1427,8 @@ class ColorDialog(QDialog):
 
     def updateUndefinedColor(self):
         color = self.model.activeView.undefined_color
-        style = "border-radius: 8px;background-color: rgb%s"
-        self.undefinedColorButton.setStyleSheet(style % str(color))
+        self.undefinedColorButton.setStyleSheet("border-radius: 8px;"
+                                                "background-color: rgb%s" % (str(color)))
 
     def updateUndefined(self):
         colorby = self.model.activeView.colorby
