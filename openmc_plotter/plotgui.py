@@ -946,18 +946,18 @@ class PlotImage(FigureCanvas):
             return
 
         if self.tally_data_indicator is not None and self.tally_image is not None:
-            # use norm to get axis value if log scale
-            if cv.tallyDataLogScale:
-                y_val = self.tally_image.norm(y_val)
-
             # If indicator value hasn't changed, skip update
             if self._last_tally_indicator_value == y_val:
                 return
             self._last_tally_indicator_value = y_val
 
             data = self.tally_data_indicator.get_data()
+            # Colorbar axes use data coordinates; normalization is only needed
+            # when mapping the value through the colormap.
             self.tally_data_indicator.set_data([data[0], [y_val, y_val]])
-            dl_color = invert_rgb(self.tally_image.get_cmap()(y_val), True)
+            normalized_value = self.tally_image.norm(y_val)
+            dl_color = invert_rgb(
+                self.tally_image.get_cmap()(normalized_value), True)
             self.tally_data_indicator.set_c(dl_color)
 
             if not self._blit_indicator(self.tally_data_indicator, self.tally_colorbar):
@@ -971,18 +971,18 @@ class PlotImage(FigureCanvas):
             return
 
         if self.data_indicator and self.image is not None:
-            # use norm to get axis value if log scale
-            if cv.color_scale_log[cv.colorby]:
-                y_val = self.image.norm(y_val)
-
             # If indicator value hasn't changed, skip update
             if self._last_data_indicator_value == y_val:
                 return
             self._last_data_indicator_value = y_val
 
             data = self.data_indicator.get_data()
+            # Colorbar axes use data coordinates; normalization is only needed
+            # when mapping the value through the colormap.
             self.data_indicator.set_data([data[0], [y_val, y_val]])
-            dl_color = invert_rgb(self.image.get_cmap()(y_val), True)
+            normalized_value = self.image.norm(y_val)
+            dl_color = invert_rgb(
+                self.image.get_cmap()(normalized_value), True)
             self.data_indicator.set_c(dl_color)
 
             if not self._blit_indicator(self.data_indicator, self.property_colorbar):
