@@ -327,6 +327,12 @@ class PlotModel:
         # Map to be populated by overlap functions
         self.overlap_info = None
 
+        # Boolean mask of internal undefined (not-found) regions, populated by
+        # makePlot when undefined-region coloring is enabled. Internal regions
+        # are enclosed by defined geometry (potentially unsafe); external
+        # (boundary-connected) undefined regions are intentionally ignored.
+        self.undefined_internal = None
+
         self.version = __version__
 
         # default statepoint value
@@ -584,6 +590,18 @@ class PlotModel:
             for id, dom in domain.items():
                 if dom.highlight:
                     image[self.ids == int(id)] = cv.highlightBackground
+
+        # Classify and color undefined (not-found) regions. Only internal
+        # regions (holes enclosed by defined geometry) are flagged as a
+        # warning; external regions connect to the slice boundary and are
+        # left untouched.
+        self.undefined_internal = None
+        if cv.color_undefined:
+            _, _, internal = \
+                openmc.Model._classify_undefined_regions(self.cell_ids)
+            if internal is not None:
+                self.undefined_internal = internal
+                image[internal] = cv.undefined_color
 
         # set model image
         self.image = image
@@ -1228,6 +1246,11 @@ class PlotViewIndependent:
         RGB color to apply to plot background
     overlap_color : 3-tuple of int
         RGB color to apply for cell overlap regions
+    color_undefined : bool
+        Indicator of whether or not internal undefined (not-found) regions
+        will be shown
+    undefined_color : 3-tuple of int
+        RGB color to apply for internal (enclosed) undefined regions
     domainAlpha : float between 0 and 1
         Alpha value of the geometry plot
     plotVisibile : bool
@@ -1277,6 +1300,9 @@ class PlotViewIndependent:
         self.highlightSeed = 1
         self.domainBackground = (50, 50, 50)
         self.overlap_color = (255, 0, 0)
+        # Undefined (not-found) region coloring (internal regions only)
+        self.color_undefined = False
+        self.undefined_color = (255, 165, 0)
         self.domainAlpha = 1.0
         self.domainVisible = True
         self.outlinesCell = False
@@ -1314,6 +1340,11 @@ class PlotViewIndependent:
             self.outlinesCell = False
         if not hasattr(self, 'outlinesMat'):
             self.outlinesMat = False
+        # Undefined region coloring (added in a later version)
+        if not hasattr(self, 'color_undefined'):
+            self.color_undefined = False
+        if not hasattr(self, 'undefined_color'):
+            self.undefined_color = (255, 165, 0)
         # Migrate old boolean attributes to new tallyDataMinMaxType
         if not hasattr(self, 'tallyDataMinMaxType'):
             if getattr(self, 'tallyDataUserMinMax', False):

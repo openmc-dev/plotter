@@ -361,6 +361,22 @@ class PlotImage(FigureCanvas):
         label2 = self._cellLabel(cell2)
         return f"OVERLAP: Universe {universe}, Cells {label1} and {label2}"
 
+    def _isUndefinedInternal(self, event):
+        """Whether the pixel under the event is an internal undefined region."""
+        if self.model.undefined_internal is None:
+            return False
+        xPos, yPos = self.getDataIndices(event)
+        cv = self.model.currentView
+        if not (0 <= yPos < cv.v_res and 0 <= xPos < cv.h_res):
+            return False
+        return bool(self.model.undefined_internal[yPos, xPos])
+
+    def _undefinedInfo(self, event):
+        """Status-bar text for an undefined (not-found) pixel, if classified."""
+        if self._isUndefinedInternal(event):
+            return "WARNING: undefined internal region"
+        return ""
+
     def mouseDoubleClickEvent(self, event):
         xCenter, yCenter = self.getPlotCoords(event.pos())
         self.main_window.editPlotOrigin(xCenter, yCenter, apply=True)
@@ -414,7 +430,7 @@ class PlotImage(FigureCanvas):
                                                          density,
                                                          temperature))
             else:
-                domainInfo = ""
+                domainInfo = self._undefinedInfo(event)
 
             if self.model.tally_data is not None:
                 tid, value = self.getTallyInfo(event)
@@ -568,7 +584,16 @@ class PlotImage(FigureCanvas):
 
             if cv.colorby not in _MODEL_PROPERTIES:
                 self.menu.addSeparator()
-                if int(id) == _NOT_FOUND:
+                if int(id) == _NOT_FOUND and self._isUndefinedInternal(event):
+                    undefColorAction = self.menu.addAction(
+                        'Edit Undefined Color...')
+                    undefColorAction.setToolTip('Edit undefined color')
+                    undefColorAction.setStatusTip(
+                        'Edit plot undefined region color')
+                    connector = partial(self.main_window.editUndefinedColor,
+                                        apply=True)
+                    undefColorAction.triggered.connect(connector)
+                elif int(id) == _NOT_FOUND:
                     bgColorAction = self.menu.addAction(
                         'Edit Background Color...')
                     bgColorAction.setToolTip('Edit background color')
@@ -598,6 +623,7 @@ class PlotImage(FigureCanvas):
             self.menu.addAction(self.main_window.maskingAction)
             self.menu.addAction(self.main_window.highlightingAct)
             self.menu.addAction(self.main_window.overlapAct)
+            self.menu.addAction(self.main_window.undefinedAct)
             self.menu.addSeparator()
         self.menu.addAction(self.main_window.dockAction)
 
@@ -1125,6 +1151,17 @@ class ColorDialog(QDialog):
         self.overlapColorButton.setFixedHeight(self.font_metric.height() * 1.5)
         self.overlapColorButton.clicked.connect(main_window.editOverlapColor)
 
+        # Undefined (not-found) region plotting
+        self.undefinedCheck = QCheckBox('', self)
+        undefined_connector = partial(main_window.toggleUndefined)
+        self.undefinedCheck.stateChanged.connect(undefined_connector)
+
+        self.undefinedColorButton = QPushButton()
+        self.undefinedColorButton.setCursor(QtCore.Qt.PointingHandCursor)
+        self.undefinedColorButton.setFixedWidth(button_width)
+        self.undefinedColorButton.setFixedHeight(self.font_metric.height() * 1.5)
+        self.undefinedColorButton.clicked.connect(main_window.editUndefinedColor)
+
         self.colorResetButton = QPushButton("&Reset Colors")
         self.colorResetButton.setCursor(QtCore.Qt.PointingHandCursor)
         self.colorResetButton.clicked.connect(main_window.resetColors)
@@ -1146,6 +1183,9 @@ class ColorDialog(QDialog):
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Show Overlaps:', self.overlapCheck)
         formLayout.addRow('Overlap Color:', self.overlapColorButton)
+        formLayout.addRow(HorizontalLine())
+        formLayout.addRow('Show Undefined:', self.undefinedCheck)
+        formLayout.addRow('Undefined Color:', self.undefinedColorButton)
         formLayout.addRow(HorizontalLine())
         formLayout.addRow('Color Plot By:', self.colorbyBox)
         formLayout.addRow('Universe Level:', self.universeLevelBox)
@@ -1314,6 +1354,8 @@ class ColorDialog(QDialog):
         self.updateDomainTabs()
         self.updateOverlap()
         self.updateOverlapColor()
+        self.updateUndefined()
+        self.updateUndefinedColor()
 
     def updateMasking(self):
         masking = self.model.activeView.masking
@@ -1383,10 +1425,22 @@ class ColorDialog(QDialog):
         if colorby in ('cell', 'material'):
             self.overlapCheck.setChecked(overlap_val)
 
+    def updateUndefinedColor(self):
+        color = self.model.activeView.undefined_color
+        self.undefinedColorButton.setStyleSheet("border-radius: 8px;"
+                                                "background-color: rgb%s" % (str(color)))
+
+    def updateUndefined(self):
+        colorby = self.model.activeView.colorby
+        undefined_val = self.model.activeView.color_undefined
+        if colorby in ('cell', 'material'):
+            self.undefinedCheck.setChecked(undefined_val)
+
     def updateColorBy(self):
         colorby = self.model.activeView.colorby
         self.colorbyBox.setCurrentText(colorby)
         self.overlapCheck.setEnabled(colorby in ("cell", "material"))
+        self.undefinedCheck.setEnabled(colorby in ("cell", "material"))
         self.universeLevelBox.setEnabled(colorby == 'cell')
 
     def updateUniverseLevel(self):
